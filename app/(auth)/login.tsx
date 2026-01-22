@@ -1,25 +1,47 @@
-import { Alert, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Alert, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { useState } from 'react';
 import { PrimaryButton } from '../../components/PrimaryButton';
-import { useAuth } from '../../hooks/useSupabaseAuth';
+import { supabase } from '../../lib/supabaseClient';
 
 export default function LoginScreen() {
-  const { signInWithEmail } = useAuth();
   const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
+  const [isSigningUp, setIsSigningUp] = useState(false);
 
-  const handleSubmit = async () => {
-    if (!email.trim()) {
-      Alert.alert('Email required', 'Enter the email you registered with.');
+  const handleAuthenticate = async () => {
+    if (!email.trim() || !password.trim()) {
+      Alert.alert('Email and password required', 'Please enter both email and password.');
+      return;
+    }
+
+    if (!supabase) {
+      Alert.alert('Configuration missing', 'Set SUPABASE_URL and SUPABASE_ANON_KEY before logging in.');
       return;
     }
 
     try {
       setLoading(true);
-      await signInWithEmail(email.trim());
-      Alert.alert('Check your inbox', 'We sent a login link to your email.');
+      if (isSigningUp) {
+        const { error } = await supabase.auth.signUp({
+          email: email.trim(),
+          password: password.trim(),
+        });
+        if (error) {
+          throw error;
+        }
+        Alert.alert('Verify your email', 'We sent a verification link to activate your account.');
+      } else {
+        const { error } = await supabase.auth.signInWithPassword({
+          email: email.trim(),
+          password: password.trim(),
+        });
+        if (error) {
+          throw error;
+        }
+      }
     } catch (error) {
-      Alert.alert('Authentication failed', error instanceof Error ? error.message : 'Unable to log you in');
+      Alert.alert('Authentication failed', error instanceof Error ? error.message : 'Unable to sign in');
     } finally {
       setLoading(false);
     }
@@ -28,7 +50,9 @@ export default function LoginScreen() {
   return (
     <View style={styles.root}>
       <Text style={styles.title}>Employee Portal</Text>
-      <Text style={styles.subtitle}>Sign in with your company email.</Text>
+      <Text style={styles.subtitle}>
+        {isSigningUp ? 'Create your account' : 'Sign in with your company credentials.'}
+      </Text>
       <TextInput
         style={styles.input}
         keyboardType="email-address"
@@ -36,8 +60,27 @@ export default function LoginScreen() {
         placeholder="you@company.com"
         value={email}
         onChangeText={setEmail}
+        textContentType="emailAddress"
       />
-      <PrimaryButton title="Send magic link" onPress={handleSubmit} loading={loading} />
+      <TextInput
+        style={styles.input}
+        secureTextEntry
+        autoCapitalize="none"
+        placeholder="Password"
+        value={password}
+        onChangeText={setPassword}
+        textContentType="password"
+      />
+      <PrimaryButton
+        title={isSigningUp ? 'Create account' : 'Sign in'}
+        onPress={handleAuthenticate}
+        loading={loading}
+      />
+      <TouchableOpacity style={styles.switchRow} onPress={() => setIsSigningUp(!isSigningUp)}>
+        <Text style={styles.switchText}>
+          {isSigningUp ? 'Already have an account? Sign in' : 'Need a new account? Sign up'}
+        </Text>
+      </TouchableOpacity>
     </View>
   );
 }
@@ -66,5 +109,13 @@ const styles = StyleSheet.create({
     marginBottom: 16,
     borderWidth: 1,
     borderColor: '#e2e8f0',
+  },
+  switchRow: {
+    marginTop: 12,
+  },
+  switchText: {
+    color: '#2563eb',
+    textAlign: 'center',
+    fontWeight: '600',
   },
 });
