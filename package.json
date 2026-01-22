@@ -6,7 +6,8 @@
     "start": "expo start",
     "android": "expo start --android",
     "ios": "expo start --ios",
-    "web": "expo start --web"
+    "web": "expo start --web",
+    "check-env": "node scripts/check-env.js"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.45.0",

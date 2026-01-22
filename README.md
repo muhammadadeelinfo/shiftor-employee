@@ -36,6 +36,7 @@ A cross-platform Expo app that lets employees interact with internal services, l
   SUPABASE_URL=
   SUPABASE_ANON_KEY=
   ```
+- Run `npm run check-env` to confirm required env vars are set before launching.
 - After you add the real keys, restart Expo (`npx expo start -c`) so `app.config.ts` re-reads them and populates `Constants.expoConfig.extra`.
 - Additional runtime configuration is controlled through `app.config.ts` and `app.json`.
 
