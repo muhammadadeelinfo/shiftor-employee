@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Alert, StyleSheet, Text, View } from 'react-native';
-import { Camera, BarCodeScanningResult, CameraPermissionResponse } from 'expo-camera';
+import { Camera, CameraView, BarCodeScanningResult, CameraPermissionResponse } from 'expo-camera';
 import { PrimaryButton } from '../../components/PrimaryButton';
 
 export default function QrClockInScreen() {
@@ -47,15 +47,11 @@ if (!permission?.granted) {
     <View style={styles.container}>
       <Text style={styles.instructions}>Point the camera at the QR / barcode provided by your manager.</Text>
       <View style={styles.preview}>
-        <Camera
+        <CameraView
           style={styles.camera}
           onBarCodeScanned={isScanning ? handleBarCodeScanned : undefined}
           barCodeScannerSettings={{
-            barCodeTypes: [
-              Camera.Constants.BarCodeType.qr,
-              Camera.Constants.BarCodeType.code128,
-              Camera.Constants.BarCodeType.code39,
-            ],
+            barCodeTypes: ['qr', 'code128', 'code39'],
           }}
         />
       </View>

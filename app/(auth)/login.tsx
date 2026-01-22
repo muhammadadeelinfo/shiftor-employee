@@ -2,8 +2,10 @@ import { Alert, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'reac
 import { useState } from 'react';
 import { PrimaryButton } from '../../components/PrimaryButton';
 import { supabase } from '../../lib/supabaseClient';
+import { useRouter } from 'expo-router';
 
 export default function LoginScreen() {
+  const router = useRouter();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
@@ -39,6 +41,7 @@ export default function LoginScreen() {
         if (error) {
           throw error;
         }
+        router.replace('(tabs)/my-shifts');
       }
     } catch (error) {
       Alert.alert('Authentication failed', error instanceof Error ? error.message : 'Unable to sign in');
