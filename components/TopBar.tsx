@@ -3,6 +3,7 @@ import Constants from 'expo-constants';
 import { Pressable, StyleSheet, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
+import { useNotifications } from './NotificationContext';
 
 const stageColorMap: Record<string, string> = {
   production: '#22c55e',
@@ -12,21 +13,18 @@ const stageColorMap: Record<string, string> = {
 export const TopBar = () => {
   const stage = Constants.expoConfig?.extra?.expoStage ?? 'development';
   const stageColor = stageColorMap[stage] ?? '#38bdf8';
-
   const insets = useSafeAreaInsets();
+  const { toggle } = useNotifications();
 
   return (
     <SafeAreaView edges={['top']} style={styles.safe}>
       <View style={[styles.bar, { paddingTop: Math.max(12, insets.top) }]}>
-        <View style={styles.leftGroup}>
-          <Ionicons name="briefcase-outline" size={22} color="#e2e8f0" />
-          <View style={[styles.stageDot, { backgroundColor: stageColor }]} />
-        </View>
+        <View />
         <View style={styles.rightGroup}>
-          <Pressable style={styles.iconButton}>
-            <Ionicons name="search" size={18} color="#cbd5f5" />
-          </Pressable>
-          <Pressable style={styles.iconButton}>
+          <Pressable
+            style={[styles.iconButton, styles.notificationButton]}
+            onPress={toggle}
+          >
             <Ionicons name="notifications-outline" size={20} color="#f8fafc" />
             <View style={[styles.notificationDot, { backgroundColor: stageColor }]} />
           </Pressable>
@@ -55,16 +53,6 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: 'rgba(148,163,184,0.4)',
   },
-  leftGroup: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-  },
-  stageDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-  },
   rightGroup: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -85,5 +73,8 @@ const styles = StyleSheet.create({
     width: 8,
     height: 8,
     borderRadius: 4,
+  },
+  notificationButton: {
+    marginRight: 4,
   },
 });
