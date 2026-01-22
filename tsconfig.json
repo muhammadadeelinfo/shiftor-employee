@@ -1,6 +1,7 @@
 {
-  "extends": "expo/tsconfig.base",
+  "extends": "expo-router/tsconfig",
   "compilerOptions": {
-    "strict": true
+    "strict": true,
+    "types": ["expo-router/types"]
   }
 }
