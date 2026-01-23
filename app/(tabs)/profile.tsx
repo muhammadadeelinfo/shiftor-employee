@@ -1,4 +1,4 @@
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { PrimaryButton } from '@shared/components/PrimaryButton';
 import { useAuth } from '@hooks/useSupabaseAuth';
 import { Link } from 'expo-router';
@@ -37,7 +37,10 @@ export default function ProfileScreen() {
   };
 
   return (
-    <View style={[styles.container, styles.containerLight]}>
+    <ScrollView
+      style={[styles.container, styles.containerLight]}
+      contentContainerStyle={styles.content}
+    >
       <View style={styles.headerBlock}>
         <View style={styles.badge}>
           <Text style={styles.badgeText}>{provider.toUpperCase()} ACCESS</Text>
@@ -84,7 +87,7 @@ export default function ProfileScreen() {
       <TouchableOpacity onPress={handleSignOut}>
         <Text style={[styles.link, styles.linkLight]}>Need to switch accounts? Log in again</Text>
       </TouchableOpacity>
-    </View>
+    </ScrollView>
   );
 }
 
@@ -92,6 +95,9 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     padding: 20,
+  },
+  content: {
+    paddingBottom: 40,
   },
   headerBlock: {
     marginBottom: 28,
