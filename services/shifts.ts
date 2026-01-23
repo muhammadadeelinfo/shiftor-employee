@@ -3,6 +3,13 @@ import { supabase } from '../lib/supabaseClient';
 
 type ShiftStatus = 'scheduled' | 'in-progress' | 'completed' | 'blocked';
 
+type AssignmentMeta = {
+  assignmentId?: string;
+  shiftId?: string;
+  confirmationStatus?: string;
+  confirmedAt?: string;
+};
+
 export type Shift = {
   id: string;
   title: string;
@@ -11,6 +18,9 @@ export type Shift = {
   end: string;
   status: ShiftStatus;
   description?: string;
+  assignmentId?: string;
+  confirmationStatus?: string;
+  confirmedAt?: string;
 };
 
 const fallbackShifts: Shift[] = [
@@ -102,6 +112,14 @@ const mapShiftRecord = (raw: Record<string, unknown>): Shift => {
   };
 };
 
+const isVisibleShiftRecord = (raw: Record<string, unknown>) => {
+  const publishStatus = pickValue(raw, ['status', 'shiftStatus', 'publicationStatus', 'publishStatus']);
+  if (!publishStatus) {
+    return true;
+  }
+  return publishStatus.toLowerCase() !== 'pending';
+};
+
 const sortShiftsByStart = (list: Shift[]): Shift[] =>
   [...list].sort((a, b) => {
     const aTime = Number(new Date(a.start));
@@ -112,9 +130,33 @@ const sortShiftsByStart = (list: Shift[]): Shift[] =>
     return aTime - bTime;
   });
 
-const mapShiftArray = (data?: Record<string, unknown>[]): Shift[] => {
+const mapShiftArray = (
+  data?: Record<string, unknown>[],
+  assignments?: AssignmentMeta[]
+): Shift[] => {
   if (!data?.length) return [];
-  const parsed = data.map(mapShiftRecord).filter((shift) => shift.id !== 'unknown');
+  const visibleRows = data.filter(isVisibleShiftRecord);
+  if (!visibleRows.length) return [];
+  const assignmentByShiftId = new Map<string, AssignmentMeta>();
+  assignments?.forEach((assignment) => {
+    if (assignment.shiftId) {
+      assignmentByShiftId.set(assignment.shiftId, assignment);
+    }
+  });
+
+  const parsed = visibleRows
+    .map((row) => {
+      const shift = mapShiftRecord(row);
+      if (shift.id === 'unknown') return undefined;
+      const assignment = assignmentByShiftId.get(shift.id);
+      return {
+        ...shift,
+        assignmentId: assignment?.assignmentId,
+        confirmationStatus: assignment?.confirmationStatus,
+        confirmedAt: assignment?.confirmedAt,
+      };
+    })
+    .filter((shift): shift is Shift => Boolean(shift));
   return sortShiftsByStart(parsed);
 };
 
@@ -124,10 +166,10 @@ const isMissingColumnError = (error: unknown) =>
   'code' in error &&
   (error as PostgrestError).code === '42703';
 
-const tryFetchShiftAssignments = async (employeeId: string): Promise<string[]> => {
+const tryFetchShiftAssignments = async (employeeId: string): Promise<AssignmentMeta[]> => {
   const { data, error } = await supabase
     .from('shift_assignments')
-    .select('shiftId')
+    .select('id, shiftId, confirmationStatus, confirmedAt')
     .eq('employeeId', employeeId);
 
   if (error) {
@@ -137,9 +179,12 @@ const tryFetchShiftAssignments = async (employeeId: string): Promise<string[]> =
     throw error;
   }
 
-  return (data ?? [])
-    .map((row) => (typeof row.shiftId === 'string' ? row.shiftId : undefined))
-    .filter(Boolean) as string[];
+  return (data ?? []).map((row) => ({
+    assignmentId: typeof row.id === 'string' ? row.id : undefined,
+    shiftId: typeof row.shiftId === 'string' ? row.shiftId : undefined,
+    confirmationStatus: typeof row.confirmationStatus === 'string' ? row.confirmationStatus : undefined,
+    confirmedAt: typeof row.confirmedAt === 'string' ? row.confirmedAt : undefined,
+  }));
 };
 
 const tryFetchShiftsByIds = async (ids: string[]): Promise<Record<string, unknown>[]> => {
@@ -158,13 +203,17 @@ const fetchShiftAssignments = async (employeeId?: string): Promise<Shift[]> => {
     return [];
   }
 
-  const ids = await tryFetchShiftAssignments(employeeId);
+  const assignments = await tryFetchShiftAssignments(employeeId);
+  const ids = assignments
+    .map((assignment) => assignment.shiftId)
+    .filter((shiftId): shiftId is string => Boolean(shiftId));
+
   if (!ids.length) {
     return [];
   }
 
   const shiftRows = await tryFetchShiftsByIds(ids);
-  return mapShiftArray(shiftRows);
+  return mapShiftArray(shiftRows, assignments);
 };
 
 export const getShifts = async (employeeId?: string): Promise<Shift[]> => {
@@ -173,6 +222,24 @@ export const getShifts = async (employeeId?: string): Promise<Shift[]> => {
   }
 
   return await fetchShiftAssignments(employeeId);
+};
+
+export const confirmShiftAssignment = async (assignmentId: string): Promise<void> => {
+  if (!supabase) {
+    throw new Error('Supabase client not configured');
+  }
+
+  const { error } = await supabase
+    .from('shift_assignments')
+    .update({
+      confirmationStatus: 'confirmed',
+      confirmedAt: new Date().toISOString(),
+    })
+    .eq('id', assignmentId);
+
+  if (error) {
+    throw error;
+  }
 };
 
 type ShiftSubscription = {
@@ -184,8 +251,8 @@ export const subscribeToShiftUpdates = (employeeId: string, onUpdate: () => void
     return { unsubscribe: () => {} };
   }
 
-  const channel = supabase.channel(`shift_assignments:${employeeId}`);
-  channel.on(
+  const assignmentChannel = supabase.channel(`shift_assignments:${employeeId}`);
+  assignmentChannel.on(
     'postgres_changes',
     {
       event: '*',
@@ -196,10 +263,10 @@ export const subscribeToShiftUpdates = (employeeId: string, onUpdate: () => void
     () => onUpdate()
   );
 
-  channel.subscribe();
+  assignmentChannel.subscribe();
 
   return {
-    unsubscribe: () => channel.unsubscribe(),
+    unsubscribe: () => assignmentChannel.unsubscribe(),
   };
 };
 

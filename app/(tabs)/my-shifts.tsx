@@ -1,7 +1,7 @@
 import { RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { getShifts, subscribeToShiftUpdates } from '../../services/shifts';
+import { getShifts, subscribeToShiftUpdates, confirmShiftAssignment } from '../../services/shifts';
 import { ShiftCard } from '../../components/ShiftCard';
 import { useLocation } from '../../hooks/useLocation';
 import { useRouter } from 'expo-router';
@@ -13,6 +13,7 @@ export default function MyShiftsScreen() {
   const userId = user?.id;
   const { location, status } = useLocation();
   const router = useRouter();
+  const [confirmingId, setConfirmingId] = useState<string | null>(null);
   const { data: shifts, isLoading, error, refetch } = useQuery({
     queryKey: ['shifts', userId],
     queryFn: () => getShifts(userId),
@@ -32,6 +33,18 @@ export default function MyShiftsScreen() {
     const timer = setInterval(() => refetch(), 120000);
     return () => clearInterval(timer);
   }, [userId, refetch]);
+
+  const handleConfirm = async (assignmentId: string) => {
+    try {
+      setConfirmingId(assignmentId);
+      await confirmShiftAssignment(assignmentId);
+      await refetch();
+    } catch (err) {
+      console.error('Shift confirmation failed', err);
+    } finally {
+      setConfirmingId((current) => (current === assignmentId ? null : current));
+    }
+  };
 
   return (
     <View style={styles.container}>
@@ -57,7 +70,13 @@ export default function MyShiftsScreen() {
           </View>
         ) : (
           shiftList.map((shift) => (
-            <ShiftCard key={shift.id} shift={shift} onPress={() => router.push(`/shift-details/${shift.id}`)} />
+            <ShiftCard
+              key={shift.id}
+              shift={shift}
+              onPress={() => router.push(`/shift-details/${shift.id}`)}
+              onConfirm={shift.assignmentId ? () => handleConfirm(shift.assignmentId) : undefined}
+              confirmLoading={shift.assignmentId ? confirmingId === shift.assignmentId : false}
+            />
           ))
         )}
         {!shiftList.length && !isLoading && !error ? <Text style={styles.empty}>No shifts scheduled.</Text> : null}
