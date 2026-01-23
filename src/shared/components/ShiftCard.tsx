@@ -53,6 +53,11 @@ const formatDuration = (start: string, end: string) => {
   return `${hoursText}${minutesText}`.trim() || '—';
 };
 
+const truncateText = (value: string, maxLength = 36) => {
+  if (value.length <= maxLength) return value;
+  return `${value.slice(0, maxLength - 1).trimEnd()}…`;
+};
+
 type Props = {
   shift: Shift;
   onPress?: () => void;
@@ -110,7 +115,11 @@ export const ShiftCard = ({ shift, onPress, onConfirm, confirmLoading }: Props) 
               <View>
                 <Text style={styles.detailLabel}>{detail.label}</Text>
                 <Text style={styles.detailValue}>{detail.title}</Text>
-                {detail.subtitle ? <Text style={styles.detailSubtitle}>{detail.subtitle}</Text> : null}
+                {detail.subtitle ? (
+                  <Text style={styles.detailSubtitle} numberOfLines={1} ellipsizeMode="tail">
+                    {truncateText(detail.subtitle)}
+                  </Text>
+                ) : null}
               </View>
             </View>
           ))}
