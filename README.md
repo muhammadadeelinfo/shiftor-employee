@@ -39,6 +39,15 @@ A cross-platform Expo app that lets employees interact with internal services, l
 - After you add the real keys, restart Expo (`npx expo start -c`) so `app.config.ts` re-reads them and populates `Constants.expoConfig.extra`.
 - Additional runtime configuration is controlled through `app.config.ts` and `app.json`.
 
+### Location handling during development
+
+- The shared location hook intentionally disables permission requests while Expo is running in development because unsatisfied device settings in the simulator/emulator can lead to the `Location request failed due to unsatisfied device settings` runtime error. This guard is only active when `EXPO_STAGE=development` (or whenever `__DEV__` is `true`), and production builds automatically re-enable the real location flow.
+- If you need to test location access while still iterating, set `ENABLE_LOCATION_IN_DEV=true` in your `.env` before restarting Metro so the hook performs the normal permission and `Location.getCurrentPositionAsync` calls. Remember to leave that flag unset (or `false`) once development is finished so the production behavior mirrors the deployed experience.
+
+### Magic-link authentication (placeholder)
+
+- Magic-link sign-in is still pending; note in this README that once development wraps up the actual `supabase.auth.signInWithOtp` flow should be wired up so employees can log in using email links. Keep this section here so the eventual implementation has a place to document how to configure and use it once it ships.
+
 ## Project structure
 
 - `app/` – Expo Router layouts and screens, with `(tabs)`/`(auth)` folders providing the stack + tab organization for production flows.

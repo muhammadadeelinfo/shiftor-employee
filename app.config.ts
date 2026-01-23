@@ -11,6 +11,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     expoStage: process.env.EXPO_STAGE ?? 'development',
     easProjectId: process.env.EAS_PROJECT_ID ?? '',
     authRedirectUrl: process.env.AUTH_REDIRECT_URL ?? '',
+    enableLocationInDev: process.env.ENABLE_LOCATION_IN_DEV === 'true',
   },
   plugins: [...(config.plugins ?? []), 'expo-router'],
 });
