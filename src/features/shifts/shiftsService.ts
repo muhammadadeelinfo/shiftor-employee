@@ -14,6 +14,8 @@ export type Shift = {
   id: string;
   title: string;
   location: string;
+  objectName?: string;
+  objectAddress?: string;
   start: string;
   end: string;
   status: ShiftStatus;
@@ -108,13 +110,19 @@ const mapShiftRecord = (raw: Record<string, unknown>): Shift => {
   const title =
     pickValue(raw, ['title', 'shiftTitle', 'name', 'shift_name']) ?? 'Shift';
   const location =
-    pickValue(raw, ['location', 'address', 'shiftLocation', 'objectAddress', 'objectTitle']) ?? 'TBD';
+    pickValue(raw, ['location', 'address', 'shiftLocation']) ??
+    pickValue(raw, ['objectAddress', 'shiftAddress']) ??
+    'TBD';
+  const objectName = pickValue(raw, ['objectTitle', 'objectName', 'shiftObject', 'shiftLocation']);
+  const objectAddress = pickValue(raw, ['objectAddress', 'shiftAddress', 'address']);
   const description = pickValue(raw, ['description', 'shiftDescription']);
   const statusValue = pickValue(raw, ['status', 'shiftStatus']) ?? 'scheduled';
   return {
     id: (typeof raw.id === 'string' && raw.id) || 'unknown',
     title,
     location,
+    objectName,
+    objectAddress,
     start,
     end,
     status: normalizeStatus(statusValue),

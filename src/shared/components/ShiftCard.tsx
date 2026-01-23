@@ -63,7 +63,12 @@ type Props = {
 export const ShiftCard = ({ shift, onPress, onConfirm, confirmLoading }: Props) => {
   const headerStatus = shift.status.replace(/\b\w/g, (char) => char.toUpperCase());
   const detailRows = [
-    { icon: 'location', label: 'Location', value: shift.location || 'TBD' },
+    {
+      icon: 'location',
+      label: 'Location',
+      title: shift.objectName ?? shift.location ?? 'TBD',
+      subtitle: shift.objectAddress ?? shift.location ?? undefined,
+    },
   ];
 
   return (
@@ -104,7 +109,8 @@ export const ShiftCard = ({ shift, onPress, onConfirm, confirmLoading }: Props) 
               <Ionicons name={detail.icon as any} size={16} color="#94a3b8" style={styles.detailIcon} />
               <View>
                 <Text style={styles.detailLabel}>{detail.label}</Text>
-                <Text style={styles.detailValue}>{detail.value}</Text>
+                <Text style={styles.detailValue}>{detail.title}</Text>
+                {detail.subtitle ? <Text style={styles.detailSubtitle}>{detail.subtitle}</Text> : null}
               </View>
             </View>
           ))}
@@ -234,6 +240,11 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: '#0f172a',
     fontWeight: '600',
+  },
+  detailSubtitle: {
+    fontSize: 12,
+    color: '#475569',
+    fontWeight: '500',
   },
   description: {
     marginTop: 10,
