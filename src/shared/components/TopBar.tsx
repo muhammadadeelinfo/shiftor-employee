@@ -1,6 +1,7 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
+import Constants from 'expo-constants';
 import { useNotifications } from '@shared/context/NotificationContext';
 import { useAuth } from '@hooks/useSupabaseAuth';
 import { useQuery } from '@tanstack/react-query';
@@ -13,10 +14,25 @@ const shiftStatusColors: Record<Shift['status'], string> = {
   blocked: '#dc2626',
 };
 
+const stageColorMap: Record<string, string> = {
+  production: '#22c55e',
+  staging: '#f97316',
+  development: '#38bdf8',
+};
+
+const stageLabelMap: Record<string, string> = {
+  production: 'Live',
+  staging: 'Preview',
+  development: 'Dev',
+};
+
 export const TopBar = () => {
   const insets = useSafeAreaInsets();
   const { toggle } = useNotifications();
   const { user } = useAuth();
+  const stage = Constants.expoConfig?.extra?.expoStage ?? 'development';
+  const stageColor = stageColorMap[stage] ?? '#38bdf8';
+  const stageLabel = stageLabelMap[stage] ?? 'Dev';
 
   const { data: shifts } = useQuery({
     queryKey: ['topbar-next-shift', user?.id],
@@ -86,6 +102,10 @@ export const TopBar = () => {
           </View>
         </View>
         <View style={styles.rightGroup}>
+          <View style={[styles.stageChip, { borderColor: stageColor }]}>
+            <View style={[styles.stageDot, { backgroundColor: stageColor }]} />
+            <Text style={[styles.stageText, { color: stageColor }]}>{stageLabel}</Text>
+          </View>
           <View
             style={[
               styles.statusBadge,
@@ -158,6 +178,26 @@ const styles = StyleSheet.create({
     color: '#0f172a',
     fontWeight: '600',
     marginTop: 2,
+  },
+  stageChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderRadius: 999,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    backgroundColor: '#ffffff',
+    gap: 6,
+  },
+  stageDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+  },
+  stageText: {
+    fontSize: 10,
+    fontWeight: '600',
+    textTransform: 'uppercase',
   },
   rightGroup: {
     flexDirection: 'row',
