@@ -65,11 +65,6 @@ export const TopBar = () => {
     })}`;
   };
 
-  const firstName =
-    user?.user_metadata?.full_name?.split(' ')[0] ??
-    user?.user_metadata?.name ??
-    user?.email ??
-    'there';
   const statusLabel = nextShift
     ? nextShift.status === 'in-progress'
       ? 'On shift'
@@ -80,6 +75,14 @@ export const TopBar = () => {
       : 'Scheduled'
     : 'Awaiting schedule';
 
+  const summaryText = nextShift
+    ? `${formatDate(nextShift.start)} · ${formatTimeRange(nextShift.start, nextShift.end)}`
+    : 'No shifts scheduled yet';
+
+  const locationText = nextShift
+    ? nextShift.objectName ?? nextShift.location ?? 'Location TBD'
+    : 'We’ll let you know once the next assignment is ready.';
+
   return (
     <SafeAreaView style={[styles.safe, { paddingTop: insets.top }]}>
       <View style={styles.bar}>
@@ -88,17 +91,9 @@ export const TopBar = () => {
             <Ionicons name="shield-checkmark-outline" size={20} color="#1d4ed8" />
           </View>
           <View style={styles.titleGroup}>
-            <Text style={styles.title}>Good to see you, {firstName}</Text>
-            <Text style={styles.subtitle}>
-              {nextShift
-                ? `${formatDate(nextShift.start)} · ${formatTimeRange(nextShift.start, nextShift.end)}`
-                : 'No shifts scheduled yet'}
-            </Text>
-            <Text style={styles.locationText}>
-              {nextShift
-                ? nextShift.objectName ?? nextShift.location ?? 'Location TBD'
-                : 'We’ll let you know once the next assignment is ready.'}
-            </Text>
+            <Text style={styles.title}>Employee Portal</Text>
+            <Text style={styles.subtitle}>{summaryText}</Text>
+            <Text style={styles.locationText}>{locationText}</Text>
           </View>
         </View>
         <View style={styles.rightGroup}>
