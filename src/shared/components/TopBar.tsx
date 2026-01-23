@@ -1,38 +1,15 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import Constants from 'expo-constants';
 import { useNotifications } from '@shared/context/NotificationContext';
 import { useAuth } from '@hooks/useSupabaseAuth';
 import { useQuery } from '@tanstack/react-query';
 import { getShifts, Shift } from '@features/shifts/shiftsService';
 
-const shiftStatusColors: Record<Shift['status'], string> = {
-  scheduled: '#2563eb',
-  'in-progress': '#059669',
-  completed: '#6b7280',
-  blocked: '#dc2626',
-};
-
-const stageColorMap: Record<string, string> = {
-  production: '#22c55e',
-  staging: '#f97316',
-  development: '#38bdf8',
-};
-
-const stageLabelMap: Record<string, string> = {
-  production: 'Live',
-  staging: 'Preview',
-  development: 'Dev',
-};
-
 export const TopBar = () => {
   const insets = useSafeAreaInsets();
   const { toggle } = useNotifications();
   const { user } = useAuth();
-  const stage = Constants.expoConfig?.extra?.expoStage ?? 'development';
-  const stageColor = stageColorMap[stage] ?? '#38bdf8';
-  const stageLabel = stageLabelMap[stage] ?? 'Dev';
 
   const { data: shifts } = useQuery({
     queryKey: ['topbar-next-shift', user?.id],
@@ -43,9 +20,6 @@ export const TopBar = () => {
   });
 
   const nextShift = shifts?.find((shift) => new Date(shift.start).getTime() > Date.now()) ?? shifts?.[0];
-  const shiftStatusColor = nextShift
-    ? shiftStatusColors[nextShift.status] ?? '#2563eb'
-    : '#94a3b8';
 
   const formatDate = (iso: string | undefined) => {
     if (!iso) return '—';
@@ -64,16 +38,6 @@ export const TopBar = () => {
       minute: '2-digit',
     })}`;
   };
-
-  const statusLabel = nextShift
-    ? nextShift.status === 'in-progress'
-      ? 'On shift'
-      : nextShift.status === 'blocked'
-      ? 'Blocked'
-      : nextShift.status === 'completed'
-      ? 'Completed'
-      : 'Scheduled'
-    : 'Awaiting schedule';
 
   const summaryText = nextShift
     ? `${formatDate(nextShift.start)} · ${formatTimeRange(nextShift.start, nextShift.end)}`
@@ -97,25 +61,9 @@ export const TopBar = () => {
           </View>
         </View>
         <View style={styles.rightGroup}>
-          <View style={[styles.stageChip, { borderColor: stageColor }]}>
-            <View style={[styles.stageDot, { backgroundColor: stageColor }]} />
-            <Text style={[styles.stageText, { color: stageColor }]}>{stageLabel}</Text>
-          </View>
-          <View
-            style={[
-              styles.statusBadge,
-              { borderColor: shiftStatusColor, backgroundColor: `${shiftStatusColor}1A` },
-            ]}
-          >
-            <View style={[styles.statusIndicator, { backgroundColor: shiftStatusColor }]} />
-            <Text style={[styles.statusText, { color: shiftStatusColor }]}>{statusLabel}</Text>
-          </View>
           <Pressable style={[styles.iconButton, styles.notificationButton]} onPress={toggle}>
             <Ionicons name="notifications-outline" size={20} color="#0f172a" />
             <View style={[styles.notificationDot, styles.redDot]} />
-          </Pressable>
-          <Pressable style={[styles.iconButton, styles.secondaryButton]}>
-            <Ionicons name="person-circle-outline" size={22} color="#0f172a" />
           </Pressable>
         </View>
       </View>
@@ -174,48 +122,10 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     marginTop: 2,
   },
-  stageChip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderRadius: 999,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    backgroundColor: '#ffffff',
-    gap: 6,
-  },
-  stageDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-  },
-  stageText: {
-    fontSize: 10,
-    fontWeight: '600',
-    textTransform: 'uppercase',
-  },
   rightGroup: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
-  },
-  statusBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderRadius: 999,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    gap: 8,
-  },
-  statusIndicator: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-  },
-  statusText: {
-    fontSize: 12,
-    fontWeight: '600',
   },
   iconButton: {
     width: 44,
@@ -229,9 +139,6 @@ const styles = StyleSheet.create({
     shadowRadius: 10,
     shadowOffset: { width: 0, height: 4 },
     elevation: 4,
-  },
-  secondaryButton: {
-    backgroundColor: '#fff',
   },
   notificationButton: {
     position: 'relative',
