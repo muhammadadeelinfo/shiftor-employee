@@ -1,5 +1,5 @@
-import { RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { useEffect, useState } from 'react';
+import { RefreshControl, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { useEffect, useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { getShifts, subscribeToShiftUpdates, confirmShiftAssignment } from '@features/shifts/shiftsService';
 import { ShiftCard } from '@shared/components/ShiftCard';
@@ -7,6 +7,11 @@ import { useLocation } from '@hooks/useLocation';
 import { useRouter } from 'expo-router';
 import { useAuth } from '@hooks/useSupabaseAuth';
 import { PrimaryButton } from '@shared/components/PrimaryButton';
+
+const startOfMonth = (date: Date) => new Date(date.getFullYear(), date.getMonth(), 1);
+
+const getMonthLabel = (date: Date) =>
+  date.toLocaleDateString([], { month: 'long', year: 'numeric' });
 
 export default function MyShiftsScreen() {
   const { user } = useAuth();
@@ -21,6 +26,26 @@ export default function MyShiftsScreen() {
     staleTime: 30 * 1000,
   });
   const shiftList = shifts ?? [];
+  const [visibleMonth, setVisibleMonth] = useState(() => startOfMonth(new Date()));
+
+  const filteredShifts = useMemo(() => {
+    const monthStart = visibleMonth;
+    const nextMonth = new Date(monthStart.getFullYear(), monthStart.getMonth() + 1, 1);
+    return shiftList.filter((shift) => {
+      const shiftDate = new Date(shift.start);
+      if (Number.isNaN(shiftDate.getTime())) {
+        return false;
+      }
+      return shiftDate >= monthStart && shiftDate < nextMonth;
+    });
+  }, [shiftList, visibleMonth]);
+
+  const handleMonthChange = (offset: number) => {
+    setVisibleMonth((prev) => {
+      const next = new Date(prev.getFullYear(), prev.getMonth() + offset, 1);
+      return next;
+    });
+  };
 
   useEffect(() => {
     if (!userId) return;
@@ -56,6 +81,15 @@ export default function MyShiftsScreen() {
             : 'Enable location to see nearby shifts'}
         </Text>
       </View>
+      <View style={styles.monthSwitcher}>
+        <TouchableOpacity style={styles.monthButton} onPress={() => handleMonthChange(-1)}>
+          <Text style={styles.monthButtonText}>← Previous</Text>
+        </TouchableOpacity>
+        <Text style={styles.monthLabel}>{getMonthLabel(visibleMonth)}</Text>
+        <TouchableOpacity style={styles.monthButton} onPress={() => handleMonthChange(1)}>
+          <Text style={styles.monthButtonText}>Next →</Text>
+        </TouchableOpacity>
+      </View>
       <ScrollView
         contentContainerStyle={styles.list}
         refreshControl={<RefreshControl refreshing={isLoading} onRefresh={() => refetch()} />}
@@ -69,7 +103,7 @@ export default function MyShiftsScreen() {
             <PrimaryButton title="Retry sync" onPress={() => refetch()} style={styles.retryButton} />
           </View>
         ) : (
-          shiftList.map((shift) => (
+          filteredShifts.map((shift) => (
             <ShiftCard
               key={shift.id}
               shift={shift}
@@ -79,7 +113,9 @@ export default function MyShiftsScreen() {
             />
           ))
         )}
-        {!shiftList.length && !isLoading && !error ? <Text style={styles.empty}>No shifts scheduled.</Text> : null}
+        {!filteredShifts.length && !isLoading && !error ? (
+          <Text style={styles.empty}>No shifts scheduled for {getMonthLabel(visibleMonth)}.</Text>
+        ) : null}
       </ScrollView>
     </View>
   );
@@ -132,5 +168,29 @@ const styles = StyleSheet.create({
   retryButton: {
     alignSelf: 'flex-start',
     paddingHorizontal: 18,
+  },
+  monthSwitcher: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  monthButton: {
+    borderRadius: 999,
+    paddingVertical: 6,
+    paddingHorizontal: 14,
+    borderWidth: 1,
+    borderColor: '#cbd5f5',
+    marginHorizontal: 4,
+  },
+  monthButtonText: {
+    color: '#1e40af',
+    fontWeight: '600',
+  },
+  monthLabel: {
+    fontSize: 16,
+    fontWeight: '600',
+    textAlign: 'center',
+    flex: 1,
   },
 });
