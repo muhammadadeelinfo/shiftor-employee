@@ -85,20 +85,30 @@ const pickValue = (row: Record<string, unknown>, keys: string[]): string | undef
   return undefined;
 };
 
+const pickFirstValue = (row: Record<string, unknown>, keys: string[]): unknown => {
+  for (const key of keys) {
+    if (key in row && row[key] !== undefined && row[key] !== null) {
+      return row[key];
+    }
+  }
+  return undefined;
+};
+
 const mapShiftRecord = (raw: Record<string, unknown>): Shift => {
   const start = normalizeTimestampPair(
-    raw.start_date ?? raw.start ?? raw.start_time ?? raw.start_at,
-    raw.start_time ?? raw.shiftStartingTime ?? raw.startTime,
+    pickFirstValue(raw, ['shiftStartingDate', 'start_date', 'start', 'start_at']),
+    pickFirstValue(raw, ['shiftStartingTime', 'start_time', 'startTime']),
     fallbackShifts[0].start
   );
   const end = normalizeTimestampPair(
-    raw.end_date ?? raw.end ?? raw.end_time ?? raw.end_at,
-    raw.end_time ?? raw.shiftEndingTime ?? raw.endTime,
+    pickFirstValue(raw, ['shiftEndingDate', 'end_date', 'end', 'end_at']),
+    pickFirstValue(raw, ['shiftEndingTime', 'end_time', 'endTime']),
     fallbackShifts[0].end
   );
   const title =
     pickValue(raw, ['title', 'shiftTitle', 'name', 'shift_name']) ?? 'Shift';
-  const location = pickValue(raw, ['location', 'address', 'shiftLocation']) ?? 'TBD';
+  const location =
+    pickValue(raw, ['location', 'address', 'shiftLocation', 'objectAddress', 'objectTitle']) ?? 'TBD';
   const description = pickValue(raw, ['description', 'shiftDescription']);
   const statusValue = pickValue(raw, ['status', 'shiftStatus']) ?? 'scheduled';
   return {
