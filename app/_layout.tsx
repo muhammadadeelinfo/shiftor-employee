@@ -58,7 +58,7 @@ function LayoutContent() {
     <AuthProvider>
       <QueryClientProvider client={queryClient}>
         <StatusBar
-          translucent
+          translucent={false}
           backgroundColor={statusBarBgColor}
           style={statusBarStyle}
           hidden={false}
