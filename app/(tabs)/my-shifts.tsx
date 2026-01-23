@@ -1,7 +1,20 @@
-import { RefreshControl, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import {
+  RefreshControl,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+  Pressable,
+} from 'react-native';
 import { useEffect, useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { getShifts, subscribeToShiftUpdates, confirmShiftAssignment } from '@features/shifts/shiftsService';
+import {
+  getShifts,
+  subscribeToShiftUpdates,
+  confirmShiftAssignment,
+} from '@features/shifts/shiftsService';
+import type { Shift } from '@features/shifts/shiftsService';
 import { ShiftCard } from '@shared/components/ShiftCard';
 import { useLocation } from '@hooks/useLocation';
 import { useRouter } from 'expo-router';
@@ -12,6 +25,26 @@ const startOfMonth = (date: Date) => new Date(date.getFullYear(), date.getMonth(
 
 const getMonthLabel = (date: Date) =>
   date.toLocaleDateString([], { month: 'long', year: 'numeric' });
+
+const getDayLabel = (date: Date) =>
+  date.toLocaleDateString([], { weekday: 'short', day: 'numeric' });
+
+const getTimeLabel = (iso: string) => {
+  const parsed = new Date(iso);
+  if (Number.isNaN(parsed.getTime())) return '—';
+  return parsed.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+};
+
+const getMonthDays = (date: Date) => {
+  const days: Date[] = [];
+  const start = startOfMonth(date);
+  const cursor = new Date(start);
+  while (cursor.getMonth() === start.getMonth()) {
+    days.push(new Date(cursor));
+    cursor.setDate(cursor.getDate() + 1);
+  }
+  return days;
+};
 
 export default function MyShiftsScreen() {
   const { user } = useAuth();
@@ -27,6 +60,7 @@ export default function MyShiftsScreen() {
   });
   const shiftList = shifts ?? [];
   const [visibleMonth, setVisibleMonth] = useState(() => startOfMonth(new Date()));
+  const [viewMode, setViewMode] = useState<'list' | 'calendar'>('list');
 
   const filteredShifts = useMemo(() => {
     const monthStart = visibleMonth;
@@ -39,6 +73,21 @@ export default function MyShiftsScreen() {
       return shiftDate >= monthStart && shiftDate < nextMonth;
     });
   }, [shiftList, visibleMonth]);
+
+  const monthDays = useMemo(() => getMonthDays(visibleMonth), [visibleMonth]);
+
+  const shiftsByDay = useMemo(() => {
+    const map = new Map<string, Shift[]>();
+    filteredShifts.forEach((shift) => {
+      const shiftDate = new Date(shift.start);
+      if (Number.isNaN(shiftDate.getTime())) return;
+      const key = shiftDate.toISOString().split('T')[0];
+      const bucket = map.get(key) ?? [];
+      bucket.push(shift);
+      map.set(key, bucket);
+    });
+    return map;
+  }, [filteredShifts]);
 
   const handleMonthChange = (offset: number) => {
     setVisibleMonth((prev) => {
@@ -90,6 +139,26 @@ export default function MyShiftsScreen() {
           <Text style={styles.monthButtonText}>Next →</Text>
         </TouchableOpacity>
       </View>
+      <View style={styles.viewSwitcher}>
+        <TouchableOpacity
+          style={[styles.viewButton, viewMode === 'list' && styles.viewButtonActive]}
+          onPress={() => setViewMode('list')}
+        >
+          <Text style={[styles.viewButtonText, viewMode === 'list' && styles.viewButtonTextActive]}>
+            List view
+          </Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.viewButton, viewMode === 'calendar' && styles.viewButtonActive]}
+          onPress={() => setViewMode('calendar')}
+        >
+          <Text
+            style={[styles.viewButtonText, viewMode === 'calendar' && styles.viewButtonTextActive]}
+          >
+            Calendar view
+          </Text>
+        </TouchableOpacity>
+      </View>
       <ScrollView
         contentContainerStyle={styles.list}
         refreshControl={<RefreshControl refreshing={isLoading} onRefresh={() => refetch()} />}
@@ -102,7 +171,7 @@ export default function MyShiftsScreen() {
             </Text>
             <PrimaryButton title="Retry sync" onPress={() => refetch()} style={styles.retryButton} />
           </View>
-        ) : (
+        ) : viewMode === 'list' ? (
           filteredShifts.map((shift) => (
             <ShiftCard
               key={shift.id}
@@ -112,6 +181,37 @@ export default function MyShiftsScreen() {
               confirmLoading={shift.assignmentId ? confirmingId === shift.assignmentId : false}
             />
           ))
+        ) : (
+          <View style={styles.calendarGrid}>
+            {monthDays.map((day) => {
+              const key = day.toISOString().split('T')[0];
+              const dayShifts = shiftsByDay.get(key) ?? [];
+              return (
+                <View key={key} style={styles.calendarDay}>
+                  <Text style={styles.calendarDayLabel}>{getDayLabel(day)}</Text>
+                  {dayShifts.length ? (
+                    dayShifts.map((shift) => (
+                      <Pressable
+                        key={shift.id}
+                        style={styles.calendarShiftRow}
+                        onPress={() => router.push(`/shift-details/${shift.id}`)}
+                      >
+                        <Text style={styles.calendarShiftTime}>
+                          {getTimeLabel(shift.start)} – {getTimeLabel(shift.end)}
+                        </Text>
+                        <Text style={styles.calendarShiftTitle}>{shift.title}</Text>
+                        <Text style={styles.calendarShiftLocation}>
+                          {shift.location}
+                        </Text>
+                      </Pressable>
+                    ))
+                  ) : (
+                    <Text style={styles.calendarEmptyText}>No shifts</Text>
+                  )}
+                </View>
+              );
+            })}
+          </View>
         )}
         {!filteredShifts.length && !isLoading && !error ? (
           <Text style={styles.empty}>No shifts scheduled for {getMonthLabel(visibleMonth)}.</Text>
@@ -192,5 +292,71 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     textAlign: 'center',
     flex: 1,
+  },
+  viewSwitcher: {
+    flexDirection: 'row',
+    marginBottom: 12,
+    justifyContent: 'center',
+  },
+  viewButton: {
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: '#d1d5db',
+    paddingHorizontal: 14,
+    paddingVertical: 6,
+    marginHorizontal: 4,
+  },
+  viewButtonActive: {
+    backgroundColor: '#2563eb',
+    borderColor: '#2563eb',
+  },
+  viewButtonText: {
+    color: '#1f2937',
+    fontWeight: '600',
+  },
+  viewButtonTextActive: {
+    color: '#fff',
+  },
+  calendarGrid: {
+    paddingVertical: 12,
+  },
+  calendarDay: {
+    marginBottom: 12,
+    backgroundColor: '#fff',
+    borderRadius: 18,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
+  },
+  calendarDayLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#0f172a',
+    marginBottom: 8,
+  },
+  calendarShiftRow: {
+    backgroundColor: '#f8fafc',
+    borderRadius: 12,
+    padding: 10,
+    marginBottom: 8,
+  },
+  calendarShiftTime: {
+    fontSize: 12,
+    color: '#475569',
+  },
+  calendarShiftTitle: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#0f172a',
+    marginTop: 2,
+  },
+  calendarShiftLocation: {
+    fontSize: 12,
+    color: '#6b7280',
+  },
+  calendarEmptyText: {
+    fontSize: 12,
+    color: '#9ca3af',
+    fontStyle: 'italic',
   },
 });
