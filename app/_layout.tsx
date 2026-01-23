@@ -13,10 +13,12 @@ import { NotificationProvider } from '@shared/context/NotificationContext';
 
 const hiddenTopBarPaths = ['/login', '/signup'];
 
-export default function RootLayout() {
+function LayoutContent() {
   const pushToken = useExpoPushToken();
   const pathname = usePathname();
   const shouldShowTopBar = pathname ? !hiddenTopBarPaths.some((path) => pathname.startsWith(path)) : true;
+  const statusBarStyle = shouldShowTopBar ? 'light' : 'dark';
+  const statusBarBgColor = shouldShowTopBar ? '#030712' : '#f8fafc';
 
   useEffect(() => {
     if (Constants.appOwnership === 'expo') {
@@ -53,17 +55,26 @@ export default function RootLayout() {
   }, [pushToken]);
 
   return (
+    <AuthProvider>
+      <QueryClientProvider client={queryClient}>
+        <StatusBar style={statusBarStyle} />
+        {!shouldShowTopBar && (
+          <View style={[styles.statusBarPlaceholder, { backgroundColor: statusBarBgColor }]} />
+        )}
+        {shouldShowTopBar ? <TopBar /> : null}
+        <View style={styles.content}>
+          <Slot />
+        </View>
+      </QueryClientProvider>
+    </AuthProvider>
+  );
+}
+
+export default function RootLayout() {
+  return (
     <NotificationProvider>
       <SafeAreaProvider>
-        <AuthProvider>
-          <QueryClientProvider client={queryClient}>
-            <StatusBar translucent backgroundColor="transparent" style="light" />
-            {shouldShowTopBar ? <TopBar /> : null}
-            <View style={styles.content}>
-              <Slot />
-            </View>
-          </QueryClientProvider>
-        </AuthProvider>
+        <LayoutContent />
       </SafeAreaProvider>
     </NotificationProvider>
   );
@@ -72,5 +83,9 @@ export default function RootLayout() {
 const styles = StyleSheet.create({
   content: {
     flex: 1,
+  },
+  statusBarPlaceholder: {
+    height: Constants.statusBarHeight ?? 0,
+    width: '100%',
   },
 });
