@@ -30,23 +30,25 @@ export const TopBar = () => {
     <SafeAreaView style={[styles.safe, { paddingTop: insets.top }]}>
       <View style={styles.bar}>
         <View style={styles.leftGroup}>
-          <Ionicons name="shield-checkmark-outline" size={20} color="#7dd3fc" />
-          <View style={[styles.stageChip, { borderColor: stageColor }]}>
-            <View style={[styles.stageDot, { backgroundColor: stageColor }]} />
-            <Text style={styles.stageText}>{stageLabel}</Text>
+          <View style={styles.iconWrap}>
+            <Ionicons name="shield-checkmark-outline" size={20} color="#1d4ed8" />
           </View>
-          <View>
+          <View style={styles.titleGroup}>
             <Text style={styles.title}>Employee Portal</Text>
             <Text style={styles.subtitle}>Shift planning & updates</Text>
           </View>
         </View>
         <View style={styles.rightGroup}>
-          <Pressable style={styles.iconButton} onPress={toggle}>
-            <Ionicons name="notifications-outline" size={20} color="#020617" />
-            <View style={[styles.notificationDot, { backgroundColor: '#f87171' }]} />
+          <View style={[styles.stageChip, { borderColor: stageColor }]}>
+            <View style={[styles.stageDot, { backgroundColor: stageColor, borderColor: stageColor }]} />
+            <Text style={styles.stageText}>{stageLabel}</Text>
+          </View>
+          <Pressable style={[styles.iconButton, styles.notificationButton]} onPress={toggle}>
+            <Ionicons name="notifications-outline" size={20} color="#0f172a" />
+            <View style={[styles.notificationDot, styles.redDot]} />
           </Pressable>
-          <Pressable style={styles.iconButton}>
-            <Ionicons name="person-circle-outline" size={22} color="#020617" />
+          <Pressable style={[styles.iconButton, styles.secondaryButton]}>
+            <Ionicons name="person-circle-outline" size={22} color="#0f172a" />
           </Pressable>
         </View>
       </View>
@@ -57,31 +59,46 @@ export const TopBar = () => {
 const styles = StyleSheet.create({
   safe: {
     width: '100%',
-    backgroundColor: '#050714',
+    backgroundColor: '#f8fafc',
   },
   bar: {
     width: '100%',
-    paddingVertical: 14,
+    paddingVertical: 16,
     paddingHorizontal: 20,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: '#050714',
-    borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255,255,255,0.06)',
+    backgroundColor: '#ffffff',
+    borderBottomWidth: 0,
+    shadowColor: '#000',
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 6 },
+    elevation: 6,
   },
   leftGroup: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
+    gap: 14,
+  },
+  iconWrap: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    backgroundColor: '#e0f2fe',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  titleGroup: {
+    justifyContent: 'center',
   },
   title: {
-    color: '#f8fafc',
+    color: '#0f172a',
     fontSize: 18,
     fontWeight: '700',
   },
   subtitle: {
-    color: '#94a3b8',
+    color: '#475569',
     fontSize: 12,
   },
   stageChip: {
@@ -89,18 +106,20 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     borderWidth: 1,
     borderRadius: 999,
-    paddingHorizontal: 10,
+    paddingHorizontal: 12,
     paddingVertical: 4,
-    backgroundColor: 'rgba(255,255,255,0.04)',
+    backgroundColor: 'rgba(14, 165, 233, 0.08)',
     gap: 6,
   },
   stageDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    borderWidth: 1,
+    borderColor: '#dbeafe',
   },
   stageText: {
-    color: '#f8fafc',
+    color: '#0f172a',
     fontSize: 12,
     textTransform: 'uppercase',
     letterSpacing: 0.5,
@@ -111,26 +130,35 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   iconButton: {
-    width: 42,
-    height: 42,
-    borderRadius: 16,
-    backgroundColor: '#fff',
+    width: 44,
+    height: 44,
+    borderRadius: 14,
+    backgroundColor: '#f1f5f9',
     alignItems: 'center',
     justifyContent: 'center',
     shadowColor: '#000',
-    shadowOpacity: 0.15,
-    shadowRadius: 12,
-    shadowOffset: { width: 0, height: 8 },
-    elevation: 6,
+    shadowOpacity: 0.08,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 4,
+  },
+  secondaryButton: {
+    backgroundColor: '#fff',
+  },
+  notificationButton: {
+    position: 'relative',
   },
   notificationDot: {
     position: 'absolute',
     top: 6,
     right: 6,
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    borderWidth: 1,
-    borderColor: '#fff',
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    borderWidth: 2,
+  },
+  redDot: {
+    backgroundColor: '#ef4444',
+    borderColor: '#fef2f2',
   },
 });

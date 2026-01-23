@@ -17,8 +17,8 @@ function LayoutContent() {
   const pushToken = useExpoPushToken();
   const pathname = usePathname();
   const shouldShowTopBar = pathname ? !hiddenTopBarPaths.some((path) => pathname.startsWith(path)) : true;
-  const statusBarStyle = shouldShowTopBar ? 'light' : 'dark';
-  const statusBarBgColor = shouldShowTopBar ? '#030712' : '#f8fafc';
+  const statusBarStyle = 'dark';
+  const statusBarBgColor = '#f8fafc';
 
   useEffect(() => {
     if (Constants.appOwnership === 'expo') {
@@ -57,12 +57,7 @@ function LayoutContent() {
   return (
     <AuthProvider>
       <QueryClientProvider client={queryClient}>
-        <View
-          style={[
-            styles.root,
-            { backgroundColor: shouldShowTopBar ? statusBarBgColor : '#f8fafc' },
-          ]}
-        >
+        <View style={[styles.root, { backgroundColor: statusBarBgColor }]}> 
           <StatusBar
             translucent
             hidden={false}
