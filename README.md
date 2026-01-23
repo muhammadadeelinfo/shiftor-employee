@@ -38,6 +38,8 @@ A cross-platform Expo app that lets employees interact with internal services, l
   ```
 - After you add the real keys, restart Expo (`npx expo start -c`) so `app.config.ts` re-reads them and populates `Constants.expoConfig.extra`.
 - Additional runtime configuration is controlled through `app.config.ts` and `app.json`.
+- Both this Expo app and the Next.js web app share the same Supabase PostgreSQL project (`https://ritalqlveknouvojxfgt.supabase.co`). Mirror the Next.js `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, and `NEXT_PUBLIC_SUPABASE_SERVICE_KEY` settings here so both clients hit the same instance.
+- Prisma is the ORM on top of that database: `schema.prisma` sets `provider = "postgresql"` and `prisma.config.js` loads `DATABASE_URL` (and optionally `DIRECT_URL`) from the environment. Use the same Supabase connection string for those vars so Prisma and both apps work against a single backend.
 
 ### Location handling during development
 
