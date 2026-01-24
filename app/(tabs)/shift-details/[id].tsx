@@ -74,6 +74,20 @@ const formatDuration = (start: string, end: string) => {
   return `${hoursText}${minutesText}`.trim() || '—';
 };
 
+const formatCountdownLabel = (minutes: number) => {
+  if (minutes <= 0) {
+    return 'Live now';
+  }
+  const days = Math.floor(minutes / 1440);
+  const hours = Math.floor((minutes % 1440) / 60);
+  const mins = minutes % 60;
+  const parts: string[] = [];
+  if (days) parts.push(`${days}d`);
+  if (hours) parts.push(`${hours}h`);
+  if (mins) parts.push(`${mins}m`);
+  return parts.length ? parts.join(' ') : 'Less than 1m';
+};
+
 export default function ShiftDetailsScreen() {
   const { id } = useLocalSearchParams();
   const shiftId = Array.isArray(id) ? id[0] : id;
@@ -135,9 +149,7 @@ export default function ShiftDetailsScreen() {
     Math.round((shiftStart.getTime() - now.getTime()) / 60000)
   );
   const countdownLabel =
-    minutesUntilStart <= 0
-      ? 'Shift in progress'
-      : `${minutesUntilStart}m until start`;
+    minutesUntilStart <= 0 ? 'Live now' : formatCountdownLabel(minutesUntilStart);
   const opsContact = shiftToShow.objectName ?? 'Operations team';
   const contactEmail = 'ops@company.com';
   const contactPhone = '+1 (415) 555-0101';
