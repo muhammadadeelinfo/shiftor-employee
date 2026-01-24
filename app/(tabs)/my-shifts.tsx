@@ -22,7 +22,7 @@ import { useLocation } from '@hooks/useLocation';
 import { useRouter } from 'expo-router';
 import { useAuth } from '@hooks/useSupabaseAuth';
 import { PrimaryButton } from '@shared/components/PrimaryButton';
-import { getShiftPhase } from '@shared/utils/shiftPhase';
+import { getShiftPhase, phaseMeta, ShiftPhase } from '@shared/utils/shiftPhase';
 
 const WEEKDAY_LABELS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
@@ -99,6 +99,18 @@ export default function MyShiftsScreen() {
   const focusedDayKey = filteredShifts
     .find((shift) => shift.id === focusedShiftId)
     ?.start.split('T')[0];
+  const dayPhaseMap = useMemo(() => {
+    const map = new Map<string, ShiftPhase>();
+    filteredShifts.forEach((shift) => {
+      const key = shift.start.split('T')[0];
+      const phase = getShiftPhase(shift.start, shift.end, now);
+      const existing = map.get(key);
+      if (!existing || existing === 'past' || (existing === 'upcoming' && phase === 'live')) {
+        map.set(key, phase);
+      }
+    });
+    return map;
+  }, [filteredShifts, now]);
 
   const renderSkeletons = () => (
     <View style={styles.skeletonContainer}>
@@ -300,6 +312,7 @@ export default function MyShiftsScreen() {
                     const isCurrentMonth = day.getMonth() === visibleMonth.getMonth();
                     const isToday = key === todayKey;
                     const isFocusedDay = focusedDayKey === key;
+                    const dayPhase = dayPhaseMap.get(key);
                     return (
                       <View
                         key={key}
@@ -322,8 +335,17 @@ export default function MyShiftsScreen() {
                           </Text>
                         </View>
                     {dayShifts.length ? (
-                      <View style={styles.calendarShiftMarker}>
-                        <Ionicons name="calendar-outline" size={12} color="#1d4ed8" />
+                      <View
+                        style={[
+                          styles.calendarShiftMarker,
+                          dayPhase ? { backgroundColor: phaseMeta[dayPhase].background } : undefined,
+                        ]}
+                      >
+                        <Ionicons
+                          name="calendar-outline"
+                          size={12}
+                          color={dayPhase ? phaseMeta[dayPhase].color : '#1d4ed8'}
+                        />
                       </View>
                     ) : null}
                     {isFocusedDay && (
