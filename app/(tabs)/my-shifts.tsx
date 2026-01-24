@@ -22,6 +22,7 @@ import { useLocation } from '@hooks/useLocation';
 import { useRouter } from 'expo-router';
 import { useAuth } from '@hooks/useSupabaseAuth';
 import { PrimaryButton } from '@shared/components/PrimaryButton';
+import { getShiftPhase } from '@shared/utils/shiftPhase';
 
 const WEEKDAY_LABELS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
@@ -91,6 +92,10 @@ export default function MyShiftsScreen() {
   }, [shiftList, visibleMonth]);
 
   const showSkeletons = isLoading && !filteredShifts.length && !error;
+  const now = new Date();
+  const liveShift = filteredShifts.find((shift) => getShiftPhase(shift.start, shift.end, now) === 'live');
+  const nextShift = filteredShifts.find((shift) => new Date(shift.start) > now);
+  const focusedShiftId = liveShift?.id ?? nextShift?.id;
 
   const renderSkeletons = () => (
     <View style={styles.skeletonContainer}>
@@ -253,6 +258,8 @@ export default function MyShiftsScreen() {
               <ShiftCard
                 key={shift.id}
                 shift={shift}
+                phase={getShiftPhase(shift.start, shift.end, now)}
+                isPrimary={shift.id === focusedShiftId}
                 onPress={() => router.push(`/shift-details/${shift.id}`)}
                 onConfirm={shift.assignmentId ? () => handleConfirm(shift.assignmentId) : undefined}
                 confirmLoading={shift.assignmentId ? confirmingId === shift.assignmentId : false}

@@ -6,6 +6,7 @@ import {
   Text,
   View,
 } from 'react-native';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { getShiftById } from '@features/shifts/shiftsService';
@@ -13,6 +14,7 @@ import { PrimaryButton } from '@shared/components/PrimaryButton';
 import type { Shift } from '@features/shifts/shiftsService';
 import { useAuth } from '@hooks/useSupabaseAuth';
 import { LinearGradient } from 'expo-linear-gradient';
+import { getShiftPhase, phaseMeta, ShiftPhase } from '@shared/utils/shiftPhase';
 
 const statusStyles: Record<
   Shift['status'],
@@ -159,8 +161,10 @@ export default function ShiftDetailsScreen() {
     Linking.openURL(`https://www.google.com/maps/search/?api=1&query=${query}`);
   };
 
+  const shiftEnd = new Date(shiftToShow.end);
   const shiftTempo =
     minutesUntilStart <= 0 ? 'Live now' : minutesUntilStart <= 30 ? 'Starting soon' : 'Upcoming';
+  const shiftPhase: ShiftPhase = getShiftPhase(shiftToShow.start, shiftToShow.end, now);
   const checklist = ['Arrive 10 minutes early', 'Wear badge and mask', 'Review guest list'];
   const prepValue = minutesUntilStart <= 30 ? 'Head to location' : 'Prep gear';
   const heroStats = [
@@ -215,6 +219,12 @@ export default function ShiftDetailsScreen() {
             <Text style={styles.heroChipLabel}>Countdown</Text>
             <Text style={styles.heroChipValue}>{countdownLabel}</Text>
           </View>
+        </View>
+        <View style={[styles.heroPhase, { backgroundColor: phaseMeta[shiftPhase].background }]}>
+          <Ionicons name={phaseMeta[shiftPhase].icon} size={16} color={phaseMeta[shiftPhase].color} />
+          <Text style={[styles.heroPhaseLabel, { color: phaseMeta[shiftPhase].color }]}>
+            {phaseMeta[shiftPhase].label}
+          </Text>
         </View>
       </LinearGradient>
 
@@ -430,6 +440,19 @@ const styles = StyleSheet.create({
   },
   heroChipLast: {
     marginRight: 0,
+  },
+  heroPhase: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 12,
+    paddingVertical: 8,
+    paddingHorizontal: 14,
+    borderRadius: 16,
+  },
+  heroPhaseLabel: {
+    marginLeft: 8,
+    fontSize: 13,
+    fontWeight: '600',
   },
   section: {
     backgroundColor: '#fff',

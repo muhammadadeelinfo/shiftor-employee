@@ -3,12 +3,51 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { useState } from 'react';
 import type { Shift } from '@features/shifts/shiftsService';
 import { PrimaryButton } from '@shared/components/PrimaryButton';
+import { ShiftPhase, phaseMeta } from '@shared/utils/shiftPhase';
 
 const statusColors: Record<string, string> = {
   scheduled: '#2563eb',
   'in-progress': '#059669',
   completed: '#6b7280',
   blocked: '#dc2626',
+};
+const phaseMeta: Record<
+  ShiftPhase,
+  { label: string; icon: keyof typeof Ionicons.glyphMap; color: string; background: string }
+> = {
+  past: {
+    label: 'Past shift',
+    icon: 'time-outline',
+    color: '#6b7280',
+    background: '#f1f5f9',
+  },
+  live: {
+    label: 'Live now',
+    icon: 'play-circle-outline',
+    color: '#059669',
+    background: '#ecfdf5',
+  },
+  upcoming: {
+    label: 'Upcoming',
+    icon: 'calendar-outline',
+    color: '#2563eb',
+    background: '#eff6ff',
+  },
+};
+
+type ShiftPhase = 'past' | 'live' | 'upcoming';
+
+const getShiftPhase = (startIso: string, endIso: string): ShiftPhase => {
+  const now = new Date();
+  const start = new Date(startIso);
+  const end = new Date(endIso);
+  if (now >= end) {
+    return 'past';
+  }
+  if (now >= start) {
+    return 'live';
+  }
+  return 'upcoming';
 };
 
 const formatTime = (iso: string) => {
@@ -72,9 +111,11 @@ type Props = {
   onPress?: () => void;
   onConfirm?: () => void;
   confirmLoading?: boolean;
+  phase: ShiftPhase;
+  isPrimary?: boolean;
 };
 
-export const ShiftCard = ({ shift, onPress, onConfirm, confirmLoading }: Props) => {
+export const ShiftCard = ({ shift, onPress, onConfirm, confirmLoading, phase: shiftPhase, isPrimary }: Props) => {
   const headerStatus = shift.status.replace(/\b\w/g, (char) => char.toUpperCase());
   const detailRows = [
     {
@@ -85,10 +126,20 @@ export const ShiftCard = ({ shift, onPress, onConfirm, confirmLoading }: Props) 
     },
   ];
   const [showFullAddress, setShowFullAddress] = useState(false);
+  const phaseConfig = phaseMeta[shiftPhase];
 
   return (
     <TouchableOpacity style={styles.card} onPress={onPress} activeOpacity={0.9}>
-      <View style={styles.accent} />
+      <View style={styles.accentContainer}>
+        <View
+          style={[
+            styles.accent,
+            isPrimary && styles.accentActive,
+            isPrimary ? { backgroundColor: phaseConfig.color } : undefined,
+          ]}
+        />
+        {isPrimary && <View style={[styles.accentDot, { backgroundColor: phaseConfig.color }]} />}
+      </View>
       <View style={styles.body}>
         <View style={styles.headerRow}>
           <View>
@@ -106,6 +157,10 @@ export const ShiftCard = ({ shift, onPress, onConfirm, confirmLoading }: Props) 
               {headerStatus}
             </Text>
           </View>
+        </View>
+        <View style={[styles.phaseBadge, { backgroundColor: phaseConfig.background }]}>
+          <Ionicons name={phaseConfig.icon as any} size={16} color={phaseConfig.color} />
+          <Text style={[styles.phaseLabel, { color: phaseConfig.color }]}>{phaseConfig.label}</Text>
         </View>
 
         <View style={styles.timeRow}>
@@ -173,8 +228,8 @@ export const ShiftCard = ({ shift, onPress, onConfirm, confirmLoading }: Props) 
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: '#ffffff',
-    borderRadius: 24,
+  backgroundColor: '#ffffff',
+  borderRadius: 24,
     marginBottom: 16,
     shadowColor: '#0f172a',
     shadowOpacity: 0.08,
@@ -186,9 +241,29 @@ const styles = StyleSheet.create({
     borderColor: '#e5e7eb',
     flexDirection: 'row',
   },
+  accentContainer: {
+    width: 14,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: 6,
+  },
   accent: {
     width: 4,
+    flex: 1,
+    borderRadius: 999,
     backgroundColor: '#2563eb',
+  },
+  accentActive: {
+    backgroundColor: '#0ea5e9',
+  },
+  accentDot: {
+    position: 'absolute',
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    top: 16,
+    borderWidth: 2,
+    borderColor: '#fff',
   },
   body: {
     flex: 1,
@@ -249,6 +324,19 @@ const styles = StyleSheet.create({
   statusText: {
     fontSize: 12,
     fontWeight: '600',
+  },
+  phaseBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderRadius: 999,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    marginBottom: 10,
+  },
+  phaseLabel: {
+    fontSize: 12,
+    fontWeight: '600',
+    marginLeft: 6,
   },
   detailRows: {
     marginTop: 6,
