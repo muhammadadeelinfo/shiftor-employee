@@ -19,6 +19,9 @@ function LayoutContent() {
   const shouldShowTopBar = pathname ? !hiddenTopBarPaths.some((path) => pathname.startsWith(path)) : true;
   const statusBarStyle = 'dark';
   const statusBarBgColor = '#f8fafc';
+  const compactRoutes = ['my-shifts', 'shift-details'];
+  const topBarVariant =
+    pathname && compactRoutes.some((segment) => pathname.includes(segment)) ? 'compact' : 'regular';
 
   useEffect(() => {
     if (Constants.appOwnership === 'expo') {
@@ -64,7 +67,7 @@ function LayoutContent() {
             backgroundColor={statusBarBgColor}
             style={statusBarStyle}
           />
-          {shouldShowTopBar && <TopBar />}
+          {shouldShowTopBar && <TopBar variant={topBarVariant} />}
           <View style={styles.content}>
             <Slot />
           </View>

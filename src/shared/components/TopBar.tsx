@@ -16,31 +16,60 @@ const stageLabelMap: Record<string, string> = {
   development: 'Dev',
 };
 
-export const TopBar = () => {
+type TopBarVariant = 'regular' | 'compact';
+
+type Props = {
+  variant?: TopBarVariant;
+};
+
+const STAGE_TRANSFORM: Record<TopBarVariant, 'uppercase' | 'none'> = {
+  regular: 'uppercase',
+  compact: 'none',
+};
+
+export const TopBar = ({ variant = 'regular' }: Props) => {
   const insets = useSafeAreaInsets();
   const { toggle } = useNotifications();
   const stage = Constants.expoConfig?.extra?.expoStage ?? 'development';
   const stageColor = stageColorMap[stage] ?? '#38bdf8';
   const stageLabel = stageLabelMap[stage] ?? 'Dev';
+  const isCompact = variant === 'compact';
 
   return (
-    <SafeAreaView style={[styles.safe, { paddingTop: insets.top }]}>
-      <View style={styles.bar}>
-        <View style={styles.leftGroup}>
-          <View style={styles.logoPill}>
-            <Ionicons name="sparkles" size={18} color="#0f172a" />
+    <SafeAreaView style={[styles.safe, { paddingTop: insets.top + (isCompact ? 4 : 0) }]}>
+      <View style={[styles.bar, isCompact ? styles.barCompact : styles.barRegular]}>
+        <View style={[styles.leftGroup, isCompact && styles.leftGroupCompact]}>
+          <View style={[styles.logoPill, isCompact && styles.logoPillCompact]}>
+            <Ionicons name="sparkles" size={isCompact ? 16 : 18} color="#0f172a" />
           </View>
           <View>
-            <Text style={styles.title}>Employee Portal</Text>
-            <Text style={styles.subtitle}>Shift planning & updates</Text>
+            <Text style={[styles.title, isCompact && styles.titleCompact]}>Employee Portal</Text>
+            {!isCompact && <Text style={styles.subtitle}>Shift planning & updates</Text>}
           </View>
         </View>
-        <View style={styles.rightGroup}>
-          <View style={[styles.stageChip, { borderColor: stageColor }]}>
-            <Text style={[styles.stageText, { color: stageColor }]}>{stageLabel}</Text>
+        <View style={[styles.rightGroup, isCompact && styles.rightGroupCompact]}>
+          <View
+            style={[
+              styles.stageChip,
+              isCompact && styles.stageChipCompact,
+              { borderColor: stageColor },
+            ]}
+          >
+            <Text
+              style={[
+                styles.stageText,
+                isCompact && styles.stageTextCompact,
+                { color: stageColor, textTransform: STAGE_TRANSFORM[variant] },
+              ]}
+            >
+              {stageLabel}
+            </Text>
           </View>
-          <Pressable style={styles.iconButton} onPress={toggle}>
-            <Ionicons name="notifications-outline" size={20} color="#fff" />
+          <Pressable
+            style={[styles.iconButton, isCompact && styles.iconButtonCompact]}
+            onPress={toggle}
+          >
+            <Ionicons name="notifications-outline" size={isCompact ? 18 : 20} color="#fff" />
             <View style={[styles.notificationDot, styles.redDot]} />
           </Pressable>
         </View>
@@ -56,12 +85,14 @@ const styles = StyleSheet.create({
   },
   bar: {
     width: '100%',
-    paddingVertical: 18,
     paddingHorizontal: 20,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     backgroundColor: '#ffffff',
+  },
+  barRegular: {
+    paddingVertical: 18,
     borderRadius: 20,
     shadowColor: '#0f172a',
     shadowOpacity: 0.08,
@@ -69,10 +100,24 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 8 },
     elevation: 6,
   },
+  barCompact: {
+    paddingVertical: 10,
+    borderRadius: 14,
+    marginHorizontal: 16,
+    marginBottom: 6,
+    shadowColor: '#0f172a',
+    shadowOpacity: 0.05,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 6 },
+    elevation: 4,
+  },
   leftGroup: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
+  },
+  leftGroupCompact: {
+    gap: 8,
   },
   logoPill: {
     width: 44,
@@ -87,11 +132,20 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 5 },
     elevation: 6,
   },
+  logoPillCompact: {
+    width: 36,
+    height: 36,
+    borderRadius: 12,
+    shadowOpacity: 0.06,
+  },
   title: {
     color: '#0f172a',
     fontSize: 20,
     fontWeight: '700',
     letterSpacing: 0.1,
+  },
+  titleCompact: {
+    fontSize: 16,
   },
   subtitle: {
     color: '#64748b',
@@ -103,6 +157,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 10,
   },
+  rightGroupCompact: {
+    gap: 6,
+  },
   stageChip: {
     borderRadius: 999,
     paddingHorizontal: 14,
@@ -110,11 +167,19 @@ const styles = StyleSheet.create({
     backgroundColor: '#e0f2fe',
     borderWidth: 0.5,
   },
+  stageChipCompact: {
+    paddingHorizontal: 10,
+    paddingVertical: 3,
+  },
   stageText: {
     fontSize: 11,
     fontWeight: '700',
     textTransform: 'uppercase',
     letterSpacing: 0.8,
+  },
+  stageTextCompact: {
+    fontSize: 10,
+    letterSpacing: 0.4,
   },
   iconButton: {
     width: 44,
@@ -128,6 +193,11 @@ const styles = StyleSheet.create({
     shadowRadius: 12,
     shadowOffset: { width: 0, height: 6 },
     elevation: 5,
+  },
+  iconButtonCompact: {
+    width: 36,
+    height: 36,
+    borderRadius: 12,
   },
   notificationDot: {
     position: 'absolute',
