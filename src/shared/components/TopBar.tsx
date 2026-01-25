@@ -16,7 +16,7 @@ const stageLabelMap: Record<string, string> = {
   development: 'Dev',
 };
 
-type TopBarVariant = 'regular' | 'compact';
+export type TopBarVariant = 'regular' | 'compact' | 'floating';
 
 type Props = {
   variant?: TopBarVariant;
@@ -25,6 +25,7 @@ type Props = {
 const STAGE_TRANSFORM: Record<TopBarVariant, 'uppercase' | 'none'> = {
   regular: 'uppercase',
   compact: 'none',
+  floating: 'uppercase',
 };
 
 export const TopBar = ({ variant = 'regular' }: Props) => {
@@ -34,24 +35,70 @@ export const TopBar = ({ variant = 'regular' }: Props) => {
   const stageColor = stageColorMap[stage] ?? '#38bdf8';
   const stageLabel = stageLabelMap[stage] ?? 'Dev';
   const isCompact = variant === 'compact';
+  const isFloating = variant === 'floating';
 
   return (
-    <SafeAreaView style={[styles.safe, { paddingTop: insets.top + (isCompact ? 4 : 0) }]}>
-      <View style={[styles.bar, isCompact ? styles.barCompact : styles.barRegular]}>
-        <View style={[styles.leftGroup, isCompact && styles.leftGroupCompact]}>
-          <View style={[styles.logoPill, isCompact && styles.logoPillCompact]}>
-            <Ionicons name="sparkles" size={isCompact ? 16 : 18} color="#0f172a" />
+    <SafeAreaView
+      style={[
+        styles.safe,
+        {
+          paddingTop:
+            insets.top +
+            (isFloating ? 2 : isCompact ? 4 : 0),
+        },
+      ]}
+    >
+      <View
+        style={[
+          styles.bar,
+          isFloating ? styles.barFloating : isCompact ? styles.barCompact : styles.barRegular,
+        ]}
+      >
+        <View
+          style={[
+            styles.leftGroup,
+            isCompact && styles.leftGroupCompact,
+            isFloating && styles.leftGroupFloating,
+          ]}
+        >
+          <View
+            style={[
+              styles.logoPill,
+              isCompact && styles.logoPillCompact,
+              isFloating && styles.logoPillFloating,
+            ]}
+          >
+            <Ionicons
+              name="sparkles"
+              size={isFloating ? 16 : isCompact ? 16 : 18}
+              color="#0f172a"
+            />
           </View>
           <View>
-            <Text style={[styles.title, isCompact && styles.titleCompact]}>Employee Portal</Text>
-            {!isCompact && <Text style={styles.subtitle}>Shift planning & updates</Text>}
+            <Text
+              style={[
+                styles.title,
+                isCompact && styles.titleCompact,
+                isFloating && styles.titleFloating,
+              ]}
+            >
+              Employee Portal
+            </Text>
+            {!isCompact && !isFloating && <Text style={styles.subtitle}>Shift planning & updates</Text>}
           </View>
         </View>
-        <View style={[styles.rightGroup, isCompact && styles.rightGroupCompact]}>
+        <View
+          style={[
+            styles.rightGroup,
+            isCompact && styles.rightGroupCompact,
+            isFloating && styles.rightGroupFloating,
+          ]}
+        >
           <View
             style={[
               styles.stageChip,
               isCompact && styles.stageChipCompact,
+              isFloating && styles.stageChipFloating,
               { borderColor: stageColor },
             ]}
           >
@@ -59,6 +106,7 @@ export const TopBar = ({ variant = 'regular' }: Props) => {
               style={[
                 styles.stageText,
                 isCompact && styles.stageTextCompact,
+                isFloating && styles.stageTextFloating,
                 { color: stageColor, textTransform: STAGE_TRANSFORM[variant] },
               ]}
             >
@@ -66,10 +114,14 @@ export const TopBar = ({ variant = 'regular' }: Props) => {
             </Text>
           </View>
           <Pressable
-            style={[styles.iconButton, isCompact && styles.iconButtonCompact]}
+            style={[
+              styles.iconButton,
+              isCompact && styles.iconButtonCompact,
+              isFloating && styles.iconButtonFloating,
+            ]}
             onPress={toggle}
           >
-            <Ionicons name="notifications-outline" size={isCompact ? 18 : 20} color="#fff" />
+            <Ionicons name="notifications-outline" size={isFloating ? 16 : isCompact ? 18 : 20} color="#fff" />
             <View style={[styles.notificationDot, styles.redDot]} />
           </Pressable>
         </View>
@@ -111,6 +163,18 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 6 },
     elevation: 4,
   },
+  barFloating: {
+    paddingVertical: 8,
+    borderRadius: 16,
+    marginHorizontal: 16,
+    marginBottom: 6,
+    shadowColor: '#0f172a',
+    shadowOpacity: 0.04,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 6 },
+    elevation: 3,
+    backgroundColor: '#ffffff',
+  },
   leftGroup: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -118,6 +182,9 @@ const styles = StyleSheet.create({
   },
   leftGroupCompact: {
     gap: 8,
+  },
+  leftGroupFloating: {
+    gap: 6,
   },
   logoPill: {
     width: 44,
@@ -138,6 +205,12 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     shadowOpacity: 0.06,
   },
+  logoPillFloating: {
+    width: 32,
+    height: 32,
+    borderRadius: 10,
+    shadowOpacity: 0.05,
+  },
   title: {
     color: '#0f172a',
     fontSize: 20,
@@ -146,6 +219,9 @@ const styles = StyleSheet.create({
   },
   titleCompact: {
     fontSize: 16,
+  },
+  titleFloating: {
+    fontSize: 14,
   },
   subtitle: {
     color: '#64748b',
@@ -160,6 +236,9 @@ const styles = StyleSheet.create({
   rightGroupCompact: {
     gap: 6,
   },
+  rightGroupFloating: {
+    gap: 4,
+  },
   stageChip: {
     borderRadius: 999,
     paddingHorizontal: 14,
@@ -171,6 +250,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 3,
   },
+  stageChipFloating: {
+    paddingHorizontal: 10,
+    paddingVertical: 2,
+  },
   stageText: {
     fontSize: 11,
     fontWeight: '700',
@@ -180,6 +263,10 @@ const styles = StyleSheet.create({
   stageTextCompact: {
     fontSize: 10,
     letterSpacing: 0.4,
+  },
+  stageTextFloating: {
+    fontSize: 10,
+    letterSpacing: 0.6,
   },
   iconButton: {
     width: 44,
@@ -198,6 +285,11 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 12,
+  },
+  iconButtonFloating: {
+    width: 34,
+    height: 34,
+    borderRadius: 10,
   },
   notificationDot: {
     position: 'absolute',

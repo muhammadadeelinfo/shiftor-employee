@@ -8,7 +8,7 @@ import { View, StyleSheet } from 'react-native';
 import { AuthProvider } from '@hooks/useSupabaseAuth';
 import { queryClient } from '@lib/queryClient';
 import { useExpoPushToken } from '@hooks/useExpoPushToken';
-import { TopBar } from '@shared/components/TopBar';
+import { TopBar, type TopBarVariant } from '@shared/components/TopBar';
 import { NotificationProvider } from '@shared/context/NotificationContext';
 
 const hiddenTopBarPaths = ['/login', '/signup'];
@@ -19,9 +19,16 @@ function LayoutContent() {
   const shouldShowTopBar = pathname ? !hiddenTopBarPaths.some((path) => pathname.startsWith(path)) : true;
   const statusBarStyle = 'dark';
   const statusBarBgColor = '#f8fafc';
-  const compactRoutes = ['my-shifts', 'shift-details'];
-  const topBarVariant =
-    pathname && compactRoutes.some((segment) => pathname.includes(segment)) ? 'compact' : 'regular';
+  const floatingRoutes = ['/my-shifts'];
+  const compactRoutes = ['/shift-details'];
+  let topBarVariant: TopBarVariant = 'regular';
+  if (pathname) {
+    if (floatingRoutes.some((route) => pathname.startsWith(route))) {
+      topBarVariant = 'floating';
+    } else if (compactRoutes.some((route) => pathname.startsWith(route))) {
+      topBarVariant = 'compact';
+    }
+  }
 
   useEffect(() => {
     if (Constants.appOwnership === 'expo') {
