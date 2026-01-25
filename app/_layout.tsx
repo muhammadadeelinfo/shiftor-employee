@@ -57,7 +57,7 @@ function LayoutContent() {
   return (
     <AuthProvider>
       <QueryClientProvider client={queryClient}>
-        <View style={[styles.root, { backgroundColor: statusBarBgColor }]}> 
+        <View style={[styles.root, { backgroundColor: statusBarBgColor }]}>
           <StatusBar
             translucent
             hidden={false}
@@ -65,9 +65,9 @@ function LayoutContent() {
             style={statusBarStyle}
           />
           {shouldShowTopBar && <TopBar />}
-        </View>
-        <View style={styles.content}>
-          <Slot />
+          <View style={styles.content}>
+            <Slot />
+          </View>
         </View>
       </QueryClientProvider>
     </AuthProvider>
@@ -86,6 +86,7 @@ export default function RootLayout() {
 
 const styles = StyleSheet.create({
   root: {
+    flex: 1,
     width: '100%',
   },
   content: {

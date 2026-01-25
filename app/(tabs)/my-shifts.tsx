@@ -422,7 +422,7 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#f8fafc',
     paddingHorizontal: 16,
-    paddingTop: 4,
+    paddingTop: 0,
     paddingBottom: 16,
   },
   header: {
@@ -438,6 +438,8 @@ const styles = StyleSheet.create({
   },
   list: {
     paddingBottom: 24,
+    paddingTop: 4,
+    flexGrow: 1,
   },
   errorCard: {
     backgroundColor: '#fee2e2',
