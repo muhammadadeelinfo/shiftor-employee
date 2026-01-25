@@ -52,12 +52,13 @@ export const TopBar = ({ variant = 'regular' }: Props) => {
         },
       ]}
     >
-      <View
-        style={[
-          styles.bar,
-          isFloating ? styles.barFloating : isCompact ? styles.barCompact : styles.barRegular,
-        ]}
-      >
+      <View style={styles.barWrapper}>
+        <View
+          style={[
+            styles.bar,
+            isFloating ? styles.barFloating : isCompact ? styles.barCompact : styles.barRegular,
+          ]}
+        >
         <View
           style={[
             styles.leftGroup,
@@ -147,6 +148,7 @@ export const TopBar = ({ variant = 'regular' }: Props) => {
             <View style={[styles.notificationDot, styles.redDot]} />
           </Pressable>
         </View>
+        </View>
       </View>
     </SafeAreaView>
   );
@@ -164,6 +166,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     backgroundColor: '#ffffff',
+    maxWidth: 900,
+    alignSelf: 'center',
   },
   barRegular: {
     paddingVertical: 12,
@@ -338,5 +342,9 @@ const styles = StyleSheet.create({
   },
   redDot: {
     backgroundColor: '#ef4444',
+  },
+  barWrapper: {
+    width: '100%',
+    alignItems: 'center',
   },
 });
