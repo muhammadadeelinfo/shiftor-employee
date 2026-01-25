@@ -141,15 +141,6 @@ const mapShiftRecord = (raw: Record<string, unknown>): Shift => {
     description: description ?? undefined,
   };
 };
-
-const isVisibleShiftRecord = (raw: Record<string, unknown>) => {
-  const publishStatus = pickValue(raw, ['status', 'shiftStatus', 'publicationStatus', 'publishStatus']);
-  if (!publishStatus) {
-    return true;
-  }
-  return publishStatus.toLowerCase() !== 'pending';
-};
-
 const sortShiftsByStart = (list: Shift[]): Shift[] =>
   [...list].sort((a, b) => {
     const aTime = Number(new Date(a.start));
@@ -165,8 +156,6 @@ const mapShiftArray = (
   assignments?: AssignmentMeta[]
 ): Shift[] => {
   if (!data?.length) return [];
-  const visibleRows = data.filter(isVisibleShiftRecord);
-  if (!visibleRows.length) return [];
   const assignmentByShiftId = new Map<string, AssignmentMeta>();
   assignments?.forEach((assignment) => {
     if (assignment.shiftId) {
@@ -174,7 +163,7 @@ const mapShiftArray = (
     }
   });
 
-  const parsed = visibleRows
+  const parsed = data
     .map((row) => {
       const shift = mapShiftRecord(row);
       if (shift.id === 'unknown') return undefined;
@@ -187,7 +176,10 @@ const mapShiftArray = (
       };
     })
     .filter((shift): shift is Shift => Boolean(shift));
-  return sortShiftsByStart(parsed);
+  const visibleShifts = parsed.filter(
+    (shift) => shift.confirmationStatus?.toLowerCase() !== 'pending'
+  );
+  return sortShiftsByStart(visibleShifts);
 };
 
 const isMissingColumnError = (error: unknown) =>
