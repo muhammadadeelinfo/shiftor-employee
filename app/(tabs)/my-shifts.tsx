@@ -427,7 +427,7 @@ const styles = StyleSheet.create({
     paddingBottom: 16,
   },
   header: {
-    marginBottom: 6,
+    marginBottom: 4,
   },
   label: {
     fontSize: 20,
@@ -484,7 +484,8 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   viewControlsContainer: {
-    marginVertical: 6,
+    marginTop: 4,
+    marginBottom: 6,
     gap: 8,
   },
   monthSwitcherCard: {
@@ -494,7 +495,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     borderRadius: 18,
     paddingVertical: 6,
-    paddingHorizontal: 12,
+    paddingHorizontal: 14,
     shadowColor: '#0f172a',
     shadowOpacity: 0.05,
     shadowRadius: 12,
@@ -502,6 +503,7 @@ const styles = StyleSheet.create({
     elevation: 4,
     borderWidth: 1,
     borderColor: '#e5e7eb',
+    marginBottom: 6,
   },
   monthNavButton: {
     width: 36,

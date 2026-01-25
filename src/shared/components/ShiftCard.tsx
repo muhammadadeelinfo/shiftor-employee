@@ -140,17 +140,19 @@ export const ShiftCard = ({
                 {formatTime(shift.start)} – {formatTime(shift.end)}
               </Text>
             </View>
-            <Text style={styles.phaseMetaText}>{phaseConfig.label}</Text>
           </View>
-          <View style={[styles.statusBadge, { borderColor: statusColor }]}>
-            <Animated.View
-              style={[
-                styles.statusDot,
-                { backgroundColor: statusColor },
-                isLive && { transform: [{ scale: pulseAnim }] },
-              ]}
-            />
-            <Text style={[styles.statusText, { color: statusColor }]}>{shift.status.toUpperCase()}</Text>
+          <View style={styles.statusBlock}>
+            <View style={[styles.statusBadge, { borderColor: statusColor }]}>
+              <Animated.View
+                style={[
+                  styles.statusDot,
+                  { backgroundColor: statusColor },
+                  isLive && { transform: [{ scale: pulseAnim }] },
+                ]}
+              />
+              <Text style={[styles.statusText, { color: statusColor }]}>{shift.status.toUpperCase()}</Text>
+            </View>
+            <Text style={styles.phaseInline}>{phaseConfig.label}</Text>
           </View>
         </View>
 
@@ -198,7 +200,7 @@ export const ShiftCard = ({
 
         {shift.assignmentId && (
           <View style={styles.confirmSection}>
-            <Text style={styles.confirmInstruction}>Be on time</Text>
+            <Text style={styles.confirmInstruction}>Be On Time</Text>
             {shift.confirmationStatus?.toLowerCase() === 'confirmed' ? (
               <Text style={styles.confirmedText}>Confirmed</Text>
             ) : (
@@ -287,10 +289,15 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#cbd5f5',
   },
-  phaseMetaText: {
-    marginTop: 4,
-    fontSize: 12,
-    color: '#475569',
+  statusBlock: {
+    alignItems: 'flex-end',
+    gap: 2,
+  },
+  phaseInline: {
+    fontSize: 10,
+    letterSpacing: 0.5,
+    textTransform: 'uppercase',
+    color: '#94a3b8',
   },
   statusBadge: {
     flexDirection: 'row',
@@ -376,10 +383,11 @@ const styles = StyleSheet.create({
     marginTop: 16,
   },
   confirmInstruction: {
-    textTransform: 'capitalize',
+    textTransform: 'uppercase',
     color: '#475569',
-    fontSize: 14,
+    fontSize: 12,
     fontWeight: '600',
+    letterSpacing: 0.4,
   },
   confirmedText: {
     color: '#059669',
