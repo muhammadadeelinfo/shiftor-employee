@@ -3,6 +3,8 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import Constants from 'expo-constants';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useNotifications } from '@shared/context/NotificationContext';
+import { useAuth } from '@hooks/useSupabaseAuth';
+import { useAuth } from '@hooks/useSupabaseAuth';
 
 const stageColorMap: Record<string, string> = {
   production: '#22c55e',
@@ -31,11 +33,15 @@ const STAGE_TRANSFORM: Record<TopBarVariant, 'uppercase' | 'none'> = {
 export const TopBar = ({ variant = 'regular' }: Props) => {
   const insets = useSafeAreaInsets();
   const { toggle } = useNotifications();
+  const { user } = useAuth();
   const stage = Constants.expoConfig?.extra?.expoStage ?? 'development';
   const stageColor = stageColorMap[stage] ?? '#38bdf8';
   const stageLabel = stageLabelMap[stage] ?? 'Dev';
   const isCompact = variant === 'compact';
   const isFloating = variant === 'floating';
+
+  const displayName =
+    user?.user_metadata?.full_name ?? user?.email?.split('@')[0] ?? 'Employee';
 
   return (
     <SafeAreaView
@@ -43,8 +49,7 @@ export const TopBar = ({ variant = 'regular' }: Props) => {
         styles.safe,
         {
           paddingTop:
-            insets.top +
-            (isFloating ? 2 : isCompact ? 4 : 0),
+            insets.top + (isFloating ? 2 : isCompact ? 4 : 0),
         },
       ]}
     >
@@ -84,7 +89,21 @@ export const TopBar = ({ variant = 'regular' }: Props) => {
             >
               Employee Portal
             </Text>
-            {!isCompact && !isFloating && <Text style={styles.subtitle}>Shift planning & updates</Text>}
+            {!isCompact && !isFloating ? (
+              <>
+                <Text style={styles.subtitle}>Shift planning & updates</Text>
+                <Text style={styles.greeting}>Hi, {displayName}</Text>
+              </>
+            ) : (
+              <Text
+                style={[
+                  styles.subtitleCompact,
+                  isFloating && styles.subtitleFloating,
+                ]}
+              >
+                Hi, {displayName}
+              </Text>
+            )}
           </View>
         </View>
         <View
@@ -121,7 +140,11 @@ export const TopBar = ({ variant = 'regular' }: Props) => {
             ]}
             onPress={toggle}
           >
-            <Ionicons name="notifications-outline" size={isFloating ? 16 : isCompact ? 18 : 20} color="#fff" />
+            <Ionicons
+              name="notifications-outline"
+              size={isFloating ? 16 : isCompact ? 18 : 20}
+              color="#fff"
+            />
             <View style={[styles.notificationDot, styles.redDot]} />
           </Pressable>
         </View>
@@ -226,6 +249,19 @@ const styles = StyleSheet.create({
   subtitle: {
     color: '#64748b',
     fontSize: 13,
+    marginTop: 2,
+  },
+  subtitleCompact: {
+    color: '#475569',
+    fontSize: 12,
+  },
+  subtitleFloating: {
+    color: '#475569',
+    fontSize: 11,
+  },
+  greeting: {
+    color: '#475569',
+    fontSize: 12,
     marginTop: 2,
   },
   rightGroup: {
