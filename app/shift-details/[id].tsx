@@ -1,6 +1,7 @@
 import {
   ActivityIndicator,
   Linking,
+  Pressable,
   ScrollView,
   StyleSheet,
   Text,
@@ -193,7 +194,16 @@ export default function ShiftDetailsScreen() {
 
   return (
     <ScrollView contentContainerStyle={contentStyle}>
-      <Text style={styles.tabLabel}>{t('shiftOverview')}</Text>
+      <View style={styles.headerContainer}>
+        <Pressable
+          style={({ pressed }) => [styles.backButton, pressed && styles.backButtonPressed]}
+          onPress={() => router.back()}
+          accessibilityLabel="Back"
+        >
+          <Ionicons name="chevron-back" size={24} color="#1f2937" />
+        </Pressable>
+        <Text style={styles.tabLabel}>{t('shiftOverview')}</Text>
+      </View>
       <LinearGradient
         colors={['#eef2ff', '#f8fafc']}
         style={[styles.hero, { borderColor: status.border }]}
@@ -330,6 +340,23 @@ const styles = StyleSheet.create({
     flexGrow: 1,
     padding: 20,
     backgroundColor: '#f8fafc',
+  },
+  headerContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  backButton: {
+    width: 34,
+    height: 34,
+    borderRadius: 999,
+    backgroundColor: '#eef2ff',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
+  },
+  backButtonPressed: {
+    opacity: 0.7,
   },
   hero: {
     borderWidth: 1,
