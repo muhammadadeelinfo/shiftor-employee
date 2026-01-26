@@ -8,6 +8,7 @@ import {
   getShiftConfirmationStatusLabel,
   normalizeShiftConfirmationStatus,
 } from '@lib/shiftConfirmationStatus';
+import { getShiftPhase, phaseMeta } from '@shared/utils/shiftPhase';
 
 const statusColors: Record<string, string> = {
   scheduled: '#2563eb',
@@ -101,6 +102,8 @@ export const ShiftCard = ({
     normalizedConfirmationStatus === 'confirmed' ||
     normalizedConfirmationStatus === 'confirmed by employee';
   const confirmationLabel = getShiftConfirmationStatusLabel(normalizedConfirmationStatus);
+  const shiftPhase = getShiftPhase(shift.start, shift.end);
+  const phaseMetadata = phaseMeta[shiftPhase];
 
   return (
     <Pressable
@@ -116,6 +119,19 @@ export const ShiftCard = ({
           <View>
             <Text style={styles.cardLabel}>{t('upcomingShiftListTitle')}</Text>
             <Text style={styles.cardDate}>{formatDate(shift.start)}</Text>
+            <View style={styles.phaseRow}>
+              <View style={[styles.phasePill, { backgroundColor: phaseMetadata.background }]}>
+                <Ionicons
+                  name={phaseMetadata.icon}
+                  size={14}
+                  color={phaseMetadata.color}
+                  style={styles.phaseIcon}
+                />
+                <Text style={[styles.phasePillText, { color: phaseMetadata.color }]}>
+                  {phaseMetadata.label}
+                </Text>
+              </View>
+            </View>
           </View>
           <View
             style={[styles.statusPill, { borderColor: statusColor }]}
@@ -243,6 +259,24 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     letterSpacing: 0.5,
     marginLeft: 6,
+  },
+  phaseRow: {
+    marginTop: 6,
+  },
+  phasePill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 16,
+    alignSelf: 'flex-start',
+  },
+  phasePillText: {
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  phaseIcon: {
+    marginRight: 6,
   },
   timeLabel: {
     fontSize: 10,
