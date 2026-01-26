@@ -8,7 +8,7 @@ import { View, StyleSheet } from 'react-native';
 import { AuthProvider } from '@hooks/useSupabaseAuth';
 import { queryClient } from '@lib/queryClient';
 import { useExpoPushToken } from '@hooks/useExpoPushToken';
-import { TopBar, type TopBarVariant } from '@shared/components/TopBar';
+import { NotificationBell } from '@shared/components/NotificationBell';
 import { NotificationProvider } from '@shared/context/NotificationContext';
 import { LanguageProvider } from '@shared/context/LanguageContext';
 
@@ -17,19 +17,11 @@ const hiddenTopBarPaths = ['/login', '/signup'];
 function LayoutContent() {
   const pushToken = useExpoPushToken();
   const pathname = usePathname();
-  const shouldShowTopBar = pathname ? !hiddenTopBarPaths.some((path) => pathname.startsWith(path)) : true;
+  const shouldShowNotificationBell = pathname
+    ? !hiddenTopBarPaths.some((path) => pathname.startsWith(path))
+    : true;
   const statusBarStyle = 'dark';
   const statusBarBgColor = '#f8fafc';
-  const floatingRoutes = ['/my-shifts'];
-  const compactRoutes = ['/shift-details'];
-  let topBarVariant: TopBarVariant = 'regular';
-  if (pathname) {
-    if (floatingRoutes.some((route) => pathname.startsWith(route))) {
-      topBarVariant = 'floating';
-    } else if (compactRoutes.some((route) => pathname.startsWith(route))) {
-      topBarVariant = 'compact';
-    }
-  }
 
   useEffect(() => {
     if (Constants.appOwnership === 'expo') {
@@ -74,7 +66,11 @@ function LayoutContent() {
           backgroundColor={statusBarBgColor}
           style={statusBarStyle}
         />
-        {shouldShowTopBar && <TopBar variant={topBarVariant} />}
+        {shouldShowNotificationBell && (
+          <View style={styles.notificationOverlay}>
+            <NotificationBell />
+          </View>
+        )}
         <View style={styles.content}>
           <Slot />
         </View>
@@ -104,5 +100,11 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
+  },
+  notificationOverlay: {
+    position: 'absolute',
+    top: 12,
+    right: 14,
+    zIndex: 10,
   },
 });

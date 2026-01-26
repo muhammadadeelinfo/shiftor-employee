@@ -2,7 +2,7 @@ import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-nati
 import { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useRouter } from 'expo-router';
-import { LinearGradient } from '@expo-linear-gradient';
+import { LinearGradient } from 'expo-linear-gradient';
 import { PrimaryButton } from '@shared/components/PrimaryButton';
 import { getShifts } from '@features/shifts/shiftsService';
 import { useTheme } from '@shared/themeContext';
