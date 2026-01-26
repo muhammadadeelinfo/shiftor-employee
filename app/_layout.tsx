@@ -60,7 +60,7 @@ function LayoutContent() {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <SafeAreaView style={[styles.root, { backgroundColor: statusBarBgColor }]} edges={['top', 'bottom']}>
+        <SafeAreaView style={[styles.root, { backgroundColor: statusBarBgColor }]} edges={['top']}>
         <StatusBar
           translucent
           hidden={false}
