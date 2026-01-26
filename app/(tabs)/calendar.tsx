@@ -57,14 +57,6 @@ const getCalendarWeeks = (date: Date) => {
 const dayKey = (date: Date) => date.toISOString().split('T')[0];
 const getMonthLabel = (date: Date) => date.toLocaleDateString([], { month: 'long', year: 'numeric' });
 
-const shiftTypeIconMap = {
-  morning: { name: 'sunny', color: '#facc15' },
-  evening: { name: 'partly-sunny', color: '#fb923c' },
-  night: { name: 'moon', color: '#7c3aed' },
-} as const;
-
-type ShiftType = keyof typeof shiftTypeIconMap;
-
 const renderSkeletons = () => (
   <View style={styles.skeletonContainer}>
     {Array.from({ length: 3 }).map((_, index) => (
@@ -102,23 +94,6 @@ export default function CalendarScreen() {
       return shiftDate >= visibleMonth && shiftDate < nextMonth;
     });
   }, [orderedShifts, visibleMonth]);
-
-  const shiftTypesByDay = useMemo(() => {
-    const map = new Map<string, Set<ShiftType>>();
-    const categorize = (shiftStart: string): ShiftType => {
-      const hour = new Date(shiftStart).getHours();
-      if (hour >= 6 && hour < 14) return 'morning';
-      if (hour >= 14 && hour < 22) return 'evening';
-      return 'night';
-    };
-    monthShifts.forEach((shift) => {
-      const key = shift.start.split('T')[0];
-      const set = map.get(key) ?? new Set<ShiftType>();
-      set.add(categorize(shift.start));
-      map.set(key, set);
-    });
-    return map;
-  }, [monthShifts]);
 
   const shiftsByDay = useMemo(() => {
     const map = new Map<string, typeof orderedShifts[number]>();
@@ -287,7 +262,6 @@ export default function CalendarScreen() {
                       const isToday = key === todayKey;
                       const isFocusedDay = focusedDayKey === key;
                       const dayPhase = dayPhaseMap.get(key);
-                      const shiftTypes = shiftTypesByDay.get(key);
                       return (
                         <View
                           key={key}
@@ -306,19 +280,6 @@ export default function CalendarScreen() {
                           >
                             {day.getDate()}
                           </Text>
-                          {shiftTypes && shiftTypes.size ? (
-                            <View style={styles.shiftIconRow}>
-                              {Array.from(shiftTypes).map((type) => (
-                                <View key={type} style={styles.shiftIcon}>
-                                  <Ionicons
-                                    name={shiftTypeIconMap[type].name}
-                                    size={12}
-                                    color={shiftTypeIconMap[type].color}
-                                  />
-                                </View>
-                              ))}
-                            </View>
-                          ) : null}
                           {isToday && <View style={styles.dayTodayDot} />}
                           {isFocusedDay && (
                             <View style={[styles.dayHalo, styles.dayHaloActive]}>
@@ -461,24 +422,6 @@ const styles = StyleSheet.create({
   },
   dayChipLabelMuted: {
     color: '#94a3b8',
-  },
-  shiftIconRow: {
-    flexDirection: 'row',
-    marginTop: 6,
-    gap: 4,
-  },
-  shiftIcon: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    backgroundColor: '#fff',
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: '#dbeafe',
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.15,
-    shadowRadius: 6,
-    elevation: 3,
   },
   dayTodayDot: {
     width: 6,
