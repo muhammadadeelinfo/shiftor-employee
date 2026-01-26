@@ -193,6 +193,7 @@ export default function MyShiftsScreen() {
         }
       }
       if (candidateMonth && candidateMonth.getTime() !== visibleMonth.getTime()) {
+        hasManuallyChangedMonth.current = true;
         setVisibleMonth(candidateMonth);
       }
     },

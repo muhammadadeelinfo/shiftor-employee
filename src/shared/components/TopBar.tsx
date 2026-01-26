@@ -13,9 +13,8 @@ type Props = {
 
 export const TopBar = ({ variant = 'regular' }: Props) => {
   const insets = useSafeAreaInsets();
-  const { toggle } = useNotifications();
+  const { toggle, unreadCount } = useNotifications();
   const { language, setLanguage } = useLanguage();
-  const unreadNotifications = 3;
 
   const variantStyle =
     variant === 'floating'
@@ -57,7 +56,11 @@ export const TopBar = ({ variant = 'regular' }: Props) => {
             style={styles.notificationGradient}
           >
             <Ionicons name="notifications-outline" size={20} color="#fff" />
-            {unreadNotifications > 0 && <View style={styles.notificationDot} />}
+            {unreadCount > 0 && (
+              <View style={styles.notificationBadge}>
+                <Text style={styles.notificationBadgeText}>{unreadCount > 9 ? '9+' : unreadCount}</Text>
+              </View>
+            )}
           </LinearGradient>
         </TouchableOpacity>
       </View>
@@ -151,15 +154,23 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  notificationDot: {
+  notificationBadge: {
     position: 'absolute',
     top: 6,
     right: 6,
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-    backgroundColor: '#fee2e2',
+    minWidth: 18,
+    height: 18,
+    borderRadius: 9,
+    backgroundColor: '#dc2626',
     borderWidth: 1.5,
     borderColor: '#fff',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 3,
+  },
+  notificationBadgeText: {
+    color: '#fff',
+    fontSize: 10,
+    fontWeight: '700',
   },
 });

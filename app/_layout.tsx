@@ -10,6 +10,7 @@ import { queryClient } from '@lib/queryClient';
 import { useExpoPushToken } from '@hooks/useExpoPushToken';
 import { TopBar, type TopBarVariant } from '@shared/components/TopBar';
 import { NotificationProvider } from '@shared/context/NotificationContext';
+import { LanguageProvider } from '@shared/context/LanguageContext';
 
 const hiddenTopBarPaths = ['/login', '/signup'];
 
@@ -65,32 +66,34 @@ function LayoutContent() {
   }, [pushToken]);
 
   return (
-    <AuthProvider>
-      <QueryClientProvider client={queryClient}>
-        <View style={[styles.root, { backgroundColor: statusBarBgColor }]}>
-          <StatusBar
-            translucent
-            hidden={false}
-            backgroundColor={statusBarBgColor}
-            style={statusBarStyle}
-          />
-          {shouldShowTopBar && <TopBar variant={topBarVariant} />}
-          <View style={styles.content}>
-            <Slot />
-          </View>
+    <QueryClientProvider client={queryClient}>
+      <View style={[styles.root, { backgroundColor: statusBarBgColor }]}>
+        <StatusBar
+          translucent
+          hidden={false}
+          backgroundColor={statusBarBgColor}
+          style={statusBarStyle}
+        />
+        {shouldShowTopBar && <TopBar variant={topBarVariant} />}
+        <View style={styles.content}>
+          <Slot />
         </View>
-      </QueryClientProvider>
-    </AuthProvider>
+      </View>
+    </QueryClientProvider>
   );
 }
 
 export default function RootLayout() {
   return (
-    <NotificationProvider>
-      <SafeAreaProvider>
-        <LayoutContent />
-      </SafeAreaProvider>
-    </NotificationProvider>
+    <AuthProvider>
+      <NotificationProvider>
+        <SafeAreaProvider>
+          <LanguageProvider>
+            <LayoutContent />
+          </LanguageProvider>
+        </SafeAreaProvider>
+      </NotificationProvider>
+    </AuthProvider>
   );
 }
 
