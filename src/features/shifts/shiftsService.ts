@@ -177,10 +177,7 @@ const mapShiftArray = (
       };
     })
     .filter((shift): shift is Shift => Boolean(shift));
-  const visibleShifts = parsed.filter(
-    (shift) => shift.confirmationStatus !== 'pending'
-  );
-  return sortShiftsByStart(visibleShifts);
+  return sortShiftsByStart(parsed);
 };
 
 const isMissingColumnError = (error: unknown) =>
