@@ -14,6 +14,7 @@ import { PrimaryButton } from '@shared/components/PrimaryButton';
 import { useShiftFeed } from '@features/shifts/useShiftFeed';
 import { getShiftPhase, phaseMeta, type ShiftPhase } from '@shared/utils/shiftPhase';
 import { useLanguage } from '@shared/context/LanguageContext';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const WEEKDAY_LABELS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
@@ -53,6 +54,7 @@ const renderSkeletons = () => (
 
 export default function CalendarScreen() {
   const { t } = useLanguage();
+  const insets = useSafeAreaInsets();
   const { orderedShifts, isLoading, error, refetch } = useShiftFeed();
   const [visibleMonth, setVisibleMonth] = useState(() => startOfMonth(new Date()));
   const calendarFlip = useRef(new Animated.Value(0)).current;
@@ -177,13 +179,16 @@ export default function CalendarScreen() {
     </View>
   );
 
+  const containerStyle = [styles.container, { paddingTop: 12 + insets.top }];
+  const scrollContentStyle = [styles.scrollContent, { paddingBottom: 32 + insets.bottom }];
+
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={containerStyle} edges={['top']}>
       <ScrollView
-        contentContainerStyle={styles.scrollContent}
+        contentContainerStyle={scrollContentStyle}
         refreshControl={<RefreshControl refreshing={isLoading} onRefresh={() => refetch()} />}
       >
-          <View style={styles.headerCard}>
+        <View style={styles.headerCard}>
             <View>
               <Text style={styles.headerTitle}>{monthLabel}</Text>
             </View>
@@ -267,7 +272,7 @@ export default function CalendarScreen() {
           </View>
         )}
       </ScrollView>
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -276,7 +281,6 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#eef1ff',
     paddingHorizontal: 16,
-    paddingTop: 20,
   },
   scrollContent: {
     paddingBottom: 32,

@@ -8,6 +8,7 @@ import { getShifts } from '@features/shifts/shiftsService';
 import { useTheme } from '@shared/themeContext';
 import { useAuth } from '@hooks/useSupabaseAuth';
 import { languageDefinitions, useLanguage } from '@shared/context/LanguageContext';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const formatDate = (iso?: string) => {
   if (!iso) return '—';
@@ -53,6 +54,7 @@ export default function ProfileScreen() {
   const { user, signOut } = useAuth();
   const { mode, setMode, theme } = useTheme();
   const { t, language, setLanguage } = useLanguage();
+  const insets = useSafeAreaInsets();
   const renderLanguageToggle = (
     <View style={[styles.languagePill, { backgroundColor: theme.surface }]}>
       {languageDefinitions.map((definition) => {
@@ -143,12 +145,16 @@ export default function ProfileScreen() {
       ? ['#111827', '#0f172a', theme.primary]
       : [theme.primary, '#7c3aed', '#2563eb'];
 
+  const safeAreaStyle = { paddingTop: 12 + insets.top };
+  const contentContainerStyle = [styles.content, { paddingBottom: 40 + insets.bottom }];
+
   return (
-    <ScrollView
-      style={[styles.container, { backgroundColor: theme.background }]}
-      contentContainerStyle={styles.content}
-    >
-      <LinearGradient colors={heroGradientColors} style={styles.heroGradient}>
+    <SafeAreaView style={[styles.safeArea, { backgroundColor: theme.background, ...safeAreaStyle }]}>
+      <ScrollView
+        style={[styles.container, { backgroundColor: theme.background }]}
+        contentContainerStyle={contentContainerStyle}
+      >
+        <LinearGradient colors={heroGradientColors} style={styles.heroGradient}>
         <View style={styles.heroRow}>
           <View>
             <Text style={styles.heroTitle}>{t('profileGreeting', { name: profileName(user) })}</Text>
@@ -367,7 +373,8 @@ export default function ProfileScreen() {
       <TouchableOpacity onPress={handleSignOut}>
         <Text style={[styles.link, { color: theme.primary }]}>{t('switchAccount')}</Text>
       </TouchableOpacity>
-    </ScrollView>
+      </ScrollView>
+    </SafeAreaView>
   );
 }
 
@@ -378,6 +385,9 @@ const styles = StyleSheet.create({
   },
   content: {
     paddingBottom: 40,
+  },
+  safeArea: {
+    flex: 1,
   },
   heroGradient: {
     borderRadius: 26,

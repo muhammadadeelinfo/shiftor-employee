@@ -3,8 +3,10 @@ import { Alert, StyleSheet, Text, View } from 'react-native';
 import { Camera, CameraView, BarCodeScanningResult, CameraPermissionResponse } from 'expo-camera';
 import { PrimaryButton } from '@shared/components/PrimaryButton';
 import { useLanguage } from '@shared/context/LanguageContext';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export default function QrClockInScreen() {
+  const insets = useSafeAreaInsets();
   const [permission, setPermission] = useState<CameraPermissionResponse | null>(null);
   const [scannedData, setScannedData] = useState<string | null>(null);
   const [isScanning, setIsScanning] = useState(true);
@@ -28,25 +30,30 @@ export default function QrClockInScreen() {
     Alert.alert(t('qrDetectedTitle'), t('qrDetectedMessage', { code: data }));
   };
 
+  const safeAreaPadding = {
+    paddingTop: 12 + insets.top,
+    paddingBottom: 12 + insets.bottom,
+  };
+
   if (!permission) {
     return (
-      <View style={styles.center}>
+      <SafeAreaView style={[styles.center, safeAreaPadding]}>
         <Text>{t('requestingCameraPermission')}</Text>
-      </View>
+      </SafeAreaView>
     );
   }
 
   if (!permission?.granted) {
     return (
-      <View style={styles.center}>
+      <SafeAreaView style={[styles.center, safeAreaPadding]}>
         <Text style={styles.error}>{t('cameraPermissionRequired')}</Text>
         <PrimaryButton title={t('grantCameraAccess')} onPress={handleRequestPermission} />
-      </View>
+      </SafeAreaView>
     );
   }
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={[styles.container, safeAreaPadding]} edges={['top']}>
       <Text style={styles.instructions}>{t('qrInstructions')}</Text>
       <View style={styles.preview}>
         <CameraView
@@ -73,7 +80,7 @@ export default function QrClockInScreen() {
           style={styles.button}
         />
       ) : null}
-    </View>
+    </SafeAreaView>
   );
 }
 
