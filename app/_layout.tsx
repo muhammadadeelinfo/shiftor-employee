@@ -12,7 +12,7 @@ import { TopBar, type TopBarVariant } from '@shared/components/TopBar';
 import { NotificationProvider } from '@shared/context/NotificationContext';
 import { LanguageProvider } from '@shared/context/LanguageContext';
 
-const hiddenTopBarPaths = ['/login', '/signup', '/calendar'];
+const hiddenTopBarPaths = ['/login', '/signup'];
 
 function LayoutContent() {
   const pushToken = useExpoPushToken();

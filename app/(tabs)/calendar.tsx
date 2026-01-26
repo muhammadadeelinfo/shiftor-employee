@@ -13,7 +13,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { PrimaryButton } from '@shared/components/PrimaryButton';
 import { useShiftFeed } from '@features/shifts/useShiftFeed';
 import { getShiftPhase, phaseMeta, type ShiftPhase } from '@shared/utils/shiftPhase';
-import { languageDefinitions, useLanguage } from '@shared/context/LanguageContext';
+import { useLanguage } from '@shared/context/LanguageContext';
 
 const WEEKDAY_LABELS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
@@ -52,7 +52,7 @@ const renderSkeletons = () => (
 );
 
 export default function CalendarScreen() {
-  const { t, language, setLanguage } = useLanguage();
+  const { t } = useLanguage();
   const { orderedShifts, isLoading, error, refetch } = useShiftFeed();
   const [visibleMonth, setVisibleMonth] = useState(() => startOfMonth(new Date()));
   const calendarFlip = useRef(new Animated.Value(0)).current;
@@ -177,77 +177,41 @@ export default function CalendarScreen() {
     </View>
   );
 
-  const languageToggle = (
-    <View style={styles.languageRow}>
-      {languageDefinitions.map((definition) => (
-        <Pressable
-          key={definition.code}
-          onPress={() => setLanguage(definition.code)}
-          style={({ pressed }) => [
-            styles.languageChip,
-            language === definition.code && styles.languageChipActive,
-            pressed && styles.languageChipPressed,
-          ]}
-        >
-          <Text
-            style={[
-              styles.languageChipText,
-              language === definition.code && styles.languageChipTextActive,
-            ]}
-          >
-            {definition.flag} {definition.shortLabel}
-          </Text>
-        </Pressable>
-      ))}
-    </View>
-  );
-
   return (
     <View style={styles.container}>
-      <View style={styles.topBar}>
-        <View style={styles.languageWrapper}>{languageToggle}</View>
-        <Pressable style={styles.notificationButton}>
-          <Ionicons name="notifications-outline" size={20} color="#0f172a" />
-          <View style={styles.notificationBadge}>
-            <Text style={styles.notificationBadgeText}>2</Text>
-          </View>
-        </Pressable>
-      </View>
       <ScrollView
         contentContainerStyle={styles.scrollContent}
         refreshControl={<RefreshControl refreshing={isLoading} onRefresh={() => refetch()} />}
       >
-        <View style={styles.headerCard}>
-          <View>
-            <Text style={styles.headerTitle}>{monthLabel}</Text>
-            <Text style={styles.headerSubTitle}>{t('calendarSwitcherHint')}</Text>
-          </View>
-          <View style={styles.switcherPill}>
-            <Pressable
-              onPress={() => handleMonthChange(-1)}
-              style={({ pressed }) => [
-                styles.switcherButton,
-                styles.switcherArrow,
-                pressed && styles.switcherButtonPressed,
-              ]}
-            >
-              <Ionicons name="chevron-back" size={16} color="#2563eb" />
-            </Pressable>
-            <View style={styles.switcherLabelWrapper}>
-              <Text style={styles.switcherLabel}>{t('calendarSwitcherLabel')}</Text>
+          <View style={styles.headerCard}>
+            <View>
+              <Text style={styles.headerTitle}>{monthLabel}</Text>
+              <Text style={styles.headerSubTitle}>{t('calendarSwitcherHint')}</Text>
             </View>
-            <Pressable
-              onPress={() => handleMonthChange(1)}
-              style={({ pressed }) => [
-                styles.switcherButton,
-                styles.switcherArrow,
-                pressed && styles.switcherButtonPressed,
-              ]}
-            >
-              <Ionicons name="chevron-forward" size={16} color="#2563eb" />
-            </Pressable>
+            <View style={styles.switcherPill}>
+              <Pressable
+                onPress={() => handleMonthChange(-1)}
+                style={({ pressed }) => [
+                  styles.switcherButton,
+                  pressed && styles.switcherButtonPressed,
+                ]}
+              >
+                <Ionicons name="chevron-back" size={16} color="#2563eb" />
+              </Pressable>
+              <View style={styles.switcherLabelWrapper}>
+                <Text style={styles.switcherLabel}>{t('calendarSwitcherLabel')}</Text>
+              </View>
+              <Pressable
+                onPress={() => handleMonthChange(1)}
+                style={({ pressed }) => [
+                  styles.switcherButton,
+                  pressed && styles.switcherButtonPressed,
+                ]}
+              >
+                <Ionicons name="chevron-forward" size={16} color="#2563eb" />
+              </Pressable>
+            </View>
           </View>
-        </View>
         {errorView}
         {showSkeletons && renderSkeletons()}
         {emptyState}
@@ -337,85 +301,6 @@ const styles = StyleSheet.create({
     backgroundColor: '#eef1ff',
     paddingHorizontal: 16,
     paddingTop: 20,
-  },
-  topBar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    backgroundColor: '#e8efff',
-    borderRadius: 30,
-    paddingVertical: 10,
-    paddingHorizontal: 14,
-    marginBottom: 14,
-    shadowColor: '#0f172a',
-    shadowOpacity: 0.08,
-    shadowOffset: { width: 0, height: 6 },
-    shadowRadius: 18,
-    elevation: 8,
-  },
-  languageWrapper: {
-    backgroundColor: '#fff',
-    borderRadius: 26,
-    paddingVertical: 6,
-    paddingHorizontal: 4,
-    paddingLeft: 10,
-    shadowColor: '#0f172a',
-    shadowOpacity: 0.08,
-    shadowOffset: { width: 0, height: 4 },
-    shadowRadius: 12,
-    elevation: 4,
-  },
-  languageRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  languageChip: {
-    paddingVertical: 6,
-    paddingHorizontal: 12,
-    borderRadius: 20,
-    backgroundColor: '#eef2ff',
-    marginRight: 4,
-  },
-  languageChipActive: {
-    backgroundColor: '#2563eb',
-  },
-  languageChipPressed: {
-    opacity: 0.7,
-  },
-  languageChipText: {
-    color: '#0f172a',
-    fontWeight: '600',
-    fontSize: 13,
-  },
-  languageChipTextActive: {
-    color: '#fff',
-  },
-  notificationButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 16,
-    backgroundColor: '#2563eb',
-    alignItems: 'center',
-    justifyContent: 'center',
-    position: 'relative',
-  },
-  notificationBadge: {
-    position: 'absolute',
-    right: -2,
-    top: -4,
-    backgroundColor: '#f87171',
-    width: 20,
-    height: 20,
-    borderRadius: 10,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 2,
-    borderColor: '#fff',
-  },
-  notificationBadgeText: {
-    fontSize: 10,
-    fontWeight: '700',
-    color: '#fff',
   },
   scrollContent: {
     paddingBottom: 32,
