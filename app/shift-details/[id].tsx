@@ -194,12 +194,16 @@ export default function ShiftDetailsScreen() {
   const contentStyle = [styles.container, { paddingBottom: 40 + insets.bottom }];
 
   const handleBack = () => {
-    if (router.canGoBack()) {
-      router.back();
-      return;
-    }
     if (fromParam === 'calendar') {
       router.replace('/calendar');
+      return;
+    }
+    if (fromParam === 'shifts') {
+      router.replace('/my-shifts');
+      return;
+    }
+    if (router.canGoBack()) {
+      router.back();
       return;
     }
     router.replace('/my-shifts');
