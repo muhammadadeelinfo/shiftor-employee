@@ -4,12 +4,14 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { PrimaryButton } from '@shared/components/PrimaryButton';
 import { supabase } from '@lib/supabaseClient';
 import { useRouter } from 'expo-router';
+import { useLanguage } from '@shared/context/LanguageContext';
 
 const REMEMBER_KEY = 'employee-portal-remember-me';
 const EMAIL_KEY = 'employee-portal-remembered-email';
 
 export default function LoginScreen() {
   const router = useRouter();
+  const { t } = useLanguage();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
@@ -31,12 +33,12 @@ export default function LoginScreen() {
 
   const handleAuthenticate = async () => {
     if (!email.trim() || !password.trim()) {
-      Alert.alert('Email and password required', 'Please enter both email and password.');
+      Alert.alert(t('authEmailPasswordRequiredTitle'), t('authEmailPasswordRequiredBody'));
       return;
     }
 
     if (!supabase) {
-      Alert.alert('Configuration missing', 'Set SUPABASE_URL and SUPABASE_ANON_KEY before logging in.');
+      Alert.alert(t('authConfigurationMissingTitle'), t('authConfigurationMissingBody'));
       return;
     }
 
@@ -57,7 +59,7 @@ export default function LoginScreen() {
         if (error) {
           throw error;
         }
-        Alert.alert('Verify your email', 'We sent a verification link to activate your account.');
+        Alert.alert(t('authVerifyEmailTitle'), t('authVerifyEmailBody'));
       } else {
         const { error } = await supabase.auth.signInWithPassword({
           email: email.trim(),
@@ -69,7 +71,10 @@ export default function LoginScreen() {
         router.replace('(tabs)/my-shifts');
       }
     } catch (error) {
-      Alert.alert('Authentication failed', error instanceof Error ? error.message : 'Unable to sign in');
+      Alert.alert(
+        t('authFailedTitle'),
+        error instanceof Error ? error.message : t('authUnableSignIn')
+      );
     } finally {
       setLoading(false);
     }
@@ -77,15 +82,15 @@ export default function LoginScreen() {
 
   return (
     <View style={styles.root}>
-      <Text style={styles.title}>Employee Portal</Text>
+      <Text style={styles.title}>{t('loginTitle')}</Text>
       <Text style={styles.subtitle}>
-        {isSigningUp ? 'Create your account' : 'Sign in with your company credentials.'}
+        {isSigningUp ? t('loginCreateTitle') : t('loginSignInSubtitle')}
       </Text>
       <TextInput
         style={styles.input}
         keyboardType="email-address"
         autoCapitalize="none"
-        placeholder="you@company.com"
+        placeholder={t('loginEmailPlaceholder')}
         value={email}
         onChangeText={setEmail}
         textContentType="emailAddress"
@@ -94,23 +99,23 @@ export default function LoginScreen() {
         style={styles.input}
         secureTextEntry
         autoCapitalize="none"
-        placeholder="Password"
+        placeholder={t('loginPasswordPlaceholder')}
         value={password}
         onChangeText={setPassword}
         textContentType="password"
       />
       <View style={styles.rememberRow}>
-        <Text style={styles.rememberLabel}>Keep me signed in</Text>
+        <Text style={styles.rememberLabel}>{t('keepSignedIn')}</Text>
         <Switch value={rememberMe} onValueChange={setRememberMe} />
       </View>
       <PrimaryButton
-        title={isSigningUp ? 'Create account' : 'Sign in'}
+        title={isSigningUp ? t('loginCreateButton') : t('loginSignInButton')}
         onPress={handleAuthenticate}
         loading={loading}
       />
       <TouchableOpacity style={styles.switchRow} onPress={() => setIsSigningUp(!isSigningUp)}>
         <Text style={styles.switchText}>
-          {isSigningUp ? 'Already have an account? Sign in' : 'Need a new account? Sign up'}
+          {isSigningUp ? t('loginAlreadyHaveAccount') : t('loginNeedAccount')}
         </Text>
       </TouchableOpacity>
     </View>

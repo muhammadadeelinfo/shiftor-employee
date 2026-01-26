@@ -14,7 +14,9 @@ import { PrimaryButton } from '@shared/components/PrimaryButton';
 import type { Shift } from '@features/shifts/shiftsService';
 import { useAuth } from '@hooks/useSupabaseAuth';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { getShiftPhase, phaseMeta, ShiftPhase } from '@shared/utils/shiftPhase';
+import { useLanguage, type TranslationKey } from '@shared/context/LanguageContext';
 
 const statusStyles: Record<
   Shift['status'],
@@ -44,6 +46,12 @@ const statusStyles: Record<
     text: '#b91c1c',
     description: 'This assignment needs attention before you can start.',
   },
+};
+
+const phaseTranslationKey: Record<ShiftPhase, TranslationKey> = {
+  past: 'phasePast',
+  live: 'phaseLive',
+  upcoming: 'phaseUpcoming',
 };
 
 const formatDate = (value: string) => {
@@ -103,6 +111,7 @@ export default function ShiftDetailsScreen() {
     enabled: Boolean(shiftId),
   });
   const router = useRouter();
+  const insets = useSafeAreaInsets();
 
   if (!shiftId) {
     return (
@@ -118,6 +127,7 @@ export default function ShiftDetailsScreen() {
         ?.find((item) => item.id === shiftId)
     : undefined;
   const shiftToShow = shift ?? cachedShift;
+  const { t } = useLanguage();
 
   if (isLoading && !shiftToShow) {
     return (
@@ -130,8 +140,8 @@ export default function ShiftDetailsScreen() {
   if (!shiftToShow) {
     return (
       <View style={styles.center}>
-        <Text style={styles.error}>Shift not found. Pull to retry.</Text>
-        <PrimaryButton title="Retry" onPress={() => refetch()} />
+        <Text style={styles.error}>{t('shiftNotFound')}</Text>
+        <PrimaryButton title={t('retry')} onPress={() => refetch()} />
       </View>
     );
   }
@@ -151,7 +161,7 @@ export default function ShiftDetailsScreen() {
     Math.round((shiftStart.getTime() - now.getTime()) / 60000)
   );
   const countdownLabel =
-    minutesUntilStart <= 0 ? 'Live now' : formatCountdownLabel(minutesUntilStart);
+    minutesUntilStart <= 0 ? t('liveNow') : formatCountdownLabel(minutesUntilStart);
   const opsContact = shiftToShow.objectName ?? 'Operations team';
   const contactEmail = 'ops@company.com';
   const contactPhone = '+1 (415) 555-0101';
@@ -163,19 +173,27 @@ export default function ShiftDetailsScreen() {
 
   const shiftEnd = new Date(shiftToShow.end);
   const shiftTempo =
-    minutesUntilStart <= 0 ? 'Live now' : minutesUntilStart <= 30 ? 'Starting soon' : 'Upcoming';
+    minutesUntilStart <= 0
+      ? t('liveNow')
+      : minutesUntilStart <= 30
+      ? t('startingSoon')
+      : t('upcoming');
   const shiftPhase: ShiftPhase = getShiftPhase(shiftToShow.start, shiftToShow.end, now);
-  const checklist = ['Arrive 10 minutes early', 'Wear badge and mask', 'Review guest list'];
-  const prepValue = minutesUntilStart <= 30 ? 'Head to location' : 'Prep gear';
+  const phaseLabel = t(phaseTranslationKey[shiftPhase]);
+  const checklist = [t('arriveTip'), t('badgeTip'), t('reviewTip')];
+  const prepValue = minutesUntilStart <= 30 ? t('headToLocation') : t('prepGear');
   const heroStats = [
-    { label: 'Start', value: startLabel },
-    { label: 'End', value: endLabel },
-    { label: 'Duration', value: duration },
+    { label: t('heroStatsStart'), value: startLabel },
+    { label: t('heroStatsEnd'), value: endLabel },
+    { label: t('heroStatsDuration'), value: duration },
   ];
+  const reachOutCopy = t('reachOutCopy', { contact: opsContact });
+
+  const contentStyle = [styles.container, { paddingBottom: 40 + insets.bottom }];
 
   return (
-    <ScrollView contentContainerStyle={styles.container}>
-      <Text style={styles.tabLabel}>Shift overview</Text>
+    <ScrollView contentContainerStyle={contentStyle}>
+      <Text style={styles.tabLabel}>{t('shiftOverview')}</Text>
       <LinearGradient
         colors={['#eef2ff', '#f8fafc']}
         style={[styles.hero, { borderColor: status.border }]}
@@ -212,48 +230,48 @@ export default function ShiftDetailsScreen() {
         </View>
         <View style={styles.heroChips}>
           <View style={styles.heroChip}>
-            <Text style={styles.heroChipLabel}>Stage</Text>
+            <Text style={styles.heroChipLabel}>{t('stageLabel')}</Text>
             <Text style={styles.heroChipValue}>{shiftTempo}</Text>
           </View>
           <View style={[styles.heroChip, styles.heroChipLast]}>
-            <Text style={styles.heroChipLabel}>Countdown</Text>
+            <Text style={styles.heroChipLabel}>{t('countdownLabel')}</Text>
             <Text style={styles.heroChipValue}>{countdownLabel}</Text>
           </View>
         </View>
         <View style={[styles.heroPhase, { backgroundColor: phaseMeta[shiftPhase].background }]}>
           <Ionicons name={phaseMeta[shiftPhase].icon} size={16} color={phaseMeta[shiftPhase].color} />
           <Text style={[styles.heroPhaseLabel, { color: phaseMeta[shiftPhase].color }]}>
-            {phaseMeta[shiftPhase].label}
+            {phaseLabel}
           </Text>
         </View>
       </LinearGradient>
 
       <View style={styles.section}>
-        <Text style={styles.sectionHeading}>Timing snapshot</Text>
+        <Text style={styles.sectionHeading}>{t('timingSnapshot')}</Text>
         <View style={styles.gridRow}>
           <View style={styles.gridItem}>
-            <Text style={styles.gridLabel}>Day</Text>
+            <Text style={styles.gridLabel}>{t('dayLabel')}</Text>
             <Text style={styles.gridValue}>{dateLabel}</Text>
           </View>
           <View style={styles.gridItem}>
-            <Text style={styles.gridLabel}>Stage</Text>
+            <Text style={styles.gridLabel}>{t('stageLabel')}</Text>
             <Text style={styles.gridValue}>{shiftTempo}</Text>
           </View>
         </View>
         <View style={styles.nextStepsRow}>
           <View style={styles.nextStep}>
-            <Text style={styles.nextStepLabel}>Countdown</Text>
+            <Text style={styles.nextStepLabel}>{t('countdownLabel')}</Text>
             <Text style={styles.nextStepValue}>{countdownLabel}</Text>
           </View>
           <View style={[styles.nextStep, styles.nextStepLast]}>
-            <Text style={styles.nextStepLabel}>Prep</Text>
+            <Text style={styles.nextStepLabel}>{t('prepLabel')}</Text>
             <Text style={styles.nextStepValue}>{prepValue}</Text>
           </View>
         </View>
       </View>
 
       <View style={styles.section}>
-        <Text style={styles.sectionHeading}>Focus points</Text>
+        <Text style={styles.sectionHeading}>{t('focusPointsLabel')}</Text>
         <View style={styles.splitRow}>
           {checklist.map((point) => (
             <View key={point} style={styles.bulletRow}>
@@ -265,43 +283,43 @@ export default function ShiftDetailsScreen() {
       </View>
 
       <View style={styles.section}>
-        <Text style={styles.sectionHeading}>Where you'll be</Text>
+        <Text style={styles.sectionHeading}>{t('whereLabel')}</Text>
         <Text style={styles.sectionTitle}>{locationLabel}</Text>
         {locationSubtext ? <Text style={styles.sectionSubtitle}>{locationSubtext}</Text> : null}
         {locationSubtext ? (
           <Text style={styles.mapLink} onPress={handleOpenMaps}>
-            Open in maps
+            {t('openInMaps')}
           </Text>
         ) : null}
       </View>
 
       {description ? (
         <View style={styles.section}>
-          <Text style={styles.sectionHeading}>What you’ll do</Text>
+          <Text style={styles.sectionHeading}>{t('whatYoullDoLabel')}</Text>
           <Text style={styles.sectionBody}>{description}</Text>
         </View>
       ) : null}
 
       {!description && (
         <View style={styles.section}>
-          <Text style={styles.sectionHeading}>What you’ll do</Text>
-          <Text style={styles.sectionBody}>
-            No description was provided. Touch base with operations if you need the rundown.
-          </Text>
+          <Text style={styles.sectionHeading}>{t('whatYoullDoLabel')}</Text>
+          <Text style={styles.sectionBody}>{t('noDescription')}</Text>
         </View>
       )}
 
       <View style={styles.section}>
-        <Text style={styles.sectionHeading}>Need a hand?</Text>
+        <Text style={styles.sectionHeading}>{t('needAHand')}</Text>
+        <Text style={styles.sectionBody}>{reachOutCopy}</Text>
         <Text style={styles.sectionBody}>
-          Reach out to {opsContact} if anything changes or if you need a quick refresher before clocking in.
+          {t('callLabel')}: {contactPhone}
         </Text>
-        <Text style={styles.sectionBody}>Call: {contactPhone}</Text>
-        <Text style={styles.sectionBody}>Email: {contactEmail}</Text>
+        <Text style={styles.sectionBody}>
+          {t('emailLabel')}: {contactEmail}
+        </Text>
       </View>
 
       <View style={styles.cta}>
-        <PrimaryButton title="Clock in with QR" onPress={() => router.push('/qr-clock-in')} />
+        <PrimaryButton title={t('cta')} onPress={() => router.push('/qr-clock-in')} />
       </View>
     </ScrollView>
   );
@@ -319,18 +337,6 @@ const styles = StyleSheet.create({
     marginBottom: 24,
     padding: 20,
     backgroundColor: '#fff',
-    shadowColor: '#0f172a',
-    shadowOpacity: 0.08,
-    shadowOffset: { width: 0, height: 10 },
-    shadowRadius: 20,
-    elevation: 6,
-  },
-  hero: {
-    borderRadius: 22,
-    marginBottom: 24,
-    padding: 20,
-    backgroundColor: '#fff',
-    borderWidth: 1,
     shadowColor: '#0f172a',
     shadowOpacity: 0.08,
     shadowOffset: { width: 0, height: 10 },
@@ -562,6 +568,7 @@ const styles = StyleSheet.create({
   },
   cta: {
     marginTop: 24,
+    marginBottom: 16,
   },
   mapLink: {
     color: '#0ea5e9',

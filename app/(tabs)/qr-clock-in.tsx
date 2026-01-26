@@ -2,11 +2,13 @@ import { useEffect, useState } from 'react';
 import { Alert, StyleSheet, Text, View } from 'react-native';
 import { Camera, CameraView, BarCodeScanningResult, CameraPermissionResponse } from 'expo-camera';
 import { PrimaryButton } from '@shared/components/PrimaryButton';
+import { useLanguage } from '@shared/context/LanguageContext';
 
 export default function QrClockInScreen() {
   const [permission, setPermission] = useState<CameraPermissionResponse | null>(null);
   const [scannedData, setScannedData] = useState<string | null>(null);
   const [isScanning, setIsScanning] = useState(true);
+  const { t } = useLanguage();
 
   useEffect(() => {
     (async () => {
@@ -23,29 +25,29 @@ export default function QrClockInScreen() {
   const handleBarCodeScanned = ({ data }: BarCodeScanningResult) => {
     setScannedData(data);
     setIsScanning(false);
-    Alert.alert('QR detected', data);
+    Alert.alert(t('qrDetectedTitle'), t('qrDetectedMessage', { code: data }));
   };
 
   if (!permission) {
     return (
-    <View style={styles.center}>
-      <Text>Requesting camera permission...</Text>
-    </View>
-  );
-}
+      <View style={styles.center}>
+        <Text>{t('requestingCameraPermission')}</Text>
+      </View>
+    );
+  }
 
-if (!permission?.granted) {
-  return (
-    <View style={styles.center}>
-      <Text style={styles.error}>Camera permission is required to scan a QR.</Text>
-      <PrimaryButton title="Grant camera access" onPress={handleRequestPermission} />
-    </View>
-  );
-}
+  if (!permission?.granted) {
+    return (
+      <View style={styles.center}>
+        <Text style={styles.error}>{t('cameraPermissionRequired')}</Text>
+        <PrimaryButton title={t('grantCameraAccess')} onPress={handleRequestPermission} />
+      </View>
+    );
+  }
 
   return (
     <View style={styles.container}>
-      <Text style={styles.instructions}>Point the camera at the QR / barcode provided by your manager.</Text>
+      <Text style={styles.instructions}>{t('qrInstructions')}</Text>
       <View style={styles.preview}>
         <CameraView
           style={styles.camera}
@@ -57,13 +59,13 @@ if (!permission?.granted) {
       </View>
       {scannedData ? (
         <View style={styles.scanResult}>
-          <Text style={styles.scanLabel}>Last scan</Text>
+          <Text style={styles.scanLabel}>{t('lastScanLabel')}</Text>
           <Text style={styles.scanValue}>{scannedData}</Text>
         </View>
       ) : null}
       {!isScanning ? (
         <PrimaryButton
-          title="Scan another badge"
+          title={t('scanAnotherBadge')}
           onPress={() => {
             setScannedData(null);
             setIsScanning(true);
