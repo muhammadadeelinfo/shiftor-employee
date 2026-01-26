@@ -205,7 +205,9 @@ export default function CalendarScreen() {
   return (
     <View style={styles.container}>
       <View style={styles.topBar}>
-        {languageToggle}
+        <View style={styles.languageWrapper}>
+          {languageToggle}
+        </View>
         <Pressable style={styles.notificationButton}>
           <Ionicons name="notifications-outline" size={20} color="#0f172a" />
           <View style={styles.notificationBadge}>
@@ -336,26 +338,39 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: '#fff',
-    borderRadius: 28,
+    backgroundColor: '#e8efff',
+    borderRadius: 30,
     paddingVertical: 10,
-    paddingHorizontal: 12,
+    paddingHorizontal: 14,
     marginBottom: 14,
     shadowColor: '#0f172a',
-    shadowOpacity: 0.06,
+    shadowOpacity: 0.08,
     shadowOffset: { width: 0, height: 6 },
-    shadowRadius: 16,
-    elevation: 6,
+    shadowRadius: 18,
+    elevation: 8,
+  },
+  languageWrapper: {
+    backgroundColor: '#fff',
+    borderRadius: 26,
+    paddingVertical: 6,
+    paddingHorizontal: 4,
+    paddingLeft: 10,
+    shadowColor: '#0f172a',
+    shadowOpacity: 0.08,
+    shadowOffset: { width: 0, height: 4 },
+    shadowRadius: 12,
+    elevation: 4,
   },
   languageRow: {
     flexDirection: 'row',
+    alignItems: 'center',
   },
   languageChip: {
     paddingVertical: 6,
     paddingHorizontal: 12,
     borderRadius: 20,
     backgroundColor: '#eef2ff',
-    marginRight: 6,
+    marginRight: 4,
   },
   languageChipActive: {
     backgroundColor: '#2563eb',
