@@ -4,9 +4,14 @@ import { ThemeProvider } from '@shared/themeContext';
 
 const iconConfig: Record<string, { active: string; inactive: string; label: string }> = {
   'my-shifts': {
+    active: 'list',
+    inactive: 'list-outline',
+    label: 'Shifts',
+  },
+  calendar: {
     active: 'calendar',
     inactive: 'calendar-outline',
-    label: 'Shifts',
+    label: 'Calendar',
   },
   'qr-clock-in': {
     active: 'qr-code',
@@ -53,6 +58,7 @@ export default function TabsLayout() {
         }}
       >
         <Tabs.Screen name="my-shifts" />
+        <Tabs.Screen name="calendar" />
         <Tabs.Screen name="qr-clock-in" />
         <Tabs.Screen name="profile" />
         <Tabs.Screen
