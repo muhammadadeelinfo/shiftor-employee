@@ -172,7 +172,7 @@ const mapShiftArray = (
       if (shift.id === 'unknown') return undefined;
       const assignment = assignmentByShiftId.get(shift.id);
       const confirmationStatus = normalizeShiftConfirmationStatus(assignment?.confirmationStatus);
-      if (confirmationStatus === 'not published') {
+      if (confirmationStatus === 'not published' || confirmationStatus === 'pending') {
         return undefined;
       }
       return {
