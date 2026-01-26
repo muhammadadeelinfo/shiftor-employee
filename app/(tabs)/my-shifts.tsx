@@ -390,6 +390,13 @@ export default function MyShiftsScreen() {
           <Text style={styles.headerTitle}>
             Upcoming Shifts · {getMonthLabel(visibleMonth)}
           </Text>
+          {nextShift ? (
+            <Text style={styles.nextShiftSubtitle}>
+              Next: {nextShift.title} — {getTimeLabel(nextShift.start)}
+            </Text>
+          ) : (
+            <Text style={styles.nextShiftSubtitle}>No upcoming shifts yet</Text>
+          )}
         </View>
       </View>
       {errorView}
@@ -514,6 +521,40 @@ const styles = StyleSheet.create({
   viewSwitcherRow: {
     marginBottom: 12,
   },
+  viewSwitcherContainer: {
+    flexDirection: 'row',
+    backgroundColor: '#eef2ff',
+    borderRadius: 20,
+    padding: 6,
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: 8,
+    borderWidth: 1,
+    borderColor: '#dbeafe',
+    shadowColor: '#1d4ed8',
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 10 },
+  },
+  viewToggle: {
+    paddingVertical: 6,
+    paddingHorizontal: 14,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: 'transparent',
+  },
+  viewToggleActive: {
+    backgroundColor: '#1d4ed8',
+    borderColor: '#1d4ed8',
+  },
+  viewToggleText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#1d4ed8',
+  },
+  viewToggleTextActive: {
+    color: '#fff',
+  },
   list: {
     paddingBottom: 24,
     paddingTop: 2,
@@ -550,6 +591,11 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 20,
     fontWeight: '700',
+  },
+  nextShiftSubtitle: {
+    marginTop: 4,
+    fontSize: 14,
+    color: '#475569',
   },
   viewSwitcherContainer: {
     flexDirection: 'row',
