@@ -3,7 +3,7 @@ export type ShiftPhase = 'past' | 'live' | 'upcoming';
 export const getShiftPhase = (startIso: string, endIso: string, now = new Date()): ShiftPhase => {
   const start = new Date(startIso);
   const end = new Date(endIso);
-  if (now >= end) {
+  if (now > end) {
     return 'past';
   }
   if (now >= start) {
