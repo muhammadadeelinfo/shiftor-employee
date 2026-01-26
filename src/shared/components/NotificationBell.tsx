@@ -13,8 +13,10 @@ export const NotificationBell = () => {
     animationRef.current?.stop();
     glow.setValue(0);
     if (!unreadCount || open) {
+      animationRef.current = null;
       return;
     }
+
     const animation = Animated.loop(
       Animated.sequence([
         Animated.timing(glow, {
