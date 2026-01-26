@@ -363,13 +363,6 @@ export default function MyShiftsScreen() {
 
   return (
     <View style={styles.container}>
-      <View style={styles.headerWrapper}>
-        <View>
-          <Text style={styles.headerTitle}>
-            Upcoming Shifts · {getMonthLabel(visibleMonth)}
-          </Text>
-        </View>
-      </View>
       <View style={styles.viewSwitcherRow}>
         <View style={styles.viewSwitcherContainer}>
           <TouchableOpacity
@@ -390,6 +383,13 @@ export default function MyShiftsScreen() {
               Calendar view
             </Text>
           </TouchableOpacity>
+        </View>
+      </View>
+      <View style={styles.headerWrapper}>
+        <View>
+          <Text style={styles.headerTitle}>
+            Upcoming Shifts · {getMonthLabel(visibleMonth)}
+          </Text>
         </View>
       </View>
       {errorView}
