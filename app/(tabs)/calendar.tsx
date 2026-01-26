@@ -320,9 +320,7 @@ export default function CalendarScreen() {
                             </View>
                           ) : null}
                           {isFocusedDay && (
-                            <View style={[styles.dayHalo, styles.dayHaloActive]}>
-                              <View style={styles.dayHaloIndicator} />
-                            </View>
+                            <View style={[styles.dayHalo, styles.dayHaloActive]} />
                           )}
                         </View>
                       );
@@ -489,14 +487,6 @@ const styles = StyleSheet.create({
   },
   dayHaloActive: {
     borderColor: '#2563eb',
-  },
-  dayHaloIndicator: {
-    position: 'absolute',
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: '#2563eb',
-    bottom: 6,
   },
   background: {
     ...StyleSheet.absoluteFillObject,
