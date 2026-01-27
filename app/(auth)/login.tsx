@@ -1,6 +1,7 @@
-import { Alert, StyleSheet, Switch, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { Alert, Pressable, StyleSheet, Switch, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { useEffect, useRef, useState } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { PrimaryButton } from '@shared/components/PrimaryButton';
 import { supabase } from '@lib/supabaseClient';
 import { useRouter } from 'expo-router';
@@ -14,6 +15,7 @@ export default function LoginScreen() {
   const { t } = useLanguage();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [isSigningUp, setIsSigningUp] = useState(false);
   const [rememberMe, setRememberMe] = useState(true);
@@ -87,29 +89,57 @@ export default function LoginScreen() {
       <Text style={styles.subtitle}>
         {isSigningUp ? t('loginCreateTitle') : t('loginSignInSubtitle')}
       </Text>
-      <TextInput
-        style={styles.input}
-        keyboardType="email-address"
-        autoCapitalize="none"
-        placeholder={t('loginEmailPlaceholder')}
-        value={email}
-        onChangeText={setEmail}
-        textContentType="emailAddress"
-        returnKeyType="next"
-        onSubmitEditing={() => passwordInputRef.current?.focus()}
-      />
-      <TextInput
-        style={styles.input}
-        secureTextEntry
-        autoCapitalize="none"
-        placeholder={t('loginPasswordPlaceholder')}
-        value={password}
-        onChangeText={setPassword}
-        textContentType="password"
-        ref={passwordInputRef}
-        returnKeyType="done"
-        onSubmitEditing={handleAuthenticate}
-      />
+      <View style={styles.emailField}>
+        <TextInput
+          style={styles.emailInput}
+          keyboardType="email-address"
+          autoCapitalize="none"
+          placeholder={t('loginEmailPlaceholder')}
+          value={email}
+          onChangeText={setEmail}
+          textContentType="emailAddress"
+          returnKeyType="next"
+          onSubmitEditing={() => passwordInputRef.current?.focus()}
+        />
+        {email ? (
+          <Pressable
+            onPress={() => setEmail('')}
+            accessibilityRole="button"
+            accessibilityLabel={t('loginClearEmail')}
+            style={styles.clearButton}
+          >
+            <Ionicons name="close-circle" size={20} color="#6b7280" />
+          </Pressable>
+        ) : null}
+      </View>
+      <View style={styles.passwordField}>
+        <TextInput
+          style={styles.passwordInput}
+          secureTextEntry={!showPassword}
+          autoCapitalize="none"
+          placeholder={t('loginPasswordPlaceholder')}
+          value={password}
+          onChangeText={setPassword}
+          textContentType="password"
+          ref={passwordInputRef}
+          returnKeyType="done"
+          onSubmitEditing={handleAuthenticate}
+        />
+        <Pressable
+          onPress={() => setShowPassword((prev) => !prev)}
+          accessibilityRole="button"
+          accessibilityLabel={
+            showPassword ? t('loginHidePassword') : t('loginShowPassword')
+          }
+          style={styles.passwordToggle}
+        >
+          <Ionicons
+            name={showPassword ? 'eye-off-outline' : 'eye-outline'}
+            size={20}
+            color="#6b7280"
+          />
+        </Pressable>
+      </View>
       <View style={styles.rememberRow}>
         <Text style={styles.rememberLabel}>{t('keepSignedIn')}</Text>
         <Switch value={rememberMe} onValueChange={setRememberMe} />
@@ -145,13 +175,39 @@ const styles = StyleSheet.create({
     color: '#6b7280',
     marginBottom: 24,
   },
-  input: {
+  passwordField: {
+    flexDirection: 'row',
+    alignItems: 'center',
     backgroundColor: '#fff',
     borderRadius: 12,
-    padding: 14,
+    paddingHorizontal: 14,
     marginBottom: 16,
     borderWidth: 1,
     borderColor: '#e2e8f0',
+  },
+  passwordInput: {
+    flex: 1,
+    paddingVertical: 14,
+  },
+  passwordToggle: {
+    padding: 8,
+  },
+  emailField: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+  },
+  emailInput: {
+    flex: 1,
+    paddingVertical: 14,
+  },
+  clearButton: {
+    padding: 8,
   },
   rememberRow: {
     flexDirection: 'row',
