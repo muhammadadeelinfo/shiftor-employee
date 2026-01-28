@@ -57,7 +57,12 @@ const getCalendarWeeks = (date: Date) => {
   return weeks;
 };
 
-const dayKey = (date: Date) => date.toISOString().split('T')[0];
+const dayKey = (date: Date) => {
+  const year = date.getFullYear();
+  const month = `${date.getMonth() + 1}`.padStart(2, '0');
+  const day = `${date.getDate()}`.padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
 const getMonthLabel = (date: Date) => date.toLocaleDateString([], { month: 'long', year: 'numeric' });
 
 const formatShiftTime = (shift: { start: string; end: string }) => {
@@ -318,10 +323,12 @@ export default function CalendarScreen() {
     if (!activeDayKey) {
       return null;
     }
-    const date = new Date(activeDayKey);
-    if (Number.isNaN(date.getTime())) {
+    const parsed = activeDayKey.split('-').map((part) => Number(part));
+    if (parsed.length !== 3 || parsed.some((part) => Number.isNaN(part))) {
       return null;
     }
+    const [year, month, day] = parsed;
+    const date = new Date(year, month - 1, day);
     return date.toLocaleDateString(undefined, {
       weekday: 'long',
       month: 'long',
@@ -520,7 +527,7 @@ export default function CalendarScreen() {
                 {calendarWeeks.map((week, weekIndex) => (
                   <View key={`week-${weekIndex}`} style={styles.calendarWeekRow}>
                     {week.map((day) => {
-                      const key = day.toISOString().split('T')[0];
+                      const key = dayKey(day);
                       const dayShifts = shiftsByDay.get(key) ?? [];
                       const isCurrentMonth = day.getMonth() === visibleMonth.getMonth();
                       const isFocusedDay = focusedDayKey === key;
