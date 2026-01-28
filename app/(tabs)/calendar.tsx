@@ -179,13 +179,6 @@ export default function CalendarScreen() {
         title: t('calendarLegendShiftGroup'),
         entries: [
           {
-            key: 'shift',
-            variant: 'dot',
-            color: '#34d399',
-            label: t('calendarLegendShift'),
-            description: t('calendarLegendShiftDesc'),
-          },
-          {
             key: 'imported',
             variant: 'multiDot',
             colors: ['#34d399', '#fb923c', '#38bdf8'],
@@ -602,55 +595,51 @@ export default function CalendarScreen() {
           </View>
         )}
         <View style={styles.legendCard}>
-          <LinearGradient
-            colors={['#fff', '#eef3ff']}
-            style={styles.legendGradient}
-          />
-          <Text style={styles.legendTitle}>{t('calendarLegendTitle')}</Text>
+          <LinearGradient colors={['#fff', '#eef3ff']} style={styles.legendGradient} />
+          <View style={styles.legendHeader}>
+            <Text style={styles.legendTitle}>{t('calendarLegendTitle')}</Text>
+            <View style={styles.legendHeaderDivider} />
+          </View>
           {legendGroups.map((group) => (
-            <View key={group.key} style={styles.legendGroup}>
-              <Text style={styles.legendGroupTitle}>{group.title}</Text>
-              <View style={styles.legendGrid}>
-                {group.entries.map((entry) => (
-                  <View
-                    key={entry.key}
-                    style={[
-                      styles.legendChip,
-                      entry.variant === 'dot' && { borderColor: entry.color },
-                    ]}
-                  >
-                    {entry.variant === 'dot' && (
-                      <View
-                        style={[
-                          styles.legendChipIcon,
-                          { backgroundColor: entry.color ?? '#fff' },
-                        ]}
-                      />
-                    )}
-                    {entry.variant === 'multiDot' && (
-                      <View style={styles.legendMultiIcon}>
-                        {entry.colors?.map((color, index) => (
-                          <View
-                            key={`${entry.key}-${index}`}
-                            style={[
-                              styles.legendDotMini,
-                              { backgroundColor: color },
-                            ]}
-                          />
-                        ))}
-                      </View>
-                    )}
-                    {entry.variant === 'icon' && entry.icon && (
-                      <Ionicons name={entry.icon} size={16} color={entry.color} />
-                    )}
+          <View key={group.key} style={styles.legendGroup}>
+            <Text style={styles.legendGroupTitle}>{group.title}</Text>
+          <View style={styles.legendList}>
+            {group.entries.map((entry) => (
+              <View key={entry.key} style={styles.legendEntryCard}>
+                <View style={styles.legendEntryIcon}>
+                  {entry.variant === 'dot' && (
+                        <View
+                          style={[
+                            styles.legendChipIcon,
+                            { backgroundColor: entry.color ?? '#fff' },
+                          ]}
+                        />
+                      )}
+                      {entry.variant === 'multiDot' && (
+                        <View style={styles.legendMultiIcon}>
+                          {entry.colors?.map((color, index) => (
+                            <View
+                              key={`${entry.key}-${index}`}
+                              style={[
+                                styles.legendDotMini,
+                                { backgroundColor: color },
+                              ]}
+                            />
+                          ))}
+                        </View>
+                      )}
+                      {entry.variant === 'icon' && entry.icon && (
+                        <Ionicons name={entry.icon} size={16} color={entry.color} />
+                      )}
+                    </View>
                     <View style={styles.legendText}>
                       <Text style={styles.legendLabel}>{entry.label}</Text>
                       {entry.description ? (
                         <Text style={styles.legendDescription}>{entry.description}</Text>
                       ) : null}
-                    </View>
                   </View>
-                ))}
+                </View>
+              ))}
               </View>
             </View>
           ))}
@@ -945,36 +934,66 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 12 },
     elevation: 10,
     backgroundColor: '#fff',
+    paddingHorizontal: 18,
+    paddingVertical: 16,
   },
   legendGradient: {
     ...StyleSheet.absoluteFillObject,
     opacity: 0.55,
   },
-  legendTitle: {
-    fontSize: 12,
-    letterSpacing: 0.4,
-    textTransform: 'uppercase',
-    color: '#94a3b8',
-    marginBottom: 12,
-  },
-  legendGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    marginHorizontal: -6,
-  },
-  legendChip: {
-    width: '50%',
-    marginHorizontal: 6,
-    marginBottom: 10,
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    borderRadius: 14,
-    backgroundColor: '#fff',
-    borderWidth: 1,
-    borderColor: 'transparent',
+  legendHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    columnGap: 10,
+    marginBottom: 14,
+  },
+  legendTitle: {
+    fontSize: 14,
+    letterSpacing: 0.6,
+    textTransform: 'uppercase',
+    color: '#475569',
+    fontWeight: '700',
+  },
+  legendHeaderDivider: {
+    flex: 1,
+    height: 1,
+    backgroundColor: '#e0e7ff',
+    borderRadius: 1,
+  },
+  legendList: {
+    width: '100%',
+  },
+  legendEntryCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+    backgroundColor: '#f7f9ff',
+    borderRadius: 16,
+    marginBottom: 8,
+    borderWidth: 1,
+    borderColor: '#e0e7ff',
+    shadowColor: '#0f172a',
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 3,
+    gap: 12,
+  },
+  legendEntryIcon: {
+    width: 32,
+    height: 32,
+    borderRadius: 10,
+    backgroundColor: '#fff',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: '#e0e7ff',
+    shadowColor: '#64748b',
+    shadowOpacity: 0.08,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 2,
   },
   legendGroup: {
     marginBottom: 12,
@@ -1003,9 +1022,14 @@ const styles = StyleSheet.create({
   legendText: {
     flex: 1,
   },
+  legendLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#0f172a',
+  },
   legendDescription: {
-    fontSize: 10,
-    color: '#94a3b8',
+    fontSize: 12,
+    color: '#475569',
     marginTop: 2,
   },
   dayDetailBackdrop: {
@@ -1147,20 +1171,6 @@ const styles = StyleSheet.create({
   },
   legendGroup: {
     marginBottom: 12,
-  },
-  legendGroupTitle: {
-    fontSize: 11,
-    letterSpacing: 0.3,
-    textTransform: 'uppercase',
-    color: '#94a3b8',
-    marginBottom: 6,
-  },
-  legendLabel: {
-    fontSize: 12,
-    color: '#475569',
-  },
-  legendIconsRow: {
-    flexDirection: 'row',
   },
   dayHalo: {
     position: 'absolute',
