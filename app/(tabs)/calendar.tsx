@@ -60,6 +60,53 @@ const getCalendarWeeks = (date: Date) => {
 const dayKey = (date: Date) => date.toISOString().split('T')[0];
 const getMonthLabel = (date: Date) => date.toLocaleDateString([], { month: 'long', year: 'numeric' });
 
+const formatShiftTime = (shift: { start: string; end: string }) => {
+  const start = new Date(shift.start);
+  const end = new Date(shift.end);
+  const dateLabel = start.toLocaleDateString(undefined, {
+    weekday: 'short',
+    month: 'short',
+    day: 'numeric',
+  });
+  const startLabel = start.toLocaleTimeString(undefined, {
+    hour: 'numeric',
+    minute: '2-digit',
+  });
+  const endLabel = end.toLocaleTimeString(undefined, {
+    hour: 'numeric',
+    minute: '2-digit',
+  });
+  return { dateLabel, startLabel, endLabel };
+};
+
+const buildShiftLocation = (shift: {
+  location: string;
+  objectName?: string;
+  objectAddress?: string;
+}) => {
+  const rawParts = [
+    shift.objectName?.trim(),
+    shift.location?.trim(),
+    shift.objectAddress?.trim(),
+  ].filter((value): value is string => Boolean(value));
+  const seen = new Set<string>();
+  const uniqueParts: string[] = [];
+  rawParts.forEach((part) => {
+    const normalized = part.toLowerCase().replace(/\s+/g, ' ').trim();
+    if (!seen.has(normalized)) {
+      seen.add(normalized);
+      uniqueParts.push(part);
+    }
+  });
+  return uniqueParts.join(', ');
+};
+
+const PHASE_TRANSLATION_KEYS: Record<ShiftPhase, 'phasePast' | 'phaseLive' | 'phaseUpcoming'> = {
+  past: 'phasePast',
+  live: 'phaseLive',
+  upcoming: 'phaseUpcoming',
+};
+
 const shiftTypeIconMap = {
   morning: { name: 'sunny', color: '#facc15' },
   evening: { name: 'partly-sunny', color: '#fb923c' },
@@ -75,11 +122,15 @@ type LegendEntry = {
   color?: string;
   colors?: string[];
   icon?: React.ComponentProps<typeof Ionicons>['name'];
+  description?: string;
 };
 
 type ImportedCalendarEvent = {
   title?: string;
   calendarId: string;
+  calendarTitle?: string;
+  startDate?: string;
+  color?: string;
 };
 
 const renderSkeletons = () => (
@@ -115,20 +166,39 @@ export default function CalendarScreen() {
   const [importedEventsByDay, setImportedEventsByDay] = useState<
     Record<string, ImportedCalendarEvent[]>
   >({});
+  const [activeDayKey, setActiveDayKey] = useState<string | null>(null);
+  const [dayDetailModalVisible, setDayDetailModalVisible] = useState(false);
+  const closeDayDetailModal = useCallback(() => {
+    setDayDetailModalVisible(false);
+    setActiveDayKey(null);
+  }, []);
   const legendGroups = useMemo(
     () => [
       {
         key: 'shifts',
         title: t('calendarLegendShiftGroup'),
         entries: [
-          { key: 'shift', variant: 'dot', color: '#34d399', label: t('calendarLegendShift') },
+          {
+            key: 'shift',
+            variant: 'dot',
+            color: '#34d399',
+            label: t('calendarLegendShift'),
+            description: t('calendarLegendShiftDesc'),
+          },
           {
             key: 'imported',
             variant: 'multiDot',
             colors: ['#34d399', '#fb923c', '#38bdf8'],
             label: t('calendarLegendImported'),
+            description: t('calendarLegendImportedDesc'),
           },
-          { key: 'pink', variant: 'dot', color: '#f472b6', label: t('calendarLegendPink') },
+          {
+            key: 'pink',
+            variant: 'dot',
+            color: '#f472b6',
+            label: t('calendarLegendPink'),
+            description: t('calendarLegendPinkDesc'),
+          },
         ],
       },
       {
@@ -141,6 +211,7 @@ export default function CalendarScreen() {
             color: '#facc15',
             icon: 'sunny-outline',
             label: t('calendarLegendMorning'),
+            description: t('calendarLegendMorningDesc'),
           },
           {
             key: 'evening',
@@ -148,6 +219,7 @@ export default function CalendarScreen() {
             color: '#fb923c',
             icon: 'partly-sunny-outline',
             label: t('calendarLegendEvening'),
+            description: t('calendarLegendEveningDesc'),
           },
           {
             key: 'night',
@@ -155,6 +227,7 @@ export default function CalendarScreen() {
             color: '#a855f7',
             icon: 'moon-outline',
             label: t('calendarLegendNight'),
+            description: t('calendarLegendNightDesc'),
           },
         ],
       },
@@ -225,6 +298,44 @@ export default function CalendarScreen() {
     });
     return map;
   }, [selectedCalendars]);
+
+  const activeDayShifts = useMemo(() => {
+    if (!activeDayKey) {
+      return [];
+    }
+    return shiftsByDay.get(activeDayKey) ?? [];
+  }, [activeDayKey, shiftsByDay]);
+
+  const activeDayImportedEvents = useMemo(() => {
+    if (!activeDayKey) {
+      return [];
+    }
+    return importedEventsByDay[activeDayKey] ?? [];
+  }, [activeDayKey, importedEventsByDay]);
+
+  const sortedActiveDayImportedEvents = useMemo(() => {
+    return [...activeDayImportedEvents].sort((a, b) => {
+      const aTime = a.startDate ? new Date(a.startDate).getTime() : 0;
+      const bTime = b.startDate ? new Date(b.startDate).getTime() : 0;
+      return aTime - bTime;
+    });
+  }, [activeDayImportedEvents]);
+
+  const activeDayLabel = useMemo(() => {
+    if (!activeDayKey) {
+      return null;
+    }
+    const date = new Date(activeDayKey);
+    if (Number.isNaN(date.getTime())) {
+      return null;
+    }
+    return date.toLocaleDateString(undefined, {
+      weekday: 'long',
+      month: 'long',
+      day: 'numeric',
+    });
+  }, [activeDayKey]);
+
 
   const handleMonthChange = useCallback(
     (offset: number) => {
@@ -307,17 +418,21 @@ export default function CalendarScreen() {
           end
         );
         if (!isMounted) return;
-        const normalized: Record<string, ImportedCalendarEvent[]> = {};
-        events.forEach((event) => {
-          const eventStart = new Date(event.startDate);
-          if (Number.isNaN(eventStart.getTime())) return;
-          const key = dayKey(eventStart);
-          const entry: ImportedCalendarEvent = {
-            title: event.title ?? undefined,
-            calendarId: event.calendarId ?? '',
-          };
-          normalized[key] = normalized[key] ?? [];
-          normalized[key].push(entry);
+      const normalized: Record<string, ImportedCalendarEvent[]> = {};
+      events.forEach((event) => {
+        const eventStart = new Date(event.startDate);
+        if (Number.isNaN(eventStart.getTime())) return;
+        const key = dayKey(eventStart);
+        const calendarMeta = selectedCalendars.find((cal) => cal.id === event.calendarId);
+        const entry: ImportedCalendarEvent = {
+          title: event.title ?? undefined,
+          calendarId: event.calendarId ?? '',
+          calendarTitle: calendarMeta?.title,
+          startDate: eventStart.toISOString(),
+          color: importedCalendarColorMap.get(event.calendarId ?? '') ?? '#facc15',
+        };
+        normalized[key] = normalized[key] ?? [];
+        normalized[key].push(entry);
         });
         setImportedEventsByDay(normalized);
       } catch (error) {
@@ -333,7 +448,7 @@ export default function CalendarScreen() {
     return () => {
       isMounted = false;
     };
-  }, [selectedCalendars, visibleMonth]);
+  }, [selectedCalendars, visibleMonth, importedCalendarColorMap]);
 
   const errorView = error ? (
     <View style={styles.errorCard}>
@@ -432,14 +547,10 @@ export default function CalendarScreen() {
                             dayShifts.length && styles.dayChipActive,
                             pressed && dayShifts.length ? styles.dayChipPressed : undefined,
                           ]}
-                          accessibilityRole={dayShifts.length ? 'button' : undefined}
-                          disabled={!dayShifts.length}
+                          accessibilityRole="button"
                           onPress={() => {
-                            if (!dayShifts.length) return;
-                            router.push({
-                              pathname: `/shift-details/${dayShifts[0].id}`,
-                              params: { from: 'calendar' },
-                            });
+                            setActiveDayKey(key);
+                            setDayDetailModalVisible(true);
                           }}
                         >
                           <Text
@@ -491,13 +602,23 @@ export default function CalendarScreen() {
           </View>
         )}
         <View style={styles.legendCard}>
+          <LinearGradient
+            colors={['#fff', '#eef3ff']}
+            style={styles.legendGradient}
+          />
           <Text style={styles.legendTitle}>{t('calendarLegendTitle')}</Text>
           {legendGroups.map((group) => (
             <View key={group.key} style={styles.legendGroup}>
               <Text style={styles.legendGroupTitle}>{group.title}</Text>
               <View style={styles.legendGrid}>
                 {group.entries.map((entry) => (
-                  <View key={entry.key} style={styles.legendChip}>
+                  <View
+                    key={entry.key}
+                    style={[
+                      styles.legendChip,
+                      entry.variant === 'dot' && { borderColor: entry.color },
+                    ]}
+                  >
                     {entry.variant === 'dot' && (
                       <View
                         style={[
@@ -513,7 +634,7 @@ export default function CalendarScreen() {
                             key={`${entry.key}-${index}`}
                             style={[
                               styles.legendDotMini,
-                              { backgroundColor: color, borderRadius: 999 },
+                              { backgroundColor: color },
                             ]}
                           />
                         ))}
@@ -522,7 +643,12 @@ export default function CalendarScreen() {
                     {entry.variant === 'icon' && entry.icon && (
                       <Ionicons name={entry.icon} size={16} color={entry.color} />
                     )}
-                    <Text style={styles.legendLabel}>{entry.label}</Text>
+                    <View style={styles.legendText}>
+                      <Text style={styles.legendLabel}>{entry.label}</Text>
+                      {entry.description ? (
+                        <Text style={styles.legendDescription}>{entry.description}</Text>
+                      ) : null}
+                    </View>
                   </View>
                 ))}
               </View>
@@ -530,6 +656,121 @@ export default function CalendarScreen() {
           ))}
         </View>
       </ScrollView>
+      <Modal
+        transparent
+        visible={dayDetailModalVisible}
+        animationType="slide"
+        onRequestClose={closeDayDetailModal}
+      >
+        <Pressable style={styles.dayDetailBackdrop} onPress={closeDayDetailModal} />
+        <View style={styles.dayDetailCard}>
+          <View style={styles.dayDetailHeader}>
+            <View>
+              <Text style={styles.dayDetailTitle}>{t('calendarDetailTitle')}</Text>
+              {activeDayLabel ? (
+                <Text style={styles.dayDetailDate}>{activeDayLabel}</Text>
+              ) : null}
+            </View>
+            <Pressable style={styles.dayDetailCloseButton} onPress={closeDayDetailModal}>
+              <Ionicons name="close" size={18} color="#475569" />
+            </Pressable>
+          </View>
+          <ScrollView
+            style={styles.dayDetailScroll}
+            contentContainerStyle={styles.dayDetailScrollContent}
+            showsVerticalScrollIndicator
+            indicatorStyle="black"
+            nestedScrollEnabled
+          >
+            <View style={styles.dayDetailSection}>
+              <Text style={styles.dayDetailSectionTitle}>{t('calendarDetailShiftsTitle')}</Text>
+              {activeDayShifts.length ? (
+                activeDayShifts.map((shift) => {
+                  const { startLabel, endLabel } = formatShiftTime(shift);
+                  const shiftPhase = getShiftPhase(shift.start, shift.end);
+                  const phaseInfo = phaseMeta[shiftPhase];
+                  const phaseLabel = t(PHASE_TRANSLATION_KEYS[shiftPhase]);
+                  const locationLabel = buildShiftLocation(shift);
+                  return (
+                    <View key={shift.id} style={styles.dayDetailShiftCard}>
+                      <View style={styles.dayDetailShiftHeader}>
+                        <Text style={styles.dayDetailShiftTitle}>{shift.title}</Text>
+                        <View
+                          style={[
+                            styles.dayDetailPhaseChip,
+                            { backgroundColor: phaseInfo.background },
+                          ]}
+                        >
+                          <Ionicons
+                            name={phaseInfo.icon}
+                            size={16}
+                            color={phaseInfo.color}
+                            style={styles.dayDetailPhaseIcon}
+                          />
+                          <Text style={[styles.dayDetailPhaseLabel, { color: phaseInfo.color }]}>
+                            {phaseLabel}
+                          </Text>
+                        </View>
+                      </View>
+                      <Text style={styles.dayDetailShiftTime}>
+                        {startLabel} — {endLabel}
+                      </Text>
+                      {locationLabel ? (
+                        <Text style={styles.dayDetailLocation}>{locationLabel}</Text>
+                      ) : null}
+                      {shift.description ? (
+                        <Text style={styles.dayDetailDescription}>{shift.description}</Text>
+                      ) : null}
+                    </View>
+                  );
+                })
+              ) : (
+                <Text style={styles.dayDetailEmptyText}>{t('calendarDetailNoEvents')}</Text>
+              )}
+            </View>
+            <View style={styles.dayDetailSection}>
+              <Text style={styles.dayDetailSectionTitle}>{t('calendarDetailImportedTitle')}</Text>
+              {sortedActiveDayImportedEvents.length ? (
+                sortedActiveDayImportedEvents.map((event) => {
+                  const eventTime = event.startDate
+                    ? new Date(event.startDate).toLocaleTimeString(undefined, {
+                        hour: 'numeric',
+                        minute: '2-digit',
+                      })
+                    : null;
+                  return (
+                    <View key={`${event.calendarId}-${event.title ?? 'event'}`} style={styles.dayDetailItem}>
+                      <View style={styles.dayDetailImportedRow}>
+                        <View
+                          style={[
+                            styles.dayDetailImportedDot,
+                            { backgroundColor: event.color ?? '#38bdf8' },
+                          ]}
+                        />
+                        <View style={styles.dayDetailImportedMeta}>
+                          <Text style={styles.dayDetailItemTitle}>
+                            {event.title ?? t('calendarDetailImportedUntitled')}
+                          </Text>
+                          <Text style={styles.dayDetailItemMeta}>
+                            {event.calendarTitle ?? t('calendarDetailImportedCalendarFallback')}
+                          </Text>
+                          {eventTime ? (
+                            <Text style={styles.dayDetailItemMeta}>
+                              {t('calendarDetailTimeLabel')}: {eventTime}
+                            </Text>
+                          ) : null}
+                        </View>
+                      </View>
+                    </View>
+                  );
+                })
+              ) : (
+                <Text style={styles.dayDetailEmptyText}>{t('calendarDetailNoImports')}</Text>
+              )}
+            </View>
+          </ScrollView>
+        </View>
+      </Modal>
       <Modal transparent visible={showEmptyModal} animationType="fade">
         <View style={styles.emptyModalBackdrop}>
           <View style={styles.emptyModalCard}>
@@ -694,16 +935,20 @@ const styles = StyleSheet.create({
     color: '#475569',
   },
   legendCard: {
-    backgroundColor: '#fff',
-    borderRadius: 24,
-    padding: 16,
+    borderRadius: 26,
     marginTop: 12,
     marginBottom: 24,
+    overflow: 'hidden',
     shadowColor: '#0f172a',
-    shadowOpacity: 0.06,
-    shadowRadius: 14,
-    shadowOffset: { width: 0, height: 8 },
-    elevation: 8,
+    shadowOpacity: 0.08,
+    shadowRadius: 20,
+    shadowOffset: { width: 0, height: 12 },
+    elevation: 10,
+    backgroundColor: '#fff',
+  },
+  legendGradient: {
+    ...StyleSheet.absoluteFillObject,
+    opacity: 0.55,
   },
   legendTitle: {
     fontSize: 12,
@@ -721,13 +966,15 @@ const styles = StyleSheet.create({
     width: '50%',
     marginHorizontal: 6,
     marginBottom: 10,
-    paddingVertical: 6,
-    paddingHorizontal: 10,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
     borderRadius: 14,
-    backgroundColor: '#f8fafc',
+    backgroundColor: '#fff',
+    borderWidth: 1,
+    borderColor: 'transparent',
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
+    gap: 8,
   },
   legendGroup: {
     marginBottom: 12,
@@ -752,6 +999,151 @@ const styles = StyleSheet.create({
     width: 6,
     height: 6,
     borderRadius: 999,
+  },
+  legendText: {
+    flex: 1,
+  },
+  legendDescription: {
+    fontSize: 10,
+    color: '#94a3b8',
+    marginTop: 2,
+  },
+  dayDetailBackdrop: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(15, 23, 42, 0.45)',
+    zIndex: 10,
+  },
+  dayDetailCard: {
+    position: 'absolute',
+    left: 16,
+    right: 16,
+    top: '15%',
+    bottom: '10%',
+    borderRadius: 24,
+    backgroundColor: '#fff',
+    padding: 16,
+    shadowColor: '#0f172a',
+    shadowOpacity: 0.15,
+    shadowOffset: { width: 0, height: 12 },
+    shadowRadius: 20,
+    elevation: 20,
+    zIndex: 20,
+  },
+  dayDetailHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 6,
+  },
+  dayDetailTitle: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#111827',
+    marginBottom: 2,
+  },
+  dayDetailDate: {
+    fontSize: 12,
+    color: '#475569',
+  },
+  dayDetailCloseButton: {
+    padding: 6,
+    borderRadius: 12,
+  },
+  dayDetailScroll: {
+    flex: 1,
+    marginTop: 4,
+  },
+  dayDetailScrollContent: {
+    paddingBottom: 20,
+  },
+  dayDetailSection: {
+    marginBottom: 14,
+  },
+  dayDetailSectionTitle: {
+    fontSize: 11,
+    letterSpacing: 0.4,
+    textTransform: 'uppercase',
+    color: '#94a3b8',
+    marginBottom: 8,
+  },
+  dayDetailItem: {
+    marginBottom: 10,
+  },
+  dayDetailItemTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#0f172a',
+  },
+  dayDetailItemMeta: {
+    fontSize: 12,
+    color: '#475569',
+    marginTop: 2,
+  },
+  dayDetailEmptyText: {
+    fontSize: 12,
+    color: '#94a3b8',
+  },
+  dayDetailImportedRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+  },
+  dayDetailImportedDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 999,
+    marginRight: 10,
+    marginTop: 5,
+  },
+  dayDetailImportedMeta: {
+    flex: 1,
+  },
+  dayDetailShiftCard: {
+    backgroundColor: '#f8fafc',
+    borderRadius: 18,
+    padding: 12,
+    marginBottom: 10,
+  },
+  dayDetailShiftHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 6,
+  },
+  dayDetailShiftTitle: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#111827',
+    flex: 1,
+    marginRight: 8,
+  },
+  dayDetailPhaseChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 2,
+    paddingHorizontal: 8,
+    borderRadius: 999,
+  },
+  dayDetailPhaseIcon: {
+    marginRight: 4,
+  },
+  dayDetailPhaseLabel: {
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  dayDetailShiftTime: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#0f172a',
+    marginBottom: 4,
+  },
+  dayDetailLocation: {
+    fontSize: 12,
+    color: '#475569',
+    marginBottom: 4,
+  },
+  dayDetailDescription: {
+    fontSize: 12,
+    color: '#475569',
   },
   legendGroup: {
     marginBottom: 12,
