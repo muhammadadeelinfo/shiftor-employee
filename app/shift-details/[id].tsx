@@ -17,6 +17,7 @@ import { useAuth } from '@hooks/useSupabaseAuth';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { getShiftPhase, phaseMeta, ShiftPhase } from '@shared/utils/shiftPhase';
+import { useTheme } from '@shared/themeContext';
 import { useLanguage, type TranslationKey } from '@shared/context/LanguageContext';
 
 const statusStyles: Record<
@@ -140,6 +141,7 @@ export default function ShiftDetailsScreen() {
     : undefined;
   const shiftToShow = shift ?? cachedShift;
   const { t } = useLanguage();
+  const { theme, mode } = useTheme();
 
   if (isLoading && !shiftToShow) {
     return (
@@ -202,8 +204,27 @@ export default function ShiftDetailsScreen() {
     { label: t('heroStatsDuration'), value: duration },
   ];
   const reachOutCopy = t('reachOutCopy', { contact: opsContact });
+  const heroGradientColors = [theme.heroGradientStart, theme.heroGradientEnd];
+  const sectionShadowColor = mode === 'dark' ? '#000' : '#0f172a';
+  const sectionBackground = theme.surface;
+  const heroChipBackground = theme.surfaceMuted;
+  const heroStatBackground = theme.surface;
+  const nextStepBackground = theme.surfaceMuted;
+  const bulletColor = theme.primary;
+  const mapLinkColor = theme.info;
+  const heroTempoLabelColor = theme.textSecondary;
+  const heroTempoValueColor = theme.textPrimary;
+  const textPrimaryColor = theme.textPrimary;
+  const textSecondaryColor = theme.textSecondary;
+  const sectionBackgroundStyle = {
+    backgroundColor: sectionBackground,
+    shadowColor: sectionShadowColor,
+  };
 
-  const contentStyle = [styles.container, { paddingBottom: 40 + insets.bottom }];
+  const contentStyle = [
+    styles.container,
+    { paddingBottom: 40 + insets.bottom, backgroundColor: theme.background },
+  ];
 
   const handleBack = () => {
     if (fromParam === 'calendar') {
@@ -234,45 +255,65 @@ export default function ShiftDetailsScreen() {
         <Text style={styles.tabLabel}>{t('shiftOverview')}</Text>
       </View>
       <LinearGradient
-        colors={['#eef2ff', '#f8fafc']}
+        colors={heroGradientColors}
         style={[styles.hero, { borderColor: status.border }]}
       >
         <View style={styles.heroTop}>
-          <View style={[styles.statusBadge, { borderColor: status.border }]}>
+          <View
+            style={[
+              styles.statusBadge,
+              { borderColor: status.border, backgroundColor: theme.surface },
+            ]}
+          >
             <View style={[styles.statusDot, { backgroundColor: status.dot }]} />
             <Text style={[styles.statusText, { color: status.text }]}>{statusLabel}</Text>
           </View>
           <View>
-            <Text style={styles.heroTempoLabel}>{shiftTempo}</Text>
-            <Text style={styles.heroTempoValue}>{countdownLabel}</Text>
+            <Text style={[styles.heroTempoLabel, { color: heroTempoLabelColor }]}>{shiftTempo}</Text>
+            <Text style={[styles.heroTempoValue, { color: heroTempoValueColor }]}>
+              {countdownLabel}
+            </Text>
           </View>
         </View>
-        <Text style={styles.title}>{shiftToShow.title}</Text>
-        <Text style={styles.subtitle}>{locationLabel}</Text>
-        <Text style={styles.statusDescription}>{statusDescription}</Text>
+        <Text style={[styles.title, { color: textPrimaryColor }]}>{shiftToShow.title}</Text>
+        <Text style={[styles.subtitle, { color: textSecondaryColor }]}>{locationLabel}</Text>
+        <Text style={[styles.statusDescription, { color: textSecondaryColor }]}>
+          {statusDescription}
+        </Text>
 
-        <View style={styles.heroStats}>
-          {heroStats.map((stat, index) => (
-            <View
-              key={stat.label}
-              style={[
-                styles.heroStatCard,
-                index === heroStats.length - 1 ? styles.heroStatCardLast : undefined,
-              ]}
-            >
-              <Text style={styles.heroStatLabel}>{stat.label}</Text>
-              <Text style={styles.heroStatValue}>{stat.value}</Text>
+          <View style={styles.heroStats}>
+            {heroStats.map((stat, index) => (
+              <View
+                key={stat.label}
+                style={[
+                  styles.heroStatCard,
+                  { backgroundColor: heroStatBackground },
+                  index === heroStats.length - 1 ? styles.heroStatCardLast : undefined,
+                ]}
+              >
+                <Text style={[styles.heroStatLabel, { color: textSecondaryColor }]}>{stat.label}</Text>
+              <Text style={[styles.heroStatValue, { color: textPrimaryColor }]}>{stat.value}</Text>
             </View>
           ))}
         </View>
         <View style={styles.heroChips}>
-          <View style={styles.heroChip}>
-            <Text style={styles.heroChipLabel}>{t('stageLabel')}</Text>
-            <Text style={styles.heroChipValue}>{shiftTempo}</Text>
+          <View style={[styles.heroChip, { backgroundColor: heroChipBackground }]}>
+            <Text style={[styles.heroChipLabel, { color: textSecondaryColor }]}>
+              {t('stageLabel')}
+            </Text>
+            <Text style={[styles.heroChipValue, { color: textPrimaryColor }]}>{shiftTempo}</Text>
           </View>
-          <View style={[styles.heroChip, styles.heroChipLast]}>
-            <Text style={styles.heroChipLabel}>{t('countdownLabel')}</Text>
-            <Text style={styles.heroChipValue}>{countdownLabel}</Text>
+          <View
+            style={[
+              styles.heroChip,
+              styles.heroChipLast,
+              { backgroundColor: heroChipBackground },
+            ]}
+          >
+            <Text style={[styles.heroChipLabel, { color: textSecondaryColor }]}>
+              {t('countdownLabel')}
+            </Text>
+            <Text style={[styles.heroChipValue, { color: textPrimaryColor }]}>{countdownLabel}</Text>
           </View>
         </View>
         <View style={[styles.heroPhase, { backgroundColor: phaseMeta[shiftPhase].background }]}>
@@ -283,74 +324,92 @@ export default function ShiftDetailsScreen() {
         </View>
       </LinearGradient>
 
-      <View style={styles.section}>
-        <Text style={styles.sectionHeading}>{t('timingSnapshot')}</Text>
+      <View style={[styles.section, sectionBackgroundStyle]}>
+        <Text style={[styles.sectionHeading, { color: textSecondaryColor }]}>
+          {t('timingSnapshot')}
+        </Text>
         <View style={styles.gridRow}>
           <View style={styles.gridItem}>
-            <Text style={styles.gridLabel}>{t('dayLabel')}</Text>
-            <Text style={styles.gridValue}>{dateLabel}</Text>
+            <Text style={[styles.gridLabel, { color: textSecondaryColor }]}>{t('dayLabel')}</Text>
+            <Text style={[styles.gridValue, { color: textPrimaryColor }]}>{dateLabel}</Text>
           </View>
           <View style={styles.gridItem}>
-            <Text style={styles.gridLabel}>{t('stageLabel')}</Text>
-            <Text style={styles.gridValue}>{shiftTempo}</Text>
+            <Text style={[styles.gridLabel, { color: textSecondaryColor }]}>{t('stageLabel')}</Text>
+            <Text style={[styles.gridValue, { color: textPrimaryColor }]}>{shiftTempo}</Text>
           </View>
         </View>
         <View style={styles.nextStepsRow}>
-          <View style={styles.nextStep}>
-            <Text style={styles.nextStepLabel}>{t('countdownLabel')}</Text>
-            <Text style={styles.nextStepValue}>{countdownLabel}</Text>
+          <View style={[styles.nextStep, { backgroundColor: nextStepBackground }]}>
+            <Text style={[styles.nextStepLabel, { color: textSecondaryColor }]}>
+              {t('countdownLabel')}
+            </Text>
+            <Text style={[styles.nextStepValue, { color: textPrimaryColor }]}>
+              {countdownLabel}
+            </Text>
           </View>
-          <View style={[styles.nextStep, styles.nextStepLast]}>
-            <Text style={styles.nextStepLabel}>{t('prepLabel')}</Text>
-            <Text style={styles.nextStepValue}>{prepValue}</Text>
+          <View style={[styles.nextStep, styles.nextStepLast, { backgroundColor: nextStepBackground }]}>
+            <Text style={[styles.nextStepLabel, { color: textSecondaryColor }]}>
+              {t('prepLabel')}
+            </Text>
+            <Text style={[styles.nextStepValue, { color: textPrimaryColor }]}>{prepValue}</Text>
           </View>
         </View>
       </View>
 
-      <View style={styles.section}>
-        <Text style={styles.sectionHeading}>{t('focusPointsLabel')}</Text>
+      <View style={[styles.section, sectionBackgroundStyle]}>
+        <Text style={[styles.sectionHeading, { color: textSecondaryColor }]}>
+          {t('focusPointsLabel')}
+        </Text>
         <View style={styles.splitRow}>
           {checklist.map((point) => (
             <View key={point} style={styles.bulletRow}>
-              <View style={styles.bulletDot} />
-              <Text style={styles.bulletText}>{point}</Text>
+              <View style={[styles.bulletDot, { backgroundColor: bulletColor }]} />
+              <Text style={[styles.bulletText, { color: textPrimaryColor }]}>{point}</Text>
             </View>
           ))}
         </View>
       </View>
 
-      <View style={styles.section}>
-        <Text style={styles.sectionHeading}>{t('whereLabel')}</Text>
-        <Text style={styles.sectionTitle}>{locationLabel}</Text>
-        {locationSubtext ? <Text style={styles.sectionSubtitle}>{locationSubtext}</Text> : null}
+      <View style={[styles.section, sectionBackgroundStyle]}>
+        <Text style={[styles.sectionHeading, { color: textSecondaryColor }]}>{t('whereLabel')}</Text>
+        <Text style={[styles.sectionTitle, { color: textPrimaryColor }]}>{locationLabel}</Text>
         {locationSubtext ? (
-          <Text style={styles.mapLink} onPress={handleOpenMaps}>
+          <Text style={[styles.sectionSubtitle, { color: textSecondaryColor }]}>
+            {locationSubtext}
+          </Text>
+        ) : null}
+        {locationSubtext ? (
+          <Text style={[styles.mapLink, { color: mapLinkColor }]} onPress={handleOpenMaps}>
             {t('openInMaps')}
           </Text>
         ) : null}
       </View>
 
       {description ? (
-        <View style={styles.section}>
-          <Text style={styles.sectionHeading}>{t('whatYoullDoLabel')}</Text>
-          <Text style={styles.sectionBody}>{description}</Text>
+        <View style={[styles.section, sectionBackgroundStyle]}>
+          <Text style={[styles.sectionHeading, { color: textSecondaryColor }]}>
+            {t('whatYoullDoLabel')}
+          </Text>
+          <Text style={[styles.sectionBody, { color: textPrimaryColor }]}>{description}</Text>
         </View>
       ) : null}
 
       {!description && (
-        <View style={styles.section}>
-          <Text style={styles.sectionHeading}>{t('whatYoullDoLabel')}</Text>
-          <Text style={styles.sectionBody}>{t('noDescription')}</Text>
+        <View style={[styles.section, sectionBackgroundStyle]}>
+          <Text style={[styles.sectionHeading, { color: textSecondaryColor }]}>
+            {t('whatYoullDoLabel')}
+          </Text>
+          <Text style={[styles.sectionBody, { color: textPrimaryColor }]}>{t('noDescription')}</Text>
         </View>
       )}
 
-      <View style={styles.section}>
-        <Text style={styles.sectionHeading}>{t('needAHand')}</Text>
-        <Text style={styles.sectionBody}>{reachOutCopy}</Text>
-        <Text style={styles.sectionBody}>
+      <View style={[styles.section, sectionBackgroundStyle]}>
+        <Text style={[styles.sectionHeading, { color: textSecondaryColor }]}>{t('needAHand')}</Text>
+        <Text style={[styles.sectionBody, { color: textPrimaryColor }]}>{reachOutCopy}</Text>
+        <Text style={[styles.sectionBody, { color: textPrimaryColor }]}>
           {t('callLabel')}: {contactPhone}
         </Text>
-        <Text style={styles.sectionBody}>
+        <Text style={[styles.sectionBody, { color: textPrimaryColor }]}>
           {t('emailLabel')}: {contactEmail}
         </Text>
       </View>

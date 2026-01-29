@@ -33,6 +33,7 @@ import {
   CalendarSelectionProvider,
   useCalendarSelection,
 } from '@shared/context/CalendarSelectionContext';
+import { ThemeProvider } from '@shared/themeContext';
 import * as Calendar from 'expo-calendar';
 import { useAuth } from '@hooks/useSupabaseAuth';
 import { useQuery } from '@tanstack/react-query';
@@ -401,9 +402,11 @@ export default function RootLayout() {
       <NotificationProvider>
         <SafeAreaProvider>
           <LanguageProvider>
-            <CalendarSelectionProvider>
-              <LayoutContent />
-            </CalendarSelectionProvider>
+            <ThemeProvider>
+              <CalendarSelectionProvider>
+                <LayoutContent />
+              </CalendarSelectionProvider>
+            </ThemeProvider>
           </LanguageProvider>
         </SafeAreaProvider>
       </NotificationProvider>
