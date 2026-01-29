@@ -14,7 +14,6 @@ import {
 import { useEffect, useRef, useState } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { LinearGradient } from 'expo-linear-gradient';
 import { PrimaryButton } from '@shared/components/PrimaryButton';
 import { supabase } from '@lib/supabaseClient';
 import { useRouter } from 'expo-router';
@@ -167,26 +166,6 @@ export default function LoginScreen() {
             <Text style={styles.supportText}>{t('loginSupportText')}</Text>
           </TouchableOpacity>
         </View>
-        <TouchableOpacity
-          style={[styles.guestWrapper, { width: Math.min(width - 32, 420) }]}
-          onPress={() => router.push('/guest')}
-          activeOpacity={0.9}
-        >
-          <LinearGradient
-            colors={['#ffffff', '#f1f5f9']}
-            start={[0, 0]}
-            end={[1, 0]}
-            style={styles.guestRow}
-          >
-            <View>
-              <Text style={styles.guestText}>{t('continueAsGuestButton')}</Text>
-              <Text style={styles.guestSubtitle}>{t('continueAsGuestSubtitle')}</Text>
-            </View>
-            <View style={styles.guestIcon}>
-              <Ionicons name="chevron-forward" size={18} color="#2563eb" />
-            </View>
-          </LinearGradient>
-        </TouchableOpacity>
       </SafeAreaView>
     </LinearGradient>
   );
@@ -275,46 +254,6 @@ const styles = StyleSheet.create({
     color: '#2563eb',
     textAlign: 'center',
     fontWeight: '600',
-  },
-  guestWrapper: {
-    marginTop: 18,
-  },
-  guestRow: {
-    paddingVertical: 16,
-    paddingHorizontal: 20,
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: '#d1d5db',
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    shadowColor: '#0f172a',
-    shadowOpacity: 0.08,
-    shadowOffset: { width: 0, height: 10 },
-    shadowRadius: 16,
-    elevation: 6,
-  },
-  guestText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#0f172a',
-  },
-  guestSubtitle: {
-    fontSize: 12,
-    color: '#6b7280',
-  },
-  guestIcon: {
-    width: 36,
-    height: 36,
-    borderRadius: 12,
-    backgroundColor: '#ffffff',
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: '#0f172a',
-    shadowOpacity: 0.2,
-    shadowOffset: { width: 0, height: 4 },
-    shadowRadius: 10,
-    elevation: 8,
   },
   accentCircleLarge: {
     position: 'absolute',

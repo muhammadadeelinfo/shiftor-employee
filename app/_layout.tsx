@@ -40,8 +40,7 @@ import { getShifts, type Shift } from '@features/shifts/shiftsService';
 import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
 
-const hiddenTopBarPaths = ['/login', '/signup', '/guest'];
-const GUEST_PATH_PREFIX = '/guest';
+const hiddenTopBarPaths = ['/login', '/signup'];
 
 function LayoutContentInner() {
   const pushToken = useExpoPushToken();
@@ -63,8 +62,7 @@ function LayoutContentInner() {
   useEffect(() => {
     if (loading) return;
 
-    const isGuestPath = pathname?.startsWith(GUEST_PATH_PREFIX);
-    if (!user && !isGuestPath && pathname !== '/login') {
+    if (!user && pathname !== '/login') {
       router.replace('/login');
     }
   }, [loading, pathname, router, user]);
