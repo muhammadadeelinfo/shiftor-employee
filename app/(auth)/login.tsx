@@ -158,14 +158,24 @@ export default function LoginScreen() {
             onPress={handleAuthenticate}
             loading={loading}
           />
-          <TouchableOpacity
-            style={styles.supportRow}
-            activeOpacity={0.7}
-            onPress={() => Linking.openURL('mailto:hello@employeeportal.com')}
-          >
-            <Ionicons name="help-circle-outline" size={18} color="#2563eb" />
-            <Text style={styles.supportText}>{t('loginSupportText')}</Text>
-          </TouchableOpacity>
+          <>
+            <TouchableOpacity
+              style={styles.supportRow}
+              activeOpacity={0.7}
+              onPress={() => Linking.openURL('mailto:hello@employeeportal.com')}
+            >
+              <Ionicons name="help-circle-outline" size={18} color="#2563eb" />
+              <Text style={styles.supportText}>{t('loginSupportText')}</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.guestRow}
+              activeOpacity={0.7}
+              onPress={() => router.push('/guest')}
+            >
+              <Text style={styles.guestTitle}>{t('continueAsGuestButton')}</Text>
+              <Text style={styles.guestSubtitle}>{t('continueAsGuestSubtitle')}</Text>
+            </TouchableOpacity>
+          </>
         </View>
       </SafeAreaView>
     </LinearGradient>
@@ -286,5 +296,27 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '600',
     marginLeft: 6,
+  },
+  guestRow: {
+    flexDirection: 'column',
+    alignItems: 'flex-start',
+    marginTop: 14,
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
+    borderRadius: 16,
+    backgroundColor: '#f8fafc',
+  },
+  guestTitle: {
+    fontSize: 14,
+    fontWeight: '700',
+    marginBottom: 2,
+    color: '#0f172a',
+  },
+  guestSubtitle: {
+    fontSize: 12,
+    color: '#475569',
+    lineHeight: 18,
   },
 });
