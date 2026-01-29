@@ -55,58 +55,33 @@ export default function ProfileScreen() {
     <SafeAreaView style={[styles.safeArea, { backgroundColor: theme.background, ...safeAreaStyle }]}>
       <LinearGradient
         colors={heroGradientColors}
-        style={styles.headerGradient}
+        style={[styles.headerGradient, styles.headerGlass]}
         start={[0, 0]}
         end={[1, 1]}
       >
         <View style={styles.heroGlow} />
-        <View style={styles.heroHeader}>
-          <View>
-            <Text style={[styles.profileGreeting, { color: theme.textPrimary }]}>
-              {t('profileGreeting', { name: profileName(user) })}
-            </Text>
-            <Text style={[styles.profileSubtext, { color: theme.textSecondary }]}>
-              {t('profileSettingsSync')}
-            </Text>
+        <View style={styles.heroCard}>
+          <View style={styles.heroHeader}>
+            <View>
+              <Text style={[styles.profileGreeting, { color: theme.textPrimary }]}>
+                {t('profileGreeting', { name: profileName(user) })}
+              </Text>
+            </View>
+            <View style={[styles.statusBadge, { backgroundColor: theme.primaryAccent }]}>
+              <Text style={styles.statusBadgeText}>{translatedStatus}</Text>
+            </View>
           </View>
-          <View style={[styles.statusBadge, { backgroundColor: theme.primaryAccent }]}>
-            <Text style={styles.statusBadgeText}>{translatedStatus}</Text>
+          <View style={styles.heroMetrics}>
+            <View style={styles.heroMetricBlock}>
+              <Text style={[styles.profileMetricLabel, { color: theme.textSecondary }]}>{t('memberSince')}</Text>
+              <Text style={[styles.profileMetricValue, { color: theme.textPrimary }]}>{formatDate(user?.created_at)}</Text>
+            </View>
+            <View style={styles.heroMetricBlock}>
+              <Text style={[styles.profileMetricLabel, { color: theme.textSecondary }]}>{t('providerLabel')}</Text>
+              <Text style={[styles.profileMetricValue, { color: theme.textPrimary }]}>{provider.toUpperCase()}</Text>
+            </View>
           </View>
-        </View>
-        <View style={styles.badgeRow}>
-          <View style={styles.heroBadge}>
-            <Ionicons name="notifications-outline" size={16} color={theme.primary} />
-            <Text style={[styles.badgeText, { color: theme.textSecondary }]}>2 alerts</Text>
-          </View>
-          <View style={styles.heroBadge}>
-            <Ionicons name="help-circle-outline" size={16} color={theme.textSecondary} />
-            <Text style={[styles.badgeText, { color: theme.textSecondary }]}>Need help?</Text>
-          </View>
-          <View style={styles.heroBadge}>
-            <Text style={[styles.badgeText, { color: theme.textSecondary }]}> {user ? user.email : '—'} </Text>
-          </View>
-        </View>
-        <View style={styles.heroStats}>
-          <View style={styles.heroStatPill}>
-            <Text style={[styles.heroStatLabel, { color: theme.textSecondary }]}>{t('memberSinceLabel')}</Text>
-            <Text style={[styles.heroStatValue, { color: theme.textPrimary }]}>{formatDate(user?.created_at)}</Text>
-          </View>
-          <View style={styles.heroStatPill}>
-            <Text style={[styles.heroStatLabel, { color: theme.textSecondary }]}>{t('providerLabel')}</Text>
-            <Text style={[styles.heroStatValue, { color: theme.textPrimary }]}>{provider.toUpperCase()}</Text>
-          </View>
-        </View>
-        <View style={styles.heroActions}>
-          <View style={[styles.actionIcon, styles.actionIconLight]}>
-            <Ionicons name="notifications" size={18} color={theme.primary} />
-            <View style={styles.notificationDot} />
-          </View>
-          <View style={styles.actionIcon}>
-            <Ionicons name="bolt" size={18} color={theme.primaryAccent} />
-          </View>
-          <Text style={[styles.heroMeta, { color: theme.textSecondary }]}>
-            {user ? user.email : t('profileSettingsSync')}
-          </Text>
+        <View style={styles.heroActions} />
         </View>
       </LinearGradient>
 
@@ -202,19 +177,23 @@ const styles = StyleSheet.create({
   },
   headerGradient: {
     paddingHorizontal: 24,
-    paddingTop: 24,
-    paddingBottom: 22,
+    paddingTop: 18,
+    paddingBottom: 16,
     borderBottomLeftRadius: 32,
     borderBottomRightRadius: 32,
     position: 'relative',
   },
+  headerGlass: {
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255,255,255,0.12)',
+  },
   heroGlow: {
     ...StyleSheet.absoluteFillObject,
     top: undefined,
-    bottom: -30,
-    left: 32,
-    right: 32,
-    height: 120,
+    bottom: -20,
+    left: 28,
+    right: 28,
+    height: 90,
     borderRadius: 50,
     backgroundColor: 'rgba(129, 140, 248, 0.25)',
     opacity: 0.4,
@@ -252,75 +231,64 @@ const styles = StyleSheet.create({
     gap: 10,
     flexWrap: 'wrap',
   },
-  heroBadge: {
+  heroCard: {
+    padding: 14,
+    borderRadius: 26,
+    marginTop: 4,
+    backgroundColor: 'rgba(255,255,255,0.05)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.12)',
+  },
+  heroMetrics: {
+    marginTop: 12,
     flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    paddingVertical: 6,
-    paddingHorizontal: 14,
+    justifyContent: 'space-between',
+    gap: 8,
+  },
+  heroMetricBlock: {
+    flex: 1,
+    padding: 8,
+    borderRadius: 16,
+    backgroundColor: 'rgba(0,0,0,0.12)',
+  },
+  profileInfo: {
+    marginTop: 20,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: 12,
+  },
+  profileInfoLeft: {
+    flex: 1,
+    padding: 10,
     borderRadius: 16,
     backgroundColor: 'rgba(255,255,255,0.08)',
   },
-  badgeText: {
-    fontSize: 11,
-    color: '#cbd5f5',
-    textTransform: 'uppercase',
-    letterSpacing: 0.4,
-  },
-  heroStats: {
-    marginTop: 18,
-    flexDirection: 'row',
-    gap: 12,
-  },
-  heroStatPill: {
+  profileInfoRight: {
     flex: 1,
-    paddingVertical: 10,
-    paddingHorizontal: 14,
-    borderRadius: 18,
+    padding: 10,
+    borderRadius: 16,
     backgroundColor: 'rgba(255,255,255,0.08)',
   },
-  heroStatLabel: {
-    fontSize: 12,
-    fontWeight: '600',
+  profileMetricLabel: {
+    fontSize: 11,
     textTransform: 'uppercase',
-    letterSpacing: 0.6,
+    letterSpacing: 0.4,
     marginBottom: 4,
   },
-  heroStatValue: {
+  profileMetricValue: {
     fontSize: 16,
     fontWeight: '700',
   },
   heroActions: {
-    marginTop: 16,
+    marginTop: 10,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
+    gap: 10,
   },
   heroMeta: {
     flex: 1,
     fontSize: 12,
     letterSpacing: 0.3,
-  },
-  actionIcon: {
-    width: 36,
-    height: 36,
-    borderRadius: 14,
-    backgroundColor: 'rgba(255,255,255,0.08)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    position: 'relative',
-  },
-  actionIconLight: {
-    backgroundColor: 'rgba(129, 140, 248, 0.25)',
-  },
-  notificationDot: {
-    position: 'absolute',
-    top: 4,
-    right: 4,
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: '#ef4444',
   },
   container: {
     flex: 1,
