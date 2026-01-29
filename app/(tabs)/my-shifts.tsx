@@ -9,7 +9,6 @@ import { useLanguage } from '@shared/context/LanguageContext';
 import { useRouter } from 'expo-router';
 import { useTheme } from '@shared/themeContext';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-import { LinearGradient } from 'expo-linear-gradient';
 
 const getMonthLabel = (date: Date) => date.toLocaleDateString([], { month: 'long', year: 'numeric' });
 
@@ -109,22 +108,9 @@ export default function MyShiftsScreen() {
     },
   ];
   const listContentStyle = [styles.list, { backgroundColor: theme.background }];
-  const heroGradientColors = [theme.heroGradientStart, theme.heroGradientEnd, theme.surfaceElevated];
 
   return (
     <SafeAreaView style={containerStyle} edges={['top']}>
-      <LinearGradient colors={heroGradientColors} style={styles.hero} start={[0, 0]} end={[1, 1]}>
-        <Text style={styles.heroLabel}>{t('shiftsTabTitle')}</Text>
-        <Text style={styles.heroSubtitle}>{monthLabel}</Text>
-        <View style={styles.heroRow}>
-          <Text style={styles.heroCallout}>{liveShift ? t('nextShift') : t('noUpcomingShifts')}</Text>
-          <PrimaryButton
-            title={t('viewSchedule')}
-            onPress={() => router.push('/calendar')}
-            style={styles.heroButton}
-          />
-        </View>
-      </LinearGradient>
       {errorView}
       <ScrollView
         ref={listScrollRef}
@@ -162,42 +148,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingTop: 0,
     paddingBottom: 0,
-  },
-  hero: {
-    borderRadius: 28,
-    marginHorizontal: -16,
-    marginBottom: 12,
-    padding: 20,
-    shadowColor: '#050914',
-    shadowOpacity: 0.4,
-    shadowOffset: { width: 0, height: 14 },
-    shadowRadius: 24,
-    elevation: 12,
-  },
-  heroLabel: {
-    fontSize: 22,
-    fontWeight: '700',
-    color: '#fff',
-  },
-  heroSubtitle: {
-    fontSize: 14,
-    color: '#dbeafe',
-    marginTop: 4,
-  },
-  heroRow: {
-    marginTop: 16,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  heroCallout: {
-    color: '#e0e7ff',
-    fontSize: 13,
-    letterSpacing: 0.2,
-  },
-  heroButton: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
   },
   list: {
     paddingBottom: 24,
