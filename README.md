@@ -51,6 +51,13 @@ A cross-platform Expo app that lets employees interact with internal services, l
 
 - Magic-link sign-in is still pending; note in this README that once development wraps up the actual `supabase.auth.signInWithOtp` flow should be wired up so employees can log in using email links. Keep this section here so the eventual implementation has a place to document how to configure and use it once it ships.
 
+### Notifications
+
+- The app relies on a `public.notifications` table (see `supabase/notifications-table.sql`) so `NotificationContext` can fetch the most recent rows, mark them read, and stay subscribed to Supabase Realtime changes without `PGRST205`. Apply that SQL in the Supabase SQL editor or `supabase db query`.
+- A new `useShiftNotifications` hook watches your assigned `shift_assignments` plus the matching `shifts` rows. When a shift is published/removed or its window/location changes, the client automatically writes a descriptive row into `public.notifications`, keeping the bell badge current without you having to emit those specific rows from your backend.
+- Insert rows into this table whenever real events happen (shifts assigned, policy updates, etc.); the client already listens on `notifications` filtered by `employeeId`, so each new row immediately updates the bell, badge, and modal without additional work.
+- For native push alerts, run a development build (`eas build --profile development` or `expo run:android/ios`) so Expo can register push tokens (Expo Go with SDK 53+ cannot). Save that token alongside the user and send push messages whenever you write a notification row so users receive both the server-side push and the in-app bell.
+
 ## Project structure
 
 - `app/` – Expo Router layouts and screens, with `(tabs)`/`(auth)` folders providing the stack + tab organization for production flows.

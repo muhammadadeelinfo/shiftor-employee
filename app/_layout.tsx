@@ -42,6 +42,7 @@ import * as Calendar from 'expo-calendar';
 import { useAuth } from '@hooks/useSupabaseAuth';
 import { useQuery } from '@tanstack/react-query';
 import { getShifts, type Shift } from '@features/shifts/shiftsService';
+import { useShiftNotifications } from '@shared/hooks/useShiftNotifications';
 import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
 import * as FileSystem from 'expo-file-system';
@@ -136,6 +137,8 @@ function LayoutContentInner() {
     enabled: !!userId,
     staleTime: 30_000,
   });
+  const quickShiftIds = useMemo(() => quickShifts.map((shift) => shift.id).filter(Boolean), [quickShifts]);
+  useShiftNotifications(quickShiftIds);
   const monthlyShifts = useMemo(() => {
     const monthStart = new Date(selectedMonth);
     monthStart.setHours(0, 0, 0, 0);
