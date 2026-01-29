@@ -20,6 +20,7 @@ import {
   useWindowDimensions,
   Modal,
   Switch,
+  TextInput,
 } from 'react-native';
 import { AuthProvider } from '@hooks/useSupabaseAuth';
 import { queryClient } from '@lib/queryClient';
@@ -118,6 +119,10 @@ function LayoutContentInner() {
     const now = new Date();
     return new Date(now.getFullYear(), now.getMonth(), 1);
   });
+  const [customReportTitle, setCustomReportTitle] = useState(() => t('reportGeneratePdf'));
+  const [customReportDescription, setCustomReportDescription] = useState(() => t('reportSummaryDescribe'));
+  const [reportNote, setReportNote] = useState('');
+  const [reportThemeSelection, setReportThemeSelection] = useState<'default' | 'soft'>('default');
   const formatShiftKey = useCallback(
     (shift: Shift) => shift.id ?? `${shift.start}-${shift.end}`,
     []
@@ -173,6 +178,10 @@ function LayoutContentInner() {
     ],
     [t]
   );
+  useEffect(() => {
+    setCustomReportTitle(t('reportGeneratePdf'));
+    setCustomReportDescription(t('reportSummaryDescribe'));
+  }, [t]);
   const userReportInfo = useMemo(() => {
     const metadata = (user?.user_metadata ?? {}) as Record<string, unknown>;
     const fallbackName = metadata.full_name ?? metadata.name;
@@ -239,24 +248,17 @@ function LayoutContentInner() {
   const { height: windowHeight } = useWindowDimensions();
   const { unreadCount } = useNotifications();
   const { theme, mode } = useTheme();
+  const reportThemeOptions = useMemo(
+    () => ({
+      default: [theme.primary, theme.primaryAccent],
+      soft: [theme.primaryAccent, theme.surface],
+    }),
+    [theme]
+  );
   const statusBarStyle = mode === 'dark' ? 'light' : 'dark';
   const statusBarBgColor = theme.surface;
-  const previewTitle =
-    previewReportType !== null ? getReportText(previewReportType).title : t('reportsTitle');
-  const previewDescription =
-    previewReportType !== null ? getReportText(previewReportType).description : '';
-  const previewSummary = useMemo(() => {
-    const totalMilliseconds = selectedShifts.reduce((sum, shift) => {
-      const startTime = Number(new Date(shift.start));
-      const endTime = Number(new Date(shift.end));
-      if (Number.isNaN(startTime) || Number.isNaN(endTime)) return sum;
-      return sum + Math.max(0, endTime - startTime);
-    }, 0);
-    return {
-      count: selectedShifts.length,
-      hours: formatHourValue(totalMilliseconds / (1000 * 60 * 60)),
-    };
-  }, [selectedShifts]);
+  const previewTitle = customReportTitle;
+  const previewDescription = customReportDescription;
 
   useEffect(() => {
     if (Constants.appOwnership === 'expo') {
@@ -331,13 +333,21 @@ function LayoutContentInner() {
     return { dateLabel, startLabel, endLabel };
   };
 
+
   const buildReportHtml = (
     title: string,
     description: string,
     shifts: Shift[],
     options: ReportOptions,
-    userInfo: { name?: string; email?: string; phone?: string }
+    userInfo: { name?: string; email?: string; phone?: string },
+    reportContext: {
+      note: string;
+      monthLabel: string;
+      accentColors: [string, string];
+    }
   ) => {
+    const showLocationColumn = options.includeShiftLocation;
+    const columnCount = showLocationColumn ? 4 : 3;
     const shiftRows =
       shifts.length > 0
         ? shifts
@@ -348,14 +358,14 @@ function LayoutContentInner() {
                   <td>${dateLabel}</td>
                   <td>${startLabel}</td>
                   <td>${endLabel}</td>
-                  <td>${shift.location ?? 'TBD'}</td>
+                  ${showLocationColumn ? `<td>${shift.location ?? 'TBD'}</td>` : ''}
                 </tr>
               `;
             })
             .join('')
         : `
           <tr>
-            <td colspan="4" style="text-align:center;">${t('reportNoShifts')}</td>
+            <td colspan="${columnCount}" style="text-align:center;">${t('reportNoShifts')}</td>
           </tr>
         `;
 
@@ -399,7 +409,7 @@ function LayoutContentInner() {
                     (entry) => `
                   <tr>
                     <td>${entry.label}</td>
-                    <td>${entry.value}</td>
+                    <td><span class="metadata-chip">${entry.value}</span></td>
                   </tr>
                 `
                   )
@@ -446,6 +456,13 @@ function LayoutContentInner() {
         `
         : '';
 
+    const sanitizedNote = reportContext.note ? reportContext.note.replace(/\n/g, '<br/>') : '';
+    const periodBlock = reportContext.monthLabel
+      ? `<div class="report-period">${reportContext.monthLabel}</div>`
+      : '';
+    const noteBlock = sanitizedNote ? `<div class="report-note">${sanitizedNote}</div>` : '';
+    const [primaryColor, secondaryColor] = reportContext.accentColors;
+
     return `
       <!DOCTYPE html>
       <html lang="en">
@@ -453,18 +470,45 @@ function LayoutContentInner() {
           <meta charset="utf-8" />
           <title>${title}</title>
           <style>
+            :root {
+              --primary-color: ${primaryColor};
+              --secondary-color: ${secondaryColor};
+            }
             body {
               font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-              padding: 36px;
-              color: #0f172a;
-              background: #f5f7fb;
+              margin: 0;
+              padding: 0;
+              background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
             }
-            h1 {
+            .app-shell {
+              background: #fff;
+              border-radius: 32px;
+              margin: 24px;
+              padding: 32px;
+              box-shadow: 0 25px 60px rgba(15, 23, 42, 0.2);
+            }
+            .report-header h1 {
               font-size: 28px;
-              margin-bottom: 4px;
+              margin-bottom: 8px;
+              color: #0f172a;
             }
-            p {
+            .report-header p {
               color: #475569;
+              margin: 0 0 14px;
+            }
+            .report-period {
+              font-size: 13px;
+              text-transform: uppercase;
+              letter-spacing: 0.4px;
+              color: #64748b;
+              margin-bottom: 6px;
+            }
+            .report-note {
+              font-size: 14px;
+              color: #1d2939;
+              background: #f8fafc;
+              border-radius: 12px;
+              padding: 10px 12px;
               margin-bottom: 18px;
             }
             .panel {
@@ -482,6 +526,14 @@ function LayoutContentInner() {
             .metadata-table td {
               padding: 10px 14px;
               border-bottom: 1px solid #e2e8f0;
+            }
+            .metadata-chip {
+              display: inline-flex;
+              padding: 6px 10px;
+              border-radius: 999px;
+              background: #eef2ff;
+              color: #4338ca;
+              font-size: 13px;
             }
             .metadata-table tr:last-child td {
               border-bottom: none;
@@ -509,6 +561,11 @@ function LayoutContentInner() {
               font-size: 16px;
               margin-bottom: 4px;
             }
+            .section-divider {
+              height: 1px;
+              margin: 24px 0;
+              background: linear-gradient(90deg, rgba(15,23,42,0), rgba(15,23,42,0.2), rgba(15,23,42,0));
+            }
             .shift-table {
               width: 100%;
               border-collapse: collapse;
@@ -518,76 +575,67 @@ function LayoutContentInner() {
             .shift-table td {
               padding: 12px 14px;
               border-bottom: 1px solid #e2e8f0;
-              text-align: left;
-            }
-            .shift-table thead {
-              background: linear-gradient(120deg, #d0e2ff, #e1f3ff);
             }
             .shift-table th {
-              font-size: 12px;
-              letter-spacing: 0.12em;
-              text-transform: uppercase;
+              text-align: left;
+              font-weight: 600;
+              color: #0f172a;
             }
-            .shift-table tbody tr:last-child td {
+            .shift-table tr:last-child td {
               border-bottom: none;
             }
-            .shift-table tbody tr:hover {
-              background: #f1f5f9;
-            }
-            .total-card {
-              display: flex;
-              justify-content: space-between;
-              align-items: center;
-              padding: 12px 14px;
-              border-radius: 14px;
-              background: linear-gradient(120deg, #1e1e2f, #3f3c70);
-              color: #fff;
-              margin-bottom: 12px;
-              box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.2);
-            }
-            .total-card span:last-child {
-              font-size: 22px;
-            }
             .footer {
-              text-align: center;
               color: #94a3b8;
-              font-size: 13px;
-              margin-top: 32px;
+              font-size: 12px;
+              text-align: right;
+              margin-top: 16px;
             }
           </style>
         </head>
         <body>
-          <h1>${title}</h1>
-          <p>${description}</p>
-          <div class="panel">
+          <div class="app-shell">
+            <div class="report-header">
+              <h1>${title}</h1>
+              <p>${description}</p>
+              ${periodBlock}
+              ${noteBlock}
+            </div>
             ${metadataSection}
             ${objectSection}
-          </div>
-          <div class="panel">
-            <div class="total-card">
-              <span>${t('reportShiftSummary', { count: shifts.length, start: shifts[0] ? new Date(shifts[0].start).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) : '-' })}</span>
-              <span>${formatHourValue(totalHours)} ${t('reportMetadataHoursUnit')}</span>
+            <div class="section-divider"></div>
+            <div class="panel">
+              <div class="total-card">
+                <span>${t('reportShiftSummary', {
+                  count: shifts.length,
+                  start: shifts[0]
+                    ? new Date(shifts[0].start).toLocaleDateString(undefined, {
+                        month: 'short',
+                        day: 'numeric',
+                      })
+                    : '-',
+                })}</span>
+                <span>${formatHourValue(totalHours)} ${t('reportMetadataHoursUnit')}</span>
+              </div>
+              <table class="shift-table">
+                <thead>
+                  <tr>
+                    <th>${t('dayLabel')}</th>
+                    <th>${t('shiftStartLabel')}</th>
+                    <th>${t('shiftEndLabel')}</th>
+                    ${showLocationColumn ? `<th>${t('locationTbd')}</th>` : ''}
+                  </tr>
+                </thead>
+                <tbody>
+                  ${shiftRows}
+                </tbody>
+              </table>
             </div>
-            <table class="shift-table">
-              <thead>
-                <tr>
-                  <th>${t('dayLabel')}</th>
-                  <th>${t('shiftStartLabel')}</th>
-                  <th>${t('shiftEndLabel')}</th>
-                  <th>${t('locationTbd')}</th>
-                </tr>
-              </thead>
-              <tbody>
-                ${shiftRows}
-              </tbody>
-            </table>
+            <div class="footer">${t('reportFooter')}</div>
           </div>
-          <div class="footer">${t('reportFooter')}</div>
         </body>
       </html>
     `;
   };
-
   const handleGeneratePDF = async (reportType: 'monthly' | 'summary') => {
     if (isGeneratingReport) return;
     setIsGeneratingReport(true);
@@ -602,7 +650,13 @@ function LayoutContentInner() {
         description,
         selectedShifts,
         reportOptions,
-        userReportInfo
+        userReportInfo,
+        {
+          note: reportNote.trim(),
+          monthLabel: monthSelectorLabel,
+          accentColors:
+            reportThemeOptions[reportThemeSelection] ?? [theme.primary, theme.primaryAccent],
+        }
       );
       const { uri } = await Print.printToFileAsync({ html });
       const savedUri = await saveReportToDevice(uri, reportType);
@@ -734,34 +788,13 @@ function LayoutContentInner() {
                 <Text style={[styles.previewHint, { color: 'rgba(255,255,255,0.7)' }]}>
                   {t('reportPreviewHint')}
                 </Text>
-                <View style={styles.previewSection}>
-                  <LinearGradient
-                    colors={[`${theme.primary}FF`, `${theme.primaryAccent}FF`]}
-                    start={{ x: 0, y: 0 }}
-                    end={{ x: 1, y: 1 }}
-                    style={styles.previewSummaryCard}
-                  >
-                    <View style={styles.previewSummaryIconWrapper}>
-                      <Ionicons name="stats-chart" size={22} color="#fff" />
-                    </View>
-                    <View style={styles.previewSummaryContent}>
-                      <Text style={styles.previewSummaryTitle}>{t('reportPreviewSummaryTitle')}</Text>
-                      <View style={styles.previewSummaryStatsRow}>
-                        <View style={styles.previewSummaryStat}>
-                          <Text style={styles.previewSummaryStatValueWhite}>{previewSummary.count}</Text>
-                          <Text style={styles.previewSummaryStatLabelWhite}>
-                            {t('reportSummaryShiftsLabel')}
-                          </Text>
-                        </View>
-                        <View style={styles.previewSummaryStat}>
-                          <Text style={styles.previewSummaryStatValueWhite}>{previewSummary.hours}</Text>
-                          <Text style={styles.previewSummaryStatLabelWhite}>
-                            {t('reportSummaryHoursLabel')}
-                          </Text>
-                        </View>
-                      </View>
-                    </View>
-                  </LinearGradient>
+                <LinearGradient
+                  colors={[`${theme.primary}25`, `${theme.surface}DD`]}
+                  style={[styles.previewSection, styles.previewCard]}
+                >
+                  <Text style={[styles.previewSectionTitle, { color: theme.textPrimary }]}>
+                    {t('reportPreviewSettingsTitle')}
+                  </Text>
                   <View style={styles.monthSelector}>
                     <TouchableOpacity
                       style={[styles.monthButton, { borderColor: theme.border }]}
@@ -784,21 +817,112 @@ function LayoutContentInner() {
                       <Ionicons name="chevron-forward" size={16} color={theme.primary} />
                     </TouchableOpacity>
                   </View>
-                </View>
+                  <View style={styles.previewInputRow}>
+                    <Text style={[styles.previewInputLabel, { color: theme.textSecondary }]}>
+                      {t('reportPreviewTitleLabel')}
+                    </Text>
+                    <TextInput
+                      style={[
+                        styles.previewTextInput,
+                        { backgroundColor: theme.surface, borderColor: theme.border },
+                      ]}
+                      value={customReportTitle}
+                      onChangeText={setCustomReportTitle}
+                      placeholder={t('reportPreviewTitlePlaceholder')}
+                      placeholderTextColor={theme.textSecondary}
+                    />
+                  </View>
+                  <View style={styles.previewInputRow}>
+                    <Text style={[styles.previewInputLabel, { color: theme.textSecondary }]}>
+                      {t('reportPreviewDescriptionLabel')}
+                    </Text>
+                    <TextInput
+                      style={[
+                        styles.previewTextInput,
+                        { backgroundColor: theme.surface, borderColor: theme.border },
+                      ]}
+                      value={customReportDescription}
+                      onChangeText={setCustomReportDescription}
+                      placeholder={t('reportPreviewDescriptionPlaceholder')}
+                      placeholderTextColor={theme.textSecondary}
+                      multiline
+                    />
+                  </View>
+                  <View style={styles.previewThemeRow}>
+                    {[
+                      { key: 'default', label: t('reportPreviewThemeDefault') },
+                      { key: 'soft', label: t('reportPreviewThemeSoft') },
+                    ].map((option, index, arr) => (
+                      <TouchableOpacity
+                        key={option.key}
+                        style={[
+                          styles.previewThemeButton,
+                          index === arr.length - 1 && styles.previewThemeButtonLast,
+                          {
+                            borderColor: theme.border,
+                            backgroundColor:
+                              reportThemeSelection === option.key ? theme.surfaceElevated : theme.surface,
+                          },
+                          reportThemeSelection === option.key && styles.previewThemeButtonActive,
+                        ]}
+                        onPress={() => setReportThemeSelection(option.key as 'default' | 'soft')}
+                      >
+                        <Text
+                          style={[
+                            styles.previewThemeButtonText,
+                            { color: theme.textPrimary },
+                          ]}
+                        >
+                          {option.label}
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                  <View style={styles.previewInputRow}>
+                    <Text style={[styles.previewInputLabel, { color: theme.textSecondary }]}>
+                      {t('reportPreviewNoteLabel')}
+                    </Text>
+                    <TextInput
+                      style={[
+                        styles.previewTextArea,
+                        { backgroundColor: theme.surface, borderColor: theme.border },
+                      ]}
+                      value={reportNote}
+                      onChangeText={setReportNote}
+                      placeholder={t('reportPreviewNotePlaceholder')}
+                      placeholderTextColor={theme.textSecondary}
+                      multiline
+                      textAlignVertical="top"
+                      numberOfLines={3}
+                    />
+                  </View>
+                </LinearGradient>
                 <View
                   style={[
                     styles.previewOptionsCard,
                     { backgroundColor: theme.surface, borderColor: theme.borderSoft },
                   ]}
                 >
-                  <Text style={[styles.previewOptionsTitle, { color: theme.textPrimary }]}>
-                    {t('reportCustomizationTitle')}
+                  <Text style={[styles.previewSectionTitle, { color: theme.textPrimary }]}>
+                    {t('reportPreviewFiltersTitle')}
                   </Text>
                   {reportOptionDefinitions.map(({ key, label }) => (
-                    <View key={key} style={styles.previewOptionRow}>
-                      <Text style={[styles.previewOptionLabel, { color: theme.textPrimary }]}>
-                        {label}
-                      </Text>
+                    <View key={key} style={styles.previewToggleRow}>
+                      <View style={{ flex: 1 }}>
+                        <Text style={[styles.previewOptionLabel, { color: theme.textPrimary }]}>
+                          {label}
+                        </Text>
+                        <Text
+                          style={[
+                            styles.previewToggleStatusText,
+                            { color: reportOptions[key] ? theme.primary : theme.textSecondary },
+                          ]}
+                        >
+                          {reportOptions[key]
+                            ? t('reportPreviewIncludedBadge')
+                            : t('reportPreviewExcludedBadge')}
+                        </Text>
+                      </View>
                       <Switch
                         value={reportOptions[key]}
                         onValueChange={() => toggleReportOption(key)}
@@ -847,21 +971,6 @@ function LayoutContentInner() {
                                 {`${startLabel} · ${endLabel}`}
                               </Text>
                             </View>
-                            {reportOptions.includeShiftLocation && (
-                              <View style={styles.previewShiftMetaRow}>
-                                <Text
-                                  style={[
-                                    styles.previewShiftMetaChip,
-                                    {
-                                      backgroundColor: `${theme.primary}12`,
-                                      color: theme.primary,
-                                    },
-                                  ]}
-                                >
-                                  {shift.location ?? t('locationTbd')}
-                                </Text>
-                              </View>
-                            )}
                           </View>
                           <TouchableOpacity
                             style={[
@@ -1370,59 +1479,20 @@ const styles = StyleSheet.create({
     fontSize: 14,
     marginBottom: 6,
   },
-  previewSummaryCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderRadius: 22,
-    padding: 16,
-    marginBottom: 12,
-    shadowColor: '#000',
-    shadowOpacity: 0.2,
-    shadowRadius: 18,
-    shadowOffset: { width: 0, height: 10 },
-    elevation: 15,
-  },
-  previewSummaryIconWrapper: {
-    width: 48,
-    height: 48,
-    borderRadius: 16,
-    backgroundColor: 'rgba(255,255,255,0.2)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 12,
-  },
-  previewSummaryContent: {
-    flex: 1,
-  },
-  previewSummaryTitle: {
-    fontSize: 12,
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-    color: 'rgba(255,255,255,0.9)',
-    marginBottom: 6,
-    fontWeight: '600',
-  },
-  previewSummaryStatsRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-  },
-  previewSummaryStat: {
-    alignItems: 'flex-start',
-  },
-  previewSummaryStatValueWhite: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: '#fff',
-  },
-  previewSummaryStatLabelWhite: {
-    fontSize: 11,
-    letterSpacing: 0.5,
-    textTransform: 'uppercase',
-    color: 'rgba(255,255,255,0.85)',
-    marginTop: 2,
-  },
   previewSection: {
     marginBottom: 12,
+  },
+  previewCard: {
+    borderWidth: 1,
+    borderRadius: 20,
+    padding: 16,
+  },
+  previewSectionTitle: {
+    fontSize: 12,
+    letterSpacing: 0.5,
+    textTransform: 'uppercase',
+    marginBottom: 12,
+    fontWeight: '600',
   },
   monthSelector: {
     flexDirection: 'row',
@@ -1478,6 +1548,59 @@ const styles = StyleSheet.create({
     fontSize: 13,
     marginBottom: 12,
   },
+  previewInputRow: {
+    marginTop: 12,
+  },
+  previewInputLabel: {
+    fontSize: 12,
+    textTransform: 'uppercase',
+    letterSpacing: 0.4,
+    marginBottom: 6,
+  },
+  previewTextInput: {
+    borderWidth: 1,
+    borderRadius: 14,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    fontSize: 14,
+  },
+  previewTextArea: {
+    borderWidth: 1,
+    borderRadius: 14,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    fontSize: 14,
+    minHeight: 70,
+  },
+  previewThemeRow: {
+    flexDirection: 'row',
+    marginTop: 12,
+  },
+  previewThemeButton: {
+    flex: 1,
+    borderWidth: 1,
+    borderRadius: 12,
+    paddingVertical: 8,
+    alignItems: 'center',
+    marginRight: 8,
+  },
+  previewThemeButtonLast: {
+    marginRight: 0,
+  },
+  previewThemeButtonLast: {
+    marginRight: 0,
+  },
+  previewThemeButtonActive: {
+    shadowColor: '#000',
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 6,
+  },
+  previewThemeButtonText: {
+    fontSize: 13,
+    fontWeight: '600',
+  },
   previewShiftCard: {
     borderWidth: 1,
     borderRadius: 18,
@@ -1523,6 +1646,17 @@ const styles = StyleSheet.create({
   previewToggleText: {
     fontSize: 12,
     fontWeight: '600',
+  },
+  previewToggleRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+    paddingVertical: 10,
+  },
+  previewToggleStatusText: {
+    fontSize: 11,
+    textTransform: 'uppercase',
+    letterSpacing: 0.3,
   },
   previewActions: {
     flexDirection: 'row',
