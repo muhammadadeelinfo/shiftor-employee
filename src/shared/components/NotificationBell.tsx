@@ -90,8 +90,8 @@ const styles = StyleSheet.create({
   },
   badge: {
     position: 'absolute',
-    top: -4,
-    right: -4,
+    top: -6,
+    right: -6,
     minWidth: 18,
     height: 18,
     borderRadius: 9,

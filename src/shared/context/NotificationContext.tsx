@@ -533,6 +533,7 @@ export const NotificationProvider = ({ children }: { children: ReactNode }) => {
                         <Text style={styles.notificationDetail} numberOfLines={2}>
                           {item.detail}
                         </Text>
+                        <View style={styles.notificationDivider} />
                         <Text style={styles.notificationTime}>{getRelativeTimeLabel(item.createdAt)}</Text>
                       </Pressable>
                     ))}
@@ -585,9 +586,9 @@ const styles = StyleSheet.create({
     width: 300,
     borderRadius: 20,
     padding: 18,
-    backgroundColor: 'rgba(15, 23, 42, 0.95)',
+    backgroundColor: '#040816',
     borderWidth: 1,
-    borderColor: 'rgba(59,130,246,0.6)',
+    borderColor: 'rgba(148,163,184,0.2)',
     shadowColor: '#0f172a',
     shadowOpacity: 0.65,
     shadowRadius: 25,
@@ -619,10 +620,12 @@ const styles = StyleSheet.create({
   summaryChip: {
     borderRadius: 999,
     borderWidth: 1,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
+    paddingHorizontal: 12,
+    paddingVertical: 5,
     marginBottom: 4,
     marginRight: 6,
+    backgroundColor: 'rgba(15, 23, 42, 0.6)',
+    color: '#e0e7ff',
   },
   summaryChipText: {
     fontSize: 11,
@@ -645,12 +648,17 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   notificationCard: {
-    backgroundColor: 'rgba(255,255,255,0.03)',
+    backgroundColor: '#0b1225',
     borderRadius: 16,
-    padding: 10,
+    padding: 12,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.05)',
+    borderColor: 'rgba(255,255,255,0.08)',
     marginBottom: 10,
+    shadowColor: '#050b1a',
+    shadowOpacity: 0.6,
+    shadowRadius: 15,
+    shadowOffset: { width: 0, height: 12 },
+    elevation: 6,
   },
   notificationCardPressed: {
     borderColor: 'rgba(255,255,255,0.25)',
@@ -676,10 +684,15 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   notificationDetail: {
-    color: '#94a3b8',
+    color: '#cbd5f5',
     fontSize: 13,
-    marginTop: 4,
+    marginTop: 6,
     marginBottom: 6,
+  },
+  notificationDivider: {
+    height: 1,
+    backgroundColor: 'rgba(255,255,255,0.08)',
+    marginVertical: 6,
   },
   notificationTime: {
     color: '#a1a8c3',
