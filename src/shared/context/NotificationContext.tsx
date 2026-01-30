@@ -339,7 +339,7 @@ export const NotificationProvider = ({ children }: { children: ReactNode }) => {
           category: entry.category ?? determineNotificationCategory(entry.title, entry.detail),
           metadata: entry.metadata,
           targetPath:
-            entry.targetPath ?? entry.metadata && resolveTargetPath(entry.metadata),
+            entry.targetPath ?? (entry.metadata && resolveTargetPath(entry.metadata)),
         },
         ...prev,
       ]);
@@ -543,15 +543,17 @@ export const NotificationProvider = ({ children }: { children: ReactNode }) => {
               <Text style={styles.notificationEmpty}>No notifications at the moment.</Text>
             )}
             {notifications.length ? (
-              <TouchableOpacity
-                style={styles.actionButton}
-                onPress={() => {
-                  void markAllAsRead();
-                  setOpen(false);
-                }}
-              >
-                <Text style={styles.actionText}>Mark all as read</Text>
-              </TouchableOpacity>
+              <View style={styles.footer}>
+                <TouchableOpacity
+                  style={[styles.actionButton, styles.footerButton]}
+                  onPress={() => {
+                    void markAllAsRead();
+                    setOpen(false);
+                  }}
+                >
+                  <Text style={styles.actionText}>Mark all as read</Text>
+                </TouchableOpacity>
+              </View>
             ) : null}
           </Pressable>
         </Pressable>
@@ -617,30 +619,30 @@ const styles = StyleSheet.create({
   summaryChip: {
     borderRadius: 999,
     borderWidth: 1,
-    paddingHorizontal: 8,
+    paddingHorizontal: 10,
     paddingVertical: 4,
     marginBottom: 4,
-    marginLeft: 4,
+    marginRight: 6,
   },
   summaryChipText: {
     fontSize: 11,
     fontWeight: '600',
   },
   notificationsList: {
-    marginTop: 6,
+    marginTop: 10,
     maxHeight: 320,
   },
   notificationsListContent: {
     paddingBottom: 12,
   },
   sectionGroup: {
-    marginBottom: 10,
+    marginBottom: 14,
   },
   sectionTitle: {
     color: '#cbd5f5',
     fontSize: 12,
     fontWeight: '600',
-    marginBottom: 6,
+    marginBottom: 8,
   },
   notificationCard: {
     backgroundColor: 'rgba(255,255,255,0.03)',
@@ -696,6 +698,16 @@ const styles = StyleSheet.create({
     borderRadius: 999,
     alignItems: 'center',
     backgroundColor: 'rgba(59,130,246,0.3)',
+  },
+  footer: {
+    marginTop: 6,
+    alignItems: 'flex-end',
+  },
+  footerButton: {
+    width: '100%',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.2)',
+    backgroundColor: 'transparent',
   },
   actionText: {
     color: '#e0e7ff',
