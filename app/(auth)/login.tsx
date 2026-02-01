@@ -26,6 +26,10 @@ const EMAIL_KEY = 'employee-portal-remembered-email';
 export default function LoginScreen() {
   const router = useRouter();
   const { t } = useLanguage();
+  const loginTitle = t('loginTitle');
+  const titleParts = loginTitle.split(' ');
+  const [titleFirstWord, ...titleRestWords] = titleParts;
+  const titleRest = titleRestWords.join(' ');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -88,15 +92,18 @@ export default function LoginScreen() {
 
   return (
     <LinearGradient
-      colors={['#0f172a', '#111827', '#f8fafc']}
-      locations={[0, 0.35, 0.9]}
+      colors={['#020617', '#080f1f', '#111827']}
+      locations={[0, 0.55, 1]}
       style={styles.gradient}
     >
       <View style={styles.accentCircleLarge} />
       <View style={styles.accentCircleSmall} />
       <SafeAreaView style={styles.safeArea}>
         <View style={[styles.card, { width: Math.min(width - 32, 420) }]}>
-          <Text style={styles.title}>{t('loginTitle')}</Text>
+          <Text style={styles.title}>
+            <Text style={styles.titleAccent}>{titleFirstWord ?? loginTitle}</Text>
+            {titleRest ? ` ${titleRest}` : ''}
+          </Text>
           <Text style={styles.subtitle}>{t('loginSignInSubtitle')}</Text>
           <View style={styles.emailField}>
             <TextInput
@@ -104,6 +111,7 @@ export default function LoginScreen() {
               keyboardType="email-address"
               autoCapitalize="none"
               placeholder={t('loginEmailPlaceholder')}
+              placeholderTextColor="#94a3b8"
               value={email}
               onChangeText={setEmail}
               textContentType="emailAddress"
@@ -117,7 +125,7 @@ export default function LoginScreen() {
                 accessibilityLabel={t('loginClearEmail')}
                 style={styles.clearButton}
               >
-                <Ionicons name="close-circle" size={20} color="#6b7280" />
+                <Ionicons name="close-circle" size={20} color="#cbd5f5" />
               </Pressable>
             ) : null}
           </View>
@@ -127,6 +135,7 @@ export default function LoginScreen() {
               secureTextEntry={!showPassword}
               autoCapitalize="none"
               placeholder={t('loginPasswordPlaceholder')}
+              placeholderTextColor="#94a3b8"
               value={password}
               onChangeText={setPassword}
               textContentType="password"
@@ -145,7 +154,7 @@ export default function LoginScreen() {
               <Ionicons
                 name={showPassword ? 'eye-off-outline' : 'eye-outline'}
                 size={20}
-                color="#6b7280"
+                color="#cbd5f5"
               />
             </Pressable>
           </View>
@@ -164,7 +173,7 @@ export default function LoginScreen() {
               activeOpacity={0.7}
               onPress={() => Linking.openURL('mailto:hello@employeeportal.com')}
             >
-              <Ionicons name="help-circle-outline" size={18} color="#2563eb" />
+              <Ionicons name="help-circle-outline" size={18} color="#60a5fa" />
               <Text style={styles.supportText}>{t('loginSupportText')}</Text>
             </TouchableOpacity>
             <TouchableOpacity
@@ -194,12 +203,14 @@ const styles = StyleSheet.create({
     padding: 16,
   },
   card: {
-    backgroundColor: '#fff',
+    backgroundColor: '#0b1224',
     borderRadius: 28,
     padding: 24,
-    shadowColor: '#0f172a',
-    shadowOpacity: 0.12,
-    shadowRadius: 40,
+    borderWidth: 1,
+    borderColor: 'rgba(148,163,184,0.25)',
+    shadowColor: '#000',
+    shadowOpacity: 0.4,
+    shadowRadius: 30,
     shadowOffset: { width: 0, height: 20 },
     elevation: 12,
   },
@@ -207,26 +218,33 @@ const styles = StyleSheet.create({
     fontSize: 32,
     fontWeight: '900',
     marginBottom: 6,
-    color: '#0f172a',
+    color: '#e2e8f0',
+    textShadowColor: 'rgba(0, 0, 0, 0.35)',
+    textShadowOffset: { width: 0, height: 2 },
+    textShadowRadius: 8,
   },
   subtitle: {
     fontSize: 16,
-    color: '#64748b',
+    color: '#94a3b8',
     marginBottom: 24,
+  },
+  titleAccent: {
+    color: '#60a5fa',
   },
   passwordField: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#fff',
+    backgroundColor: '#111629',
     borderRadius: 12,
     paddingHorizontal: 14,
     marginBottom: 16,
     borderWidth: 1,
-    borderColor: '#e2e8f0',
+    borderColor: '#1f2937',
   },
   passwordInput: {
     flex: 1,
     paddingVertical: 14,
+    color: '#e2e8f0',
   },
   passwordToggle: {
     padding: 8,
@@ -234,16 +252,17 @@ const styles = StyleSheet.create({
   emailField: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#fff',
+    backgroundColor: '#111629',
     borderRadius: 12,
     paddingHorizontal: 14,
     marginBottom: 16,
     borderWidth: 1,
-    borderColor: '#e2e8f0',
+    borderColor: '#1f2937',
   },
   emailInput: {
     flex: 1,
     paddingVertical: 14,
+    color: '#e2e8f0',
   },
   clearButton: {
     padding: 8,
@@ -256,13 +275,13 @@ const styles = StyleSheet.create({
   },
   rememberLabel: {
     fontSize: 14,
-    color: '#475569',
+    color: '#cbd5f5',
   },
   switchRow: {
     marginTop: 12,
   },
   switchText: {
-    color: '#2563eb',
+    color: '#60a5fa',
     textAlign: 'center',
     fontWeight: '600',
   },
@@ -271,8 +290,8 @@ const styles = StyleSheet.create({
     width: 260,
     height: 260,
     borderRadius: 130,
-    backgroundColor: '#1d4ed8',
-    opacity: 0.16,
+    backgroundColor: '#2563eb',
+    opacity: 0.25,
     top: -40,
     right: -80,
   },
@@ -281,7 +300,7 @@ const styles = StyleSheet.create({
     width: 180,
     height: 180,
     borderRadius: 90,
-    backgroundColor: '#e0f2fe',
+    backgroundColor: '#312e81',
     opacity: 0.35,
     bottom: 60,
     left: -40,
@@ -292,7 +311,7 @@ const styles = StyleSheet.create({
     marginTop: 16,
   },
   supportText: {
-    color: '#2563eb',
+    color: '#60a5fa',
     fontSize: 13,
     fontWeight: '600',
     marginLeft: 6,
@@ -304,19 +323,19 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     paddingHorizontal: 14,
     borderWidth: 1,
-    borderColor: '#e5e7eb',
+    borderColor: '#1f2937',
     borderRadius: 16,
-    backgroundColor: '#f8fafc',
+    backgroundColor: '#111629',
   },
   guestTitle: {
     fontSize: 14,
     fontWeight: '700',
     marginBottom: 2,
-    color: '#0f172a',
+    color: '#e2e8f0',
   },
   guestSubtitle: {
     fontSize: 12,
-    color: '#475569',
+    color: '#94a3b8',
     lineHeight: 18,
   },
 });
