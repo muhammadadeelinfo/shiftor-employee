@@ -24,6 +24,7 @@ import { useLanguage } from '@shared/context/LanguageContext';
 type StartupJob = {
   id: string;
   companyId: string;
+  companyName?: string | null;
   title: string;
   summary: string | null;
   description: string | null;
@@ -83,6 +84,227 @@ const normalizeStartupJobs = (payload: StartupJobsResponse): StartupJob[] => {
     return [];
   }
   return payload.jobs;
+};
+
+const normalizeForSearch = (value?: string | null): string => {
+  if (!value) return '';
+  return value
+    .replace(/ß/g, 'ss')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .trim();
+};
+
+const tokenizeText = (value: string): string[] =>
+  normalizeForSearch(value)
+    .split(/[^a-z0-9]+/)
+    .map((term) => term.trim())
+    .filter(Boolean);
+
+type SearchField = 'title' | 'location' | 'employmentType' | 'company' | 'salary' | 'content';
+
+type ParsedSearch = {
+  genericTerms: string[];
+  fieldTerms: Record<SearchField, string[]>;
+};
+
+const SEARCH_FIELD_ALIASES: Record<string, SearchField> = {
+  title: 'title',
+  role: 'title',
+  position: 'title',
+  job: 'title',
+  location: 'location',
+  loc: 'location',
+  city: 'location',
+  where: 'location',
+  type: 'employmentType',
+  employment: 'employmentType',
+  employmenttype: 'employmentType',
+  company: 'company',
+  employer: 'company',
+  org: 'company',
+  salary: 'salary',
+  pay: 'salary',
+  compensation: 'salary',
+};
+
+const parseSearchQuery = (query: string): ParsedSearch => {
+  const parsed: ParsedSearch = {
+    genericTerms: [],
+    fieldTerms: {
+      title: [],
+      location: [],
+      employmentType: [],
+      company: [],
+      salary: [],
+      content: [],
+    },
+  };
+
+  let remainingQuery = query;
+  const quotedFieldRegex = /(\w+):"([^"]+)"/g;
+  let quotedMatch: RegExpExecArray | null;
+  while ((quotedMatch = quotedFieldRegex.exec(query)) !== null) {
+    const key = normalizeForSearch(quotedMatch[1]);
+    const value = normalizeForSearch(quotedMatch[2]);
+    const field = SEARCH_FIELD_ALIASES[key];
+    if (field && value) {
+      parsed.fieldTerms[field].push(value);
+    }
+  }
+  remainingQuery = remainingQuery.replace(quotedFieldRegex, ' ');
+
+  const regex = /"([^"]+)"|(\S+)/g;
+  let match: RegExpExecArray | null;
+  while ((match = regex.exec(remainingQuery)) !== null) {
+    const token = (match[1] ?? match[2] ?? '').trim();
+    if (!token) continue;
+
+    const separatorIndex = token.indexOf(':');
+    if (separatorIndex > 0) {
+      const key = normalizeForSearch(token.slice(0, separatorIndex));
+      const rawValue = token.slice(separatorIndex + 1);
+      const value = normalizeForSearch(rawValue);
+      const field = SEARCH_FIELD_ALIASES[key];
+      if (field && value) {
+        parsed.fieldTerms[field].push(value);
+        continue;
+      }
+    }
+
+    const normalized = normalizeForSearch(token);
+    if (normalized) {
+      parsed.genericTerms.push(normalized);
+    }
+  }
+
+  return parsed;
+};
+
+const extractCompanyDomain = (value?: string | null): string => {
+  if (!value) return '';
+  const resolved = resolveCtaUrl(value);
+  if (!resolved) return '';
+  try {
+    const hostname = new URL(resolved).hostname.toLowerCase();
+    return hostname.replace(/^www\./, '');
+  } catch {
+    return '';
+  }
+};
+
+const levenshteinDistance = (a: string, b: string): number => {
+  if (a === b) return 0;
+  if (!a.length) return b.length;
+  if (!b.length) return a.length;
+
+  const prev = new Array(b.length + 1).fill(0).map((_, index) => index);
+  const curr = new Array(b.length + 1).fill(0);
+
+  for (let i = 1; i <= a.length; i += 1) {
+    curr[0] = i;
+    for (let j = 1; j <= b.length; j += 1) {
+      const cost = a[i - 1] === b[j - 1] ? 0 : 1;
+      curr[j] = Math.min(curr[j - 1] + 1, prev[j] + 1, prev[j - 1] + cost);
+    }
+    for (let j = 0; j <= b.length; j += 1) {
+      prev[j] = curr[j];
+    }
+  }
+
+  return prev[b.length];
+};
+
+const typoThreshold = (term: string): number => {
+  if (term.length >= 8) return 2;
+  if (term.length >= 5) return 1;
+  return 0;
+};
+
+const matchTermQuality = (term: string, fieldText: string, fieldTokens: string[]): number => {
+  if (!term) return 0;
+  if (fieldText.includes(term)) {
+    return term.includes(' ') ? 3 : 4;
+  }
+
+  if (term.includes(' ')) return 0;
+
+  for (const token of fieldTokens) {
+    if (!token) continue;
+    if (token.startsWith(term)) return 3;
+    if (token.includes(term)) return 2;
+    const threshold = typoThreshold(term);
+    if (
+      threshold > 0 &&
+      Math.abs(token.length - term.length) <= threshold &&
+      token[0] === term[0] &&
+      levenshteinDistance(token, term) <= threshold
+    ) {
+      return 1;
+    }
+  }
+
+  return 0;
+};
+
+const buildSearchFields = (job: StartupJob): Record<SearchField, string> => {
+  const companyDomain = extractCompanyDomain(job.ctaUrl);
+  return {
+    title: normalizeForSearch(job.title),
+    location: normalizeForSearch(job.location),
+    employmentType: normalizeForSearch(job.employmentType),
+    company: normalizeForSearch([job.companyName, job.companyId, companyDomain].filter(Boolean).join(' ')),
+    salary: normalizeForSearch(job.salaryText),
+    content: normalizeForSearch([job.summary, job.description, job.ctaLabel].filter(Boolean).join(' ')),
+  };
+};
+
+const calculateAdvancedSearchScore = (job: StartupJob, parsed: ParsedSearch): number => {
+  const fields = buildSearchFields(job);
+  const tokensByField: Record<SearchField, string[]> = {
+    title: tokenizeText(fields.title),
+    location: tokenizeText(fields.location),
+    employmentType: tokenizeText(fields.employmentType),
+    company: tokenizeText(fields.company),
+    salary: tokenizeText(fields.salary),
+    content: tokenizeText(fields.content),
+  };
+
+  const weightByField: Record<SearchField, number> = {
+    title: 6,
+    location: 5,
+    employmentType: 5,
+    company: 4,
+    salary: 3,
+    content: 2,
+  };
+
+  let score = 0;
+
+  for (const [field, terms] of Object.entries(parsed.fieldTerms) as [SearchField, string[]][]) {
+    for (const term of terms) {
+      const quality = matchTermQuality(term, fields[field], tokensByField[field]);
+      if (quality <= 0) return -1;
+      score += quality * (weightByField[field] + 2);
+    }
+  }
+
+  for (const term of parsed.genericTerms) {
+    let bestQuality = 0;
+    let bestWeight = 0;
+    for (const field of Object.keys(fields) as SearchField[]) {
+      const quality = matchTermQuality(term, fields[field], tokensByField[field]);
+      if (quality > bestQuality) {
+        bestQuality = quality;
+        bestWeight = weightByField[field];
+      }
+    }
+    if (bestQuality <= 0) return -1;
+    score += bestQuality * bestWeight;
+  }
+
+  return score;
 };
 
 const resolveCtaUrl = (rawUrl?: string | null): string | null => {
@@ -206,13 +428,17 @@ export default function StartupScreen() {
   }, [fetchStartupJobs]);
 
   const filteredJobs = useMemo(() => {
-    const query = searchQuery.trim().toLowerCase();
-    if (!query) return jobs;
+    const parsed = parseSearchQuery(searchQuery);
+    const hasTerms =
+      parsed.genericTerms.length ||
+      Object.values(parsed.fieldTerms).some((terms) => terms.length > 0);
+    if (!hasTerms) return jobs;
 
-    return jobs.filter((job) => {
-      const fields = [job.title, job.summary, job.location, job.employmentType, job.salaryText];
-      return fields.some((value) => (value ?? '').toLowerCase().includes(query));
-    });
+    return jobs
+      .map((job, index) => ({ job, index, score: calculateAdvancedSearchScore(job, parsed) }))
+      .filter((item) => item.score >= 0)
+      .sort((a, b) => b.score - a.score || a.index - b.index)
+      .map((item) => item.job);
   }, [jobs, searchQuery]);
 
   const shownCount = filteredJobs.length;
