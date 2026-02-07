@@ -10,7 +10,7 @@ export default function RootIndex() {
   useEffect(() => {
     if (loading) return;
 
-    router.replace(user ? '(tabs)/my-shifts' : '/login');
+    router.replace(user ? '(tabs)/my-shifts' : '/startup');
   }, [loading, router, user]);
 
   return (

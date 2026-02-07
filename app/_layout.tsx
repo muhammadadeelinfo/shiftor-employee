@@ -47,7 +47,7 @@ import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
 import * as FileSystem from 'expo-file-system';
 
-const hiddenTopBarPaths = ['/login', '/signup', '/guest'];
+const hiddenTopBarPaths = ['/login', '/signup', '/guest', '/startup'];
 
 type ReportOptionKey =
   | 'includeEmployeeName'
@@ -236,11 +236,11 @@ function LayoutContentInner() {
   useEffect(() => {
     if (loading) return;
 
-    const authFreePaths = ['/login', '/signup', '/guest'];
+    const authFreePaths = ['/login', '/signup', '/guest', '/startup'];
     const isAuthFree = pathname ? authFreePaths.some((path) => pathname.startsWith(path)) : false;
 
     if (!user && !isAuthFree) {
-      router.replace('/login');
+      router.replace('/startup');
     }
   }, [loading, pathname, router, user]);
 

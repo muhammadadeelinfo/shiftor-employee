@@ -35,6 +35,8 @@ export default function LoginScreen() {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [rememberMe, setRememberMe] = useState(true);
+  const [emailError, setEmailError] = useState<string | null>(null);
+  const [passwordError, setPasswordError] = useState<string | null>(null);
   const passwordInputRef = useRef<TextInput>(null);
 
   useEffect(() => {
@@ -51,8 +53,19 @@ export default function LoginScreen() {
   }, []);
 
   const handleAuthenticate = async () => {
-    if (!email.trim() || !password.trim()) {
-      Alert.alert(t('authEmailPasswordRequiredTitle'), t('authEmailPasswordRequiredBody'));
+    const trimmedEmail = email.trim();
+    const trimmedPassword = password.trim();
+    const nextEmailError =
+      !trimmedEmail
+        ? t('authEmailPasswordRequiredBody')
+        : /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmedEmail)
+          ? null
+          : 'Please enter a valid email address.';
+    const nextPasswordError = !trimmedPassword ? t('authEmailPasswordRequiredBody') : null;
+    setEmailError(nextEmailError);
+    setPasswordError(nextPasswordError);
+
+    if (nextEmailError || nextPasswordError) {
       return;
     }
 
@@ -71,8 +84,8 @@ export default function LoginScreen() {
       }
 
       const { error } = await supabase.auth.signInWithPassword({
-        email: email.trim(),
-        password: password.trim(),
+        email: trimmedEmail,
+        password: trimmedPassword,
       });
       if (error) {
         throw error;
@@ -113,10 +126,16 @@ export default function LoginScreen() {
               placeholder={t('loginEmailPlaceholder')}
               placeholderTextColor="#94a3b8"
               value={email}
-              onChangeText={setEmail}
+              onChangeText={(value) => {
+                setEmail(value);
+                if (emailError) {
+                  setEmailError(null);
+                }
+              }}
               textContentType="emailAddress"
               returnKeyType="next"
               onSubmitEditing={() => passwordInputRef.current?.focus()}
+              editable={!loading}
             />
             {email ? (
               <Pressable
@@ -124,11 +143,13 @@ export default function LoginScreen() {
                 accessibilityRole="button"
                 accessibilityLabel={t('loginClearEmail')}
                 style={styles.clearButton}
+                disabled={loading}
               >
                 <Ionicons name="close-circle" size={20} color="#cbd5f5" />
               </Pressable>
             ) : null}
           </View>
+          {emailError ? <Text style={styles.errorText}>{emailError}</Text> : null}
           <View style={styles.passwordField}>
             <TextInput
               style={styles.passwordInput}
@@ -137,11 +158,17 @@ export default function LoginScreen() {
               placeholder={t('loginPasswordPlaceholder')}
               placeholderTextColor="#94a3b8"
               value={password}
-              onChangeText={setPassword}
+              onChangeText={(value) => {
+                setPassword(value);
+                if (passwordError) {
+                  setPasswordError(null);
+                }
+              }}
               textContentType="password"
               ref={passwordInputRef}
               returnKeyType="done"
               onSubmitEditing={handleAuthenticate}
+              editable={!loading}
             />
             <Pressable
               onPress={() => setShowPassword((prev) => !prev)}
@@ -150,6 +177,7 @@ export default function LoginScreen() {
                 showPassword ? t('loginHidePassword') : t('loginShowPassword')
               }
               style={styles.passwordToggle}
+              disabled={loading}
             >
               <Ionicons
                 name={showPassword ? 'eye-off-outline' : 'eye-outline'}
@@ -158,10 +186,27 @@ export default function LoginScreen() {
               />
             </Pressable>
           </View>
+          {passwordError ? <Text style={styles.errorText}>{passwordError}</Text> : null}
           <View style={styles.rememberRow}>
             <Text style={styles.rememberLabel}>{t('keepSignedIn')}</Text>
-            <Switch value={rememberMe} onValueChange={setRememberMe} />
+            <Switch
+              value={rememberMe}
+              onValueChange={setRememberMe}
+              disabled={loading}
+              trackColor={{ false: '#334155', true: '#2563eb' }}
+              thumbColor={rememberMe ? '#f8fafc' : '#cbd5f5'}
+              ios_backgroundColor="#334155"
+            />
           </View>
+          <TouchableOpacity
+            style={styles.backRow}
+            activeOpacity={0.7}
+            onPress={() => router.push('/startup')}
+            disabled={loading}
+          >
+            <Ionicons name="arrow-back-circle-outline" size={18} color="#94a3b8" />
+            <Text style={styles.backText}>No credentials? Back to jobs</Text>
+          </TouchableOpacity>
           <PrimaryButton
             title={t('loginSignInButton')}
             onPress={handleAuthenticate}
@@ -172,17 +217,10 @@ export default function LoginScreen() {
               style={styles.supportRow}
               activeOpacity={0.7}
               onPress={() => Linking.openURL('mailto:hello@employeeportal.com')}
+              disabled={loading}
             >
               <Ionicons name="help-circle-outline" size={18} color="#60a5fa" />
               <Text style={styles.supportText}>{t('loginSupportText')}</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.guestRow}
-              activeOpacity={0.7}
-              onPress={() => router.push('/guest')}
-            >
-              <Text style={styles.guestTitle}>{t('continueAsGuestButton')}</Text>
-              <Text style={styles.guestSubtitle}>{t('continueAsGuestSubtitle')}</Text>
             </TouchableOpacity>
           </>
         </View>
@@ -277,6 +315,12 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#cbd5f5',
   },
+  errorText: {
+    marginTop: -10,
+    marginBottom: 12,
+    color: '#f87171',
+    fontSize: 12,
+  },
   switchRow: {
     marginTop: 12,
   },
@@ -316,26 +360,15 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     marginLeft: 6,
   },
-  guestRow: {
-    flexDirection: 'column',
-    alignItems: 'flex-start',
-    marginTop: 14,
-    paddingVertical: 10,
-    paddingHorizontal: 14,
-    borderWidth: 1,
-    borderColor: '#1f2937',
-    borderRadius: 16,
-    backgroundColor: '#111629',
+  backRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
   },
-  guestTitle: {
-    fontSize: 14,
-    fontWeight: '700',
-    marginBottom: 2,
-    color: '#e2e8f0',
-  },
-  guestSubtitle: {
-    fontSize: 12,
+  backText: {
     color: '#94a3b8',
-    lineHeight: 18,
+    fontSize: 13,
+    fontWeight: '600',
+    marginLeft: 6,
   },
 });
