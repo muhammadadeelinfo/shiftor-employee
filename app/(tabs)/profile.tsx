@@ -1,14 +1,24 @@
-import { FlatList, Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import {
+  FlatList,
+  Platform,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from 'react-native';
 import { useQuery } from '@tanstack/react-query';
 import { PrimaryButton } from '@shared/components/PrimaryButton';
 import { useTheme } from '@shared/themeContext';
 import { useAuth } from '@hooks/useSupabaseAuth';
+import { useNotifications } from '@shared/context/NotificationContext';
 import { languageDefinitions, useLanguage } from '@shared/context/LanguageContext';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { supabase } from '@lib/supabaseClient';
 import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
+import { layoutTokens } from '@shared/theme/layout';
+import { useRouter } from 'expo-router';
 
 const formatDate = (iso?: string) => {
   if (!iso) return '—';
@@ -132,7 +142,9 @@ const shiftStatus = (metadata?: Record<string, unknown> | null) => {
 };
 
 export default function ProfileScreen() {
+  const router = useRouter();
   const { user, signOut } = useAuth();
+  const { unreadCount } = useNotifications();
   const { theme } = useTheme();
   const { t, language, setLanguage } = useLanguage();
   const insets = useSafeAreaInsets();
@@ -180,7 +192,7 @@ export default function ProfileScreen() {
     .join('')
     .toUpperCase();
   return (
-    <SafeAreaView style={[styles.safeArea, { backgroundColor: theme.background }]}>
+    <SafeAreaView style={[styles.safeArea, { backgroundColor: theme.background }]} edges={['left', 'right']}>
       <FlatList
         style={[styles.container, { backgroundColor: theme.background }]}
         contentContainerStyle={contentContainerStyle}
@@ -206,7 +218,7 @@ export default function ProfileScreen() {
             style={[
               styles.headerGradient,
               styles.headerGlass,
-              { paddingTop: isIOS ? Math.max(0, insets.top - 18) : 14 + insets.top },
+              { paddingTop: isIOS ? 14 : 16 },
             ]}
             start={[0, 0]}
             end={[1, 1]}
@@ -239,7 +251,9 @@ export default function ProfileScreen() {
               </View>
               <View style={styles.heroMetrics}>
                 <View style={styles.heroMetricBlock}>
-                  <Text style={[styles.profileMetricLabel, { color: theme.textSecondary }]}>{t('memberSince')}</Text>
+                  <Text style={[styles.profileMetricLabel, { color: theme.textSecondary }]}>
+                    {t('memberSinceLabel')}
+                  </Text>
                   <Text style={[styles.profileMetricValue, { color: theme.textPrimary }]}>
                     {formatDate(user?.created_at)}
                   </Text>
@@ -249,13 +263,18 @@ export default function ProfileScreen() {
                   <Text style={[styles.profileMetricValue, { color: theme.textPrimary }]}>{provider.toUpperCase()}</Text>
                 </View>
               </View>
-              <View style={styles.heroActions} />
             </View>
           </LinearGradient>
         }
         renderItem={() => (
           <View style={[styles.body, isIOS && styles.bodyIOS]}>
-            <View style={[styles.sectionCard, { backgroundColor: theme.surface }, isIOS && styles.sectionCardIOS]}>
+            <View
+              style={[
+                styles.sectionCard,
+                { backgroundColor: theme.surface, borderColor: theme.borderSoft },
+                isIOS && styles.sectionCardIOS,
+              ]}
+            >
               <Text style={[styles.sectionHeading, { color: theme.textPrimary }]}>{t('accountSnapshot')}</Text>
               <View style={styles.infoGrid}>
                 {[
@@ -303,11 +322,51 @@ export default function ProfileScreen() {
                 ))}
               </View>
             </View>
-
-            <View style={[styles.sectionCard, { backgroundColor: theme.surface }, isIOS && styles.sectionCardIOS]}>
-              <Text style={[styles.sectionHeading, { color: theme.textPrimary }]}>{t('security')}</Text>
-              <View style={styles.preferenceGroup}>
-                <Text style={[styles.preferenceLabel, { color: theme.textSecondary }]}>{t('languageLabel')}</Text>
+            <View
+              style={[
+                styles.sectionCard,
+                { backgroundColor: theme.surface, borderColor: theme.borderSoft },
+                isIOS && styles.sectionCardIOS,
+              ]}
+            >
+              <Text style={[styles.sectionHeading, { color: theme.textPrimary }]}>
+                {t('toolsSectionTitle')}
+              </Text>
+              <View style={styles.toolsList}>
+                <TouchableOpacity
+                  style={[styles.toolsRow, { borderColor: theme.borderSoft }]}
+                  onPress={() => router.push('/notifications')}
+                >
+                  <View style={[styles.toolsIconWrap, { backgroundColor: theme.surfaceMuted }]}>
+                    <Ionicons name="notifications-outline" size={16} color={theme.primary} />
+                  </View>
+                  <Text style={[styles.toolsLabel, { color: theme.textPrimary }]}>
+                    {t('notificationBellLabel')}
+                  </Text>
+                  {unreadCount > 0 ? (
+                    <View style={styles.toolsBadge}>
+                      <Text style={styles.toolsBadgeText}>{unreadCount > 9 ? '9+' : unreadCount}</Text>
+                    </View>
+                  ) : null}
+                  <Ionicons name="chevron-forward" size={16} color={theme.textSecondary} />
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.toolsRow, { borderColor: theme.borderSoft }]}
+                  onPress={() => router.push('/calendar-settings')}
+                >
+                  <View style={[styles.toolsIconWrap, { backgroundColor: theme.surfaceMuted }]}>
+                    <Ionicons name="flash-outline" size={16} color={theme.primary} />
+                  </View>
+                  <Text style={[styles.toolsLabel, { color: theme.textPrimary }]}>
+                    {t('calendarSettingsTitle')}
+                  </Text>
+                  <Ionicons name="chevron-forward" size={16} color={theme.textSecondary} />
+                </TouchableOpacity>
+              </View>
+              <View style={[styles.preferenceGroup, styles.toolsPreferenceGroup]}>
+                <Text style={[styles.preferenceLabel, { color: theme.textSecondary }]}>
+                  {t('languageLabel')}
+                </Text>
                 <View style={styles.languageToggleList}>
                   {languageDefinitions.map((definition) => {
                     const isActive = language === definition.code;
@@ -335,6 +394,16 @@ export default function ProfileScreen() {
                   })}
                 </View>
               </View>
+            </View>
+
+            <View
+              style={[
+                styles.sectionCard,
+                { backgroundColor: theme.surface, borderColor: theme.borderSoft },
+                isIOS && styles.sectionCardIOS,
+              ]}
+            >
+              <Text style={[styles.sectionHeading, { color: theme.textPrimary }]}>{t('security')}</Text>
               <PrimaryButton
                 title={t('signOut')}
                 onPress={handleSignOut}
@@ -356,9 +425,9 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   headerGradient: {
-    paddingHorizontal: 24,
+    paddingHorizontal: layoutTokens.screenHorizontal + 8,
     paddingTop: 18,
-    paddingBottom: 16,
+    paddingBottom: 22,
     borderBottomLeftRadius: 32,
     borderBottomRightRadius: 32,
     position: 'relative',
@@ -417,17 +486,18 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
   },
   profileGreeting: {
-    fontSize: 24,
+    fontSize: 30,
     fontWeight: '700',
+    letterSpacing: -0.4,
   },
   profileGreetingIOS: {
     fontSize: 26,
     letterSpacing: 0.2,
   },
   profileSubtext: {
-    fontSize: 14,
+    fontSize: 15,
     marginTop: 4,
-    maxWidth: 220,
+    maxWidth: 230,
   },
   profileSubtextIOS: {
     fontSize: 13,
@@ -454,12 +524,16 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
   },
   heroCard: {
-    padding: 14,
-    borderRadius: 26,
+    padding: 16,
+    borderRadius: 24,
     marginTop: 4,
     backgroundColor: 'rgba(255,255,255,0.05)',
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.12)',
+    shadowColor: '#020617',
+    shadowOpacity: 0.2,
+    shadowOffset: { width: 0, height: 8 },
+    shadowRadius: 14,
   },
   heroCardIOS: {
     padding: 16,
@@ -474,9 +548,10 @@ const styles = StyleSheet.create({
   },
   heroMetricBlock: {
     flex: 1,
-    padding: 8,
-    borderRadius: 16,
-    backgroundColor: 'rgba(0,0,0,0.16)',
+    paddingVertical: 10,
+    paddingHorizontal: 10,
+    borderRadius: 14,
+    backgroundColor: 'rgba(0,0,0,0.2)',
   },
   profileInfo: {
     marginTop: 20,
@@ -506,12 +581,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '700',
   },
-  heroActions: {
-    marginTop: 10,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-  },
   heroMeta: {
     flex: 1,
     fontSize: 12,
@@ -521,43 +590,83 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   content: {
-    paddingBottom: 40,
+    paddingBottom: 48,
     flexGrow: 1,
     justifyContent: 'flex-start',
   },
   headerSpacing: {
-    marginBottom: 4,
+    marginBottom: 12,
   },
   footerSpacer: {
     width: '100%',
   },
   body: {
-    paddingHorizontal: 16,
-    paddingTop: 12,
+    paddingHorizontal: layoutTokens.screenHorizontal,
+    paddingTop: layoutTokens.screenTop,
   },
   bodyIOS: {
     paddingTop: 6,
   },
   sectionCard: {
-    borderRadius: 26,
+    borderRadius: 24,
     padding: 20,
-    marginTop: 16,
+    marginTop: layoutTokens.sectionGap - 2,
     borderWidth: 1,
-    borderColor: '#1c2342',
-    shadowColor: '#050914',
-    shadowOpacity: 0.35,
-    shadowOffset: { width: 0, height: 12 },
-    shadowRadius: 22,
-    elevation: 10,
+    borderColor: '#27315a99',
+    shadowColor: '#020617',
+    shadowOpacity: 0.2,
+    shadowOffset: { width: 0, height: 10 },
+    shadowRadius: 18,
+    elevation: 8,
   },
   sectionCardIOS: {
     borderRadius: 28,
     padding: 22,
   },
   sectionHeading: {
-    fontSize: 16,
+    fontSize: 22,
     fontWeight: '700',
-    marginBottom: 12,
+    marginBottom: 14,
+    letterSpacing: -0.2,
+  },
+  toolsList: {
+    marginTop: 4,
+  },
+  toolsRow: {
+    minHeight: 52,
+    borderWidth: 1,
+    borderRadius: 14,
+    paddingHorizontal: 12,
+    marginTop: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  toolsIconWrap: {
+    width: 32,
+    height: 32,
+    borderRadius: 11,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  toolsLabel: {
+    flex: 1,
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  toolsBadge: {
+    minWidth: 20,
+    height: 20,
+    borderRadius: 10,
+    paddingHorizontal: 5,
+    backgroundColor: '#dc2626',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  toolsBadgeText: {
+    color: '#fff',
+    fontSize: 11,
+    fontWeight: '700',
   },
   infoGrid: {
     flexDirection: 'row',
@@ -597,7 +706,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     borderTopWidth: 1,
-    paddingVertical: 10,
+    paddingVertical: 12,
   },
   contactRowIOS: {
     paddingVertical: 12,
@@ -630,6 +739,12 @@ const styles = StyleSheet.create({
   preferenceGroup: {
     marginBottom: 16,
   },
+  toolsPreferenceGroup: {
+    marginTop: 16,
+    marginBottom: 0,
+    borderTopWidth: 1,
+    paddingTop: 14,
+  },
   preferenceLabel: {
     fontSize: 12,
     fontWeight: '600',
@@ -661,19 +776,21 @@ const styles = StyleSheet.create({
   },
   languageToggleList: {
     flexDirection: 'row',
-    gap: 12,
+    gap: 8,
   },
   languageToggleItem: {
     flex: 1,
-    borderRadius: 14,
-    paddingVertical: 10,
+    borderRadius: 12,
+    paddingVertical: 11,
+    borderWidth: 1,
+    borderColor: 'transparent',
     alignItems: 'center',
     justifyContent: 'center',
     flexDirection: 'row',
     gap: 6,
   },
   languageToggleItemActive: {
-    borderWidth: 0,
+    borderColor: 'rgba(255,255,255,0.18)',
   },
   languageFlag: {
     fontSize: 14,

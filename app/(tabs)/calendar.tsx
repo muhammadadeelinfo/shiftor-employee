@@ -25,6 +25,7 @@ import { useRouter } from 'expo-router';
 import * as Calendar from 'expo-calendar';
 import { useTheme } from '@shared/themeContext';
 import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
+import { layoutTokens } from '@shared/theme/layout';
 
 const WEEKDAY_LABELS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
@@ -174,6 +175,18 @@ export default function CalendarScreen() {
   const focusedShiftId = liveShift?.id ?? nextShift?.id;
   const focusedDayKey = orderedShifts.find((shift) => shift.id === focusedShiftId)?.start.split('T')[0];
   const monthLabel = getMonthLabel(visibleMonth);
+  const nextShiftSummary = useMemo(() => {
+    if (!nextShift) return t('noUpcomingShifts');
+    const start = new Date(nextShift.start);
+    if (Number.isNaN(start.getTime())) return t('nextShift');
+    const dateText = start.toLocaleDateString([], {
+      weekday: 'short',
+      month: 'short',
+      day: 'numeric',
+    });
+    const timeText = start.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+    return `${t('nextShift')}: ${dateText} · ${timeText}`;
+  }, [nextShift, t]);
   const { selectedCalendars } = useCalendarSelection();
   const [importedEventsByDay, setImportedEventsByDay] = useState<
     Record<string, ImportedCalendarEvent[]>
@@ -501,8 +514,8 @@ export default function CalendarScreen() {
     styles.container,
     {
       backgroundColor: theme.background,
-      paddingTop: isIOS ? 0 : 12 + insets.top,
-      paddingHorizontal: isIOS ? 16 : 12,
+      paddingTop: layoutTokens.screenTop,
+      paddingHorizontal: layoutTokens.screenHorizontal,
     },
   ];
   const heroGradientColors: [string, string, ...string[]] = [
@@ -519,11 +532,11 @@ export default function CalendarScreen() {
   const dayChipFocusedStyle = {
     backgroundColor: theme.surfaceElevated,
     borderColor: theme.primaryAccent,
-    borderWidth: 2,
+    borderWidth: 1.5,
     shadowColor: theme.primaryAccent,
-    shadowOpacity: 0.35,
-    shadowRadius: 12,
-    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 5 },
   };
   const dayChipActiveStyle = {
     borderColor: theme.primary,
@@ -540,7 +553,7 @@ export default function CalendarScreen() {
   ];
 
   return (
-    <SafeAreaView style={containerStyle} edges={['top']}>
+    <SafeAreaView style={containerStyle} edges={['left', 'right']}>
       <LinearGradient colors={heroGradientColors} style={styles.background} />
       <ScrollView
         contentContainerStyle={scrollContentStyle}
@@ -555,6 +568,20 @@ export default function CalendarScreen() {
         keyboardDismissMode="on-drag"
         decelerationRate={isIOS ? 'fast' : 'normal'}
       >
+        <View
+          style={[
+            styles.summaryCard,
+            { backgroundColor: theme.surface, borderColor: theme.borderSoft },
+          ]}
+        >
+          <View style={styles.summaryTopRow}>
+            <Text style={[styles.summaryTitle, { color: theme.textPrimary }]}>{t('calendarView')}</Text>
+            <View style={[styles.summaryCountPill, { backgroundColor: theme.surfaceMuted }]}>
+              <Text style={[styles.summaryCountText, { color: theme.textPrimary }]}>{monthShifts.length}</Text>
+            </View>
+          </View>
+          <Text style={[styles.summarySubtitle, { color: theme.textSecondary }]}>{nextShiftSummary}</Text>
+        </View>
         <View
           style={[
             styles.monthCard,
@@ -816,11 +843,14 @@ export default function CalendarScreen() {
         animationType="slide"
         onRequestClose={closeDayDetailModal}
       >
-        <Pressable style={styles.dayDetailBackdrop} onPress={closeDayDetailModal} />
+        <Pressable
+          style={[styles.dayDetailBackdrop, { backgroundColor: 'rgba(3, 8, 25, 0.62)' }]}
+          onPress={closeDayDetailModal}
+        />
         <View
           style={[
             styles.dayDetailCard,
-            { backgroundColor: theme.surface, borderColor: theme.borderSoft },
+            { backgroundColor: theme.surface, borderColor: theme.borderSoft, shadowColor: '#010614' },
           ]}
         >
             <View style={styles.dayDetailHeader}>
@@ -834,8 +864,14 @@ export default function CalendarScreen() {
                   </Text>
                 ) : null}
               </View>
-            <Pressable style={styles.dayDetailCloseButton} onPress={closeDayDetailModal}>
-              <Ionicons name="close" size={18} color="#475569" />
+            <Pressable
+              style={[
+                styles.dayDetailCloseButton,
+                { backgroundColor: theme.surfaceMuted, borderColor: theme.borderSoft },
+              ]}
+              onPress={closeDayDetailModal}
+            >
+              <Ionicons name="close" size={18} color={theme.textSecondary} />
             </Pressable>
           </View>
           <ScrollView
@@ -995,14 +1031,14 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#eef1ff',
-    paddingHorizontal: 12,
+    paddingHorizontal: layoutTokens.screenHorizontal,
   },
   monthCard: {
     backgroundColor: '#fff',
     borderRadius: 36,
     paddingVertical: 16,
     paddingHorizontal: 24,
-    marginBottom: 12,
+    marginBottom: layoutTokens.sectionGap,
     shadowColor: '#0f172a',
     shadowOpacity: 0.1,
     shadowOffset: { width: 0, height: 10 },
@@ -1015,7 +1051,46 @@ const styles = StyleSheet.create({
     borderRadius: 40,
     paddingVertical: 18,
     marginBottom: 14,
-    marginTop: -8,
+    marginTop: 0,
+  },
+  summaryCard: {
+    borderWidth: 1,
+    borderRadius: layoutTokens.cardRadiusMd,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    marginBottom: layoutTokens.sectionGap - 2,
+    shadowColor: '#050914',
+    shadowOpacity: 0.16,
+    shadowOffset: { width: 0, height: 6 },
+    shadowRadius: 10,
+    elevation: 6,
+  },
+  summaryTopRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  summaryTitle: {
+    fontSize: 18,
+    fontWeight: '800',
+    letterSpacing: 0.2,
+  },
+  summaryCountPill: {
+    minWidth: 34,
+    borderRadius: 999,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+  },
+  summaryCountText: {
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  summarySubtitle: {
+    marginTop: 6,
+    fontSize: 13,
+    fontWeight: '500',
   },
   monthCardGradient: {
     ...StyleSheet.absoluteFillObject,
@@ -1195,8 +1270,7 @@ const styles = StyleSheet.create({
   },
   legendTitle: {
     fontSize: 14,
-    letterSpacing: 0.6,
-    textTransform: 'uppercase',
+    letterSpacing: 0.2,
     color: '#475569',
     fontWeight: '700',
   },
@@ -1245,11 +1319,11 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   legendGroupTitle: {
-    fontSize: 11,
+    fontSize: 12,
     letterSpacing: 0.3,
-    textTransform: 'uppercase',
     color: '#94a3b8',
     marginBottom: 6,
+    fontWeight: '600',
   },
   legendChipIcon: {
     width: 10,
@@ -1303,7 +1377,10 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 6,
+    marginBottom: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(148, 163, 184, 0.25)',
+    paddingBottom: 10,
   },
   dayDetailTitle: {
     fontSize: 14,
@@ -1316,8 +1393,12 @@ const styles = StyleSheet.create({
     color: '#475569',
   },
   dayDetailCloseButton: {
-    padding: 6,
+    width: 34,
+    height: 34,
     borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
   },
   dayDetailScroll: {
     flex: 1,

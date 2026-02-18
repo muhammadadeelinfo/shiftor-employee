@@ -2,27 +2,31 @@ import { Tabs } from 'expo-router';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '@shared/themeContext';
+import { useLanguage } from '@shared/context/LanguageContext';
 
-const iconConfig: Record<string, { active: string; inactive: string; label: string }> = {
+const iconConfig: Record<
+  string,
+  { active: string; inactive: string; labelKey: 'shiftsTabTitle' | 'tabCalendar' | 'tabQrClockIn' | 'tabProfile' }
+> = {
   'my-shifts': {
     active: 'list',
     inactive: 'list-outline',
-    label: 'Shifts',
+    labelKey: 'shiftsTabTitle',
   },
   calendar: {
     active: 'calendar',
     inactive: 'calendar-outline',
-    label: 'Calendar',
+    labelKey: 'tabCalendar',
   },
   'qr-clock-in': {
     active: 'qr-code',
     inactive: 'qr-code-outline',
-    label: 'QR Clock-In',
+    labelKey: 'tabQrClockIn',
   },
   profile: {
     active: 'person-circle',
     inactive: 'person-circle-outline',
-    label: 'Profile',
+    labelKey: 'tabProfile',
   },
 };
 
@@ -33,17 +37,18 @@ export default function TabsLayout() {
 
 function ThemeAwareTabs({ insets }: { insets: ReturnType<typeof useSafeAreaInsets> }) {
   const { theme } = useTheme();
+  const { t } = useLanguage();
   return (
     <Tabs
       screenOptions={({ route }) => {
         const icon = iconConfig[route.name] ?? {
           active: 'square',
           inactive: 'square-outline',
-          label: route.name,
+          labelKey: 'shiftsTabTitle',
         };
         return {
           headerShown: false,
-          tabBarLabel: icon.label,
+          tabBarLabel: t(icon.labelKey),
           tabBarLabelStyle: { fontSize: 11, fontWeight: '600' },
           tabBarActiveTintColor: theme.primary,
           tabBarInactiveTintColor: theme.textSecondary,
@@ -72,6 +77,8 @@ function ThemeAwareTabs({ insets }: { insets: ReturnType<typeof useSafeAreaInset
       <Tabs.Screen name="calendar" />
       <Tabs.Screen name="qr-clock-in" />
       <Tabs.Screen name="profile" />
+      <Tabs.Screen name="notifications" options={{ href: null }} />
+      <Tabs.Screen name="calendar-settings" options={{ href: null }} />
     </Tabs>
   );
 }

@@ -15,6 +15,9 @@ import type { RealtimeChannel } from '@supabase/supabase-js';
 import { supabase } from '@lib/supabaseClient';
 import { useAuth } from '@hooks/useSupabaseAuth';
 import { useRouter } from 'expo-router';
+import { useLanguage } from '@shared/context/LanguageContext';
+
+type TranslateFn = ReturnType<typeof useLanguage>['t'];
 
 type NotificationItem = {
   id: string;
@@ -33,6 +36,7 @@ type NotificationContextValue = {
   close: () => void;
   notifications: NotificationItem[];
   unreadCount: number;
+  markNotificationRead: (notificationId: string) => Promise<void>;
   addNotification: (
     entry: Pick<NotificationItem, 'title' | 'detail'> & {
       read?: boolean;
@@ -61,33 +65,43 @@ type NotificationCategory =
 
 const categoryMeta: Record<
   NotificationCategory,
-  { label: string; color: string; background: string }
+  { color: string; background: string }
 > = {
   'shift-published': {
-    label: 'Shift published',
     color: '#0ea5e9',
     background: 'rgba(14,165,233,0.15)',
   },
   'shift-removed': {
-    label: 'Shift removed',
     color: '#f97316',
     background: 'rgba(249,115,22,0.12)',
   },
   'shift-schedule': {
-    label: 'Schedule changed',
     color: '#facc15',
     background: 'rgba(250,204,21,0.15)',
   },
   admin: {
-    label: 'Admin message',
     color: '#a855f7',
     background: 'rgba(168,85,247,0.15)',
   },
   general: {
-    label: 'General',
     color: '#94a3b8',
     background: 'rgba(148,163,184,0.12)',
   },
+};
+
+const categoryLabelKeys: Record<
+  NotificationCategory,
+  | 'notificationCategoryShiftPublished'
+  | 'notificationCategoryShiftRemoved'
+  | 'notificationCategoryScheduleChanged'
+  | 'notificationCategoryAdminMessage'
+  | 'notificationCategoryGeneral'
+> = {
+  'shift-published': 'notificationCategoryShiftPublished',
+  'shift-removed': 'notificationCategoryShiftRemoved',
+  'shift-schedule': 'notificationCategoryScheduleChanged',
+  admin: 'notificationCategoryAdminMessage',
+  general: 'notificationCategoryGeneral',
 };
 
 const determineNotificationCategory = (title: string, detail: string): NotificationCategory => {
@@ -136,14 +150,16 @@ const resolveTargetPath = (metadata?: Record<string, unknown>) => {
   return undefined;
 };
 
-const createFallbackNotifications = (): NotificationItem[] => {
+const createFallbackNotifications = (
+  t: TranslateFn
+): NotificationItem[] => {
   const now = Date.now();
   const minutesAgo = (minutes: number) => new Date(now - minutes * 60 * 1000).toISOString();
   return [
     {
       id: 'shift-reminder',
-      title: 'Shift Reminder',
-      detail: '8:00 AM – Lobby Coverage',
+      title: t('notificationFallbackShiftReminderTitle'),
+      detail: t('notificationFallbackShiftReminderDetail'),
       createdAt: minutesAgo(2),
       read: false,
       category: 'shift-schedule',
@@ -152,16 +168,16 @@ const createFallbackNotifications = (): NotificationItem[] => {
     },
     {
       id: 'policy-update',
-      title: 'New QR Policy',
-      detail: 'Review QR clock-in steps before your next shift.',
+      title: t('notificationFallbackNewQrPolicyTitle'),
+      detail: t('notificationFallbackNewQrPolicyDetail'),
       createdAt: minutesAgo(40),
       read: false,
       category: 'admin',
     },
     {
       id: 'weekend-rota',
-      title: 'Weekend rota',
-      detail: 'Open unpaid weekend bids are live now.',
+      title: t('notificationFallbackWeekendRotaTitle'),
+      detail: t('notificationFallbackWeekendRotaDetail'),
       createdAt: minutesAgo(26 * 60),
       read: true,
       category: 'general',
@@ -176,7 +192,10 @@ const parseIsoDate = (value?: unknown): string => {
   return new Date().toISOString();
 };
 
-const normalizeNotificationRow = (row: Record<string, unknown>): NotificationItem | null => {
+const normalizeNotificationRow = (
+  row: Record<string, unknown>,
+  defaults: { title: string; detail: string }
+): NotificationItem | null => {
   const rawId = row.id ?? row.notificationId ?? row.notification_id;
   if (rawId === undefined || rawId === null) return null;
   const titleCandidate =
@@ -193,8 +212,8 @@ const normalizeNotificationRow = (row: Record<string, unknown>): NotificationIte
       : typeof row.description === 'string' && row.description.trim()
       ? row.description.trim()
       : undefined;
-  const normalizedTitle = titleCandidate ?? 'Notification';
-  const normalizedDetail = detailCandidate ?? 'Tap to see the latest update.';
+  const normalizedTitle = titleCandidate ?? defaults.title;
+  const normalizedDetail = detailCandidate ?? defaults.detail;
   const createdAt = parseIsoDate(
     row.created_at ?? row.createdAt ?? row.sent_at ?? row.timestamp ?? row.time
   );
@@ -218,13 +237,16 @@ const normalizeNotificationRow = (row: Record<string, unknown>): NotificationIte
   };
 };
 
-const getRelativeTimeLabel = (iso: string) => {
+const getRelativeTimeLabel = (
+  iso: string,
+  labels: { justNow: string; comingSoon: string }
+) => {
   const date = new Date(iso);
-  if (Number.isNaN(date.getTime())) return 'just now';
+  if (Number.isNaN(date.getTime())) return labels.justNow;
   const diff = Date.now() - date.getTime();
   const minute = 60 * 1000;
-  if (Math.abs(diff) < minute) return 'just now';
-  if (diff < 0) return 'coming soon';
+  if (Math.abs(diff) < minute) return labels.justNow;
+  if (diff < 0) return labels.comingSoon;
   if (diff < minute * 60) return `${Math.round(diff / minute)}m ago`;
   if (diff < minute * 60 * 24) return `${Math.round(diff / (minute * 60))}h ago`;
   return `${Math.round(diff / (minute * 60 * 24))}d ago`;
@@ -237,13 +259,10 @@ const areSameDay = (a: Date, b: Date) =>
 
 type NotificationSectionKey = 'today' | 'yesterday' | 'earlier';
 
-const sectionLabels: Record<NotificationSectionKey, string> = {
-  today: 'Today',
-  yesterday: 'Yesterday',
-  earlier: 'Earlier',
-};
-
-const groupNotificationsByRecency = (notifications: NotificationItem[]): {
+const groupNotificationsByRecency = (
+  notifications: NotificationItem[],
+  sectionLabels: Record<NotificationSectionKey, string>
+): {
   key: NotificationSectionKey;
   title: string;
   items: NotificationItem[];
@@ -281,22 +300,25 @@ const groupNotificationsByRecency = (notifications: NotificationItem[]): {
 const NotificationContext = createContext<NotificationContextValue | undefined>(undefined);
 
 export const NotificationProvider = ({ children }: { children: ReactNode }) => {
+  const { t } = useLanguage();
   const { user } = useAuth();
   const router = useRouter();
   const employeeId = user?.id;
   const [open, setOpen] = useState(false);
-  const [notifications, setNotifications] = useState<NotificationItem[]>(createFallbackNotifications);
+  const [notifications, setNotifications] = useState<NotificationItem[]>(() =>
+    createFallbackNotifications(t)
+  );
   const mountedRef = useRef(true);
   const notificationsTableUnavailableRef = useRef(false);
 
   const loadNotifications = useCallback(async () => {
     if (!mountedRef.current) return;
     if (!supabase) {
-      setNotifications(createFallbackNotifications());
+      setNotifications(createFallbackNotifications(t));
       return;
     }
     if (notificationsTableUnavailableRef.current) {
-      setNotifications(createFallbackNotifications());
+      setNotifications(createFallbackNotifications(t));
       return;
     }
 
@@ -308,7 +330,7 @@ export const NotificationProvider = ({ children }: { children: ReactNode }) => {
         .limit(6);
 
       if (employeeId) {
-        query = query.eq('employeeId', employeeId);
+        query = query.eq('employee_id', employeeId);
       }
 
       const { data, error } = await query;
@@ -320,11 +342,16 @@ export const NotificationProvider = ({ children }: { children: ReactNode }) => {
       }
 
       const normalized = (data ?? [])
-        .map(normalizeNotificationRow)
+        .map((row) =>
+          normalizeNotificationRow(row, {
+            title: t('notificationDefaultTitle'),
+            detail: t('notificationDefaultDetail'),
+          })
+        )
         .filter((item): item is NotificationItem => Boolean(item));
 
       if (!normalized.length) {
-        setNotifications(createFallbackNotifications());
+        setNotifications(createFallbackNotifications(t));
         return;
       }
 
@@ -336,10 +363,10 @@ export const NotificationProvider = ({ children }: { children: ReactNode }) => {
         console.warn('Failed to load notifications', error);
       }
       if (mountedRef.current) {
-        setNotifications(createFallbackNotifications());
+        setNotifications(createFallbackNotifications(t));
       }
     }
-  }, [employeeId]);
+  }, [employeeId, t]);
 
   const toggle = useCallback(() => setOpen((prev) => !prev), []);
   const close = useCallback(() => setOpen(false), []);
@@ -399,7 +426,7 @@ export const NotificationProvider = ({ children }: { children: ReactNode }) => {
     try {
       let query = supabase.from('notifications').update({ is_read: true });
       if (employeeId) {
-        query = query.eq('employeeId', employeeId);
+        query = query.eq('employee_id', employeeId);
       }
       const { error } = await query.in('id', unreadIds);
       if (error) {
@@ -431,7 +458,7 @@ export const NotificationProvider = ({ children }: { children: ReactNode }) => {
         event: '*',
         schema: 'public',
         table: 'notifications',
-        filter: `employeeId=eq.${employeeId}`,
+        filter: `employee_id=eq.${employeeId}`,
       },
       () => {
         void loadNotifications();
@@ -459,11 +486,22 @@ export const NotificationProvider = ({ children }: { children: ReactNode }) => {
       close,
       notifications,
       unreadCount,
+      markNotificationRead,
       markAllAsRead,
       refresh,
       addNotification,
     }),
-    [open, toggle, close, notifications, unreadCount, markAllAsRead, refresh, addNotification]
+    [
+      open,
+      toggle,
+      close,
+      notifications,
+      unreadCount,
+      markNotificationRead,
+      markAllAsRead,
+      refresh,
+      addNotification,
+    ]
   );
 
   const handleNotificationPress = useCallback(
@@ -477,7 +515,15 @@ export const NotificationProvider = ({ children }: { children: ReactNode }) => {
     [markNotificationRead, router]
   );
 
-  const groupedSections = useMemo(() => groupNotificationsByRecency(notifications), [notifications]);
+  const groupedSections = useMemo(
+    () =>
+      groupNotificationsByRecency(notifications, {
+        today: t('notificationSectionToday'),
+        yesterday: t('notificationSectionYesterday'),
+        earlier: t('notificationSectionEarlier'),
+      }),
+    [notifications, t]
+  );
 
   return (
     <NotificationContext.Provider value={value}>
@@ -487,9 +533,11 @@ export const NotificationProvider = ({ children }: { children: ReactNode }) => {
           <Pressable style={styles.panel} onPress={(event) => event.stopPropagation()}>
             <View style={styles.panelHeader}>
               <View>
-                <Text style={styles.panelTitle}>Notifications</Text>
+                <Text style={styles.panelTitle}>{t('notificationsPanelTitle')}</Text>
                 <Text style={styles.panelMeta}>
-                  {unreadCount > 0 ? `${unreadCount} waiting` : 'All caught up'}
+                  {unreadCount > 0
+                    ? t('notificationsPanelWaiting', { count: unreadCount })
+                    : t('notificationsPanelAllCaughtUp')}
                 </Text>
               </View>
             </View>
@@ -526,7 +574,7 @@ export const NotificationProvider = ({ children }: { children: ReactNode }) => {
                               ]}
                               numberOfLines={1}
                             >
-                              {categoryMeta[item.category].label}
+                              {t(categoryLabelKeys[item.category])}
                             </Text>
                           </View>
                         </View>
@@ -534,14 +582,19 @@ export const NotificationProvider = ({ children }: { children: ReactNode }) => {
                           {item.detail}
                         </Text>
                         <View style={styles.notificationDivider} />
-                        <Text style={styles.notificationTime}>{getRelativeTimeLabel(item.createdAt)}</Text>
+                        <Text style={styles.notificationTime}>
+                          {getRelativeTimeLabel(item.createdAt, {
+                            justNow: t('notificationRelativeJustNow'),
+                            comingSoon: t('notificationRelativeComingSoon'),
+                          })}
+                        </Text>
                       </Pressable>
                     ))}
                   </View>
                 ))}
               </ScrollView>
             ) : (
-              <Text style={styles.notificationEmpty}>No notifications at the moment.</Text>
+              <Text style={styles.notificationEmpty}>{t('notificationsPanelEmpty')}</Text>
             )}
             {notifications.length ? (
               <View style={styles.footer}>
@@ -552,7 +605,7 @@ export const NotificationProvider = ({ children }: { children: ReactNode }) => {
                     setOpen(false);
                   }}
                 >
-                  <Text style={styles.actionText}>Mark all as read</Text>
+                  <Text style={styles.actionText}>{t('notificationsMarkAllRead')}</Text>
                 </TouchableOpacity>
               </View>
             ) : null}
