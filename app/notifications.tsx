@@ -1,7 +1,6 @@
 import { useMemo } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useRouter } from 'expo-router';
 import { useNotifications } from '@shared/context/NotificationContext';
@@ -38,7 +37,6 @@ type NotificationSection = {
 export default function NotificationsScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const tabBarHeight = useBottomTabBarHeight();
   const { theme } = useTheme();
   const { t } = useLanguage();
   const { notifications, unreadCount, markAllAsRead, markNotificationRead } = useNotifications();
@@ -99,7 +97,7 @@ export default function NotificationsScreen() {
         style={styles.scroll}
         contentContainerStyle={[
           styles.content,
-          { paddingBottom: Math.max(20, tabBarHeight + insets.bottom + 8) },
+          { paddingBottom: Math.max(20, insets.bottom + 20) },
         ]}
         showsVerticalScrollIndicator={false}
       >

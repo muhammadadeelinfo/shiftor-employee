@@ -77,7 +77,6 @@ function ThemeAwareTabs({ insets }: { insets: ReturnType<typeof useSafeAreaInset
       <Tabs.Screen name="calendar" />
       <Tabs.Screen name="qr-clock-in" />
       <Tabs.Screen name="account" />
-      <Tabs.Screen name="notifications" options={{ href: null }} />
       <Tabs.Screen name="calendar-settings" options={{ href: null }} />
     </Tabs>
   );
