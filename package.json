@@ -8,7 +8,7 @@
     "ios": "expo start --ios",
     "web": "expo start --web",
     "check-db-config": "node scripts/check-db-config.js",
-    "test": "tsc -p tsconfig.test.json && node tmp-test/tests/timeUtils.test.js && node tmp-test/tests/shiftPhase.test.js && node tmp-test/tests/notificationUtils.test.js && node tmp-test/tests/maps.test.js && node tmp-test/tests/shiftConfirmationStatus.test.js && node tmp-test/tests/runtimeHealthUtils.test.js"
+    "test": "tsc -p tsconfig.test.json && node tmp-test/tests/timeUtils.test.js && node tmp-test/tests/shiftPhase.test.js && node tmp-test/tests/notificationUtils.test.js && node tmp-test/tests/maps.test.js && node tmp-test/tests/shiftConfirmationStatus.test.js && node tmp-test/tests/runtimeHealthUtils.test.js && node tmp-test/tests/shiftMapping.test.js"
   },
   "dependencies": {
     "@react-native-async-storage/async-storage": "^2.2.0",

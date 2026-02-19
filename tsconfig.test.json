@@ -20,6 +20,7 @@
   },
   "include": [
     "src/lib/shiftConfirmationStatus.ts",
+    "src/features/shifts/shiftMapping.ts",
     "src/shared/utils/timeUtils.ts",
     "src/shared/utils/shiftPhase.ts",
     "src/shared/utils/notificationUtils.ts",
@@ -30,6 +31,7 @@
     "tests/notificationUtils.test.ts",
     "tests/maps.test.ts",
     "tests/shiftConfirmationStatus.test.ts",
-    "tests/runtimeHealthUtils.test.ts"
+    "tests/runtimeHealthUtils.test.ts",
+    "tests/shiftMapping.test.ts"
   ]
 }
