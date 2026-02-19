@@ -1,5 +1,5 @@
 import assert from 'assert';
-import { getShiftPhase } from '../src/shared/utils/shiftPhase';
+import { getShiftPhase, phaseMeta } from '../src/shared/utils/shiftPhase';
 
 const start = '2026-03-10T08:00:00Z';
 const end = '2026-03-10T16:00:00Z';
@@ -33,5 +33,15 @@ assert.strictEqual(
   'past',
   'after shift end should be past'
 );
+
+assert.strictEqual(phaseMeta.past.label, 'Past shift');
+assert.strictEqual(phaseMeta.live.label, 'Live now');
+assert.strictEqual(phaseMeta.upcoming.label, 'Upcoming');
+assert.ok(phaseMeta.past.icon.length > 0);
+assert.ok(phaseMeta.live.icon.length > 0);
+assert.ok(phaseMeta.upcoming.icon.length > 0);
+assert.ok(phaseMeta.past.color.startsWith('#'));
+assert.ok(phaseMeta.live.background.startsWith('#'));
+assert.ok(phaseMeta.upcoming.background.startsWith('#'));
 
 console.log('tests/shiftPhase.test.ts OK');

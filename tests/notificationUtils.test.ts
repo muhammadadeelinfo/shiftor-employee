@@ -31,6 +31,7 @@ assert.strictEqual(
 
 assert.strictEqual(resolveTargetPath({ target: '/calendar' }), '/calendar');
 assert.strictEqual(resolveTargetPath({ deepLink: '  /notifications  ' }), '/notifications');
+assert.strictEqual(resolveTargetPath({ url: '/help-center', shiftId: 'abc123' }), '/help-center');
 assert.strictEqual(resolveTargetPath({ shiftId: 'abc123' }), '/shift-details/abc123');
 assert.strictEqual(resolveTargetPath(undefined), undefined);
 
@@ -75,12 +76,28 @@ assert.strictEqual(normalizedWithFallbacks?.title, 'Fallback title');
 assert.strictEqual(normalizedWithFallbacks?.detail, 'Fallback detail from description');
 assert.strictEqual(normalizedWithFallbacks?.read, true);
 assert.strictEqual(normalizedWithFallbacks?.targetPath, '/calendar-day/2026-03-10');
+assert.strictEqual(normalizedWithFallbacks?.category, 'general');
 
 const invalidRow = normalizeNotificationRow(
   { title: 'Missing id notification' },
   { title: 'Fallback title', detail: 'Fallback detail' }
 );
 assert.strictEqual(invalidRow, null);
+
+const normalizedWithBlankTitle = normalizeNotificationRow(
+  {
+    id: 'blank-title',
+    title: '   ',
+    body: 'Body detail',
+    read: true,
+    createdAt: '2026-03-10T13:00:00Z',
+  },
+  { title: 'Fallback title', detail: 'Fallback detail' }
+);
+assert.ok(normalizedWithBlankTitle, 'blank title should fall back');
+assert.strictEqual(normalizedWithBlankTitle?.title, 'Fallback title');
+assert.strictEqual(normalizedWithBlankTitle?.detail, 'Body detail');
+assert.strictEqual(normalizedWithBlankTitle?.read, true);
 
 const now = new Date('2026-03-10T12:00:00Z');
 const notifications: NotificationRecord[] = [
@@ -127,5 +144,18 @@ assert.strictEqual(grouped[1].key, 'yesterday');
 assert.strictEqual(grouped[1].items.length, 1);
 assert.strictEqual(grouped[2].key, 'earlier');
 assert.strictEqual(grouped[2].items.length, 1);
+
+const groupedWithoutEarlier = groupNotificationsByRecency(
+  notifications.slice(0, 2),
+  {
+    today: 'Today',
+    yesterday: 'Yesterday',
+    earlier: 'Earlier',
+  },
+  now
+);
+assert.strictEqual(groupedWithoutEarlier.length, 2);
+assert.strictEqual(groupedWithoutEarlier[0].key, 'today');
+assert.strictEqual(groupedWithoutEarlier[1].key, 'yesterday');
 
 console.log('tests/notificationUtils.test.ts OK');
