@@ -45,6 +45,9 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     authRedirectUrl: process.env.AUTH_REDIRECT_URL ?? '',
     apiBaseUrl: process.env.API_BASE_URL ?? '',
     enableLocationInDev: process.env.ENABLE_LOCATION_IN_DEV === 'true',
+    eas: {
+      projectId: process.env.EAS_PROJECT_ID ?? config.extra?.eas?.projectId ?? '',
+    },
   },
   plugins: (() => {
     const plugins = [...(config.plugins ?? []), 'expo-router'];
