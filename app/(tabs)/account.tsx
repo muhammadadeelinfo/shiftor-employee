@@ -1,4 +1,5 @@
 import {
+  Alert,
   FlatList,
   Platform,
   StyleSheet,
@@ -282,6 +283,9 @@ export default function AccountScreen() {
   const handleSignOut = () => {
     signOut();
   };
+  const handleComingSoon = (label: string) => {
+    Alert.alert(label, 'This feature is coming soon.');
+  };
   const contentContainerStyle = [
     styles.content,
     { paddingBottom: 28 + insets.bottom + tabBarHeight },
@@ -481,7 +485,10 @@ export default function AccountScreen() {
                 {t('securitySectionTitle')}
               </Text>
               <View style={styles.toolsList}>
-                <TouchableOpacity style={[styles.toolsRow, { borderColor: theme.borderSoft }]} onPress={() => {}}>
+                <TouchableOpacity
+                  style={[styles.toolsRow, { borderColor: theme.borderSoft }]}
+                  onPress={() => handleComingSoon(t('securityResetPassword'))}
+                >
                   <View style={[styles.toolsIconWrap, { backgroundColor: theme.surfaceMuted }]}>
                     <Ionicons name="key-outline" size={16} color={theme.primary} />
                   </View>
@@ -490,7 +497,10 @@ export default function AccountScreen() {
                   </Text>
                   <Ionicons name="chevron-forward" size={16} color={theme.textSecondary} />
                 </TouchableOpacity>
-                <TouchableOpacity style={[styles.toolsRow, { borderColor: theme.borderSoft }]} onPress={() => {}}>
+                <TouchableOpacity
+                  style={[styles.toolsRow, { borderColor: theme.borderSoft }]}
+                  onPress={() => handleComingSoon(t('securityManageSessions'))}
+                >
                   <View style={[styles.toolsIconWrap, { backgroundColor: theme.surfaceMuted }]}>
                     <Ionicons name="phone-portrait-outline" size={16} color={theme.primary} />
                   </View>
@@ -499,7 +509,10 @@ export default function AccountScreen() {
                   </Text>
                   <Ionicons name="chevron-forward" size={16} color={theme.textSecondary} />
                 </TouchableOpacity>
-                <TouchableOpacity style={[styles.toolsRow, { borderColor: theme.borderSoft }]} onPress={() => {}}>
+                <TouchableOpacity
+                  style={[styles.toolsRow, { borderColor: theme.borderSoft }]}
+                  onPress={() => handleComingSoon(t('securityEnable2fa'))}
+                >
                   <View style={[styles.toolsIconWrap, { backgroundColor: theme.surfaceMuted }]}>
                     <Ionicons name="shield-checkmark-outline" size={16} color={theme.primary} />
                   </View>
@@ -608,7 +621,10 @@ export default function AccountScreen() {
                 {t('supportSectionTitle')}
               </Text>
               <View style={styles.toolsList}>
-                <TouchableOpacity style={[styles.toolsRow, { borderColor: theme.borderSoft }]} onPress={() => {}}>
+                <TouchableOpacity
+                  style={[styles.toolsRow, { borderColor: theme.borderSoft }]}
+                  onPress={() => handleComingSoon(t('supportHelpCenter'))}
+                >
                   <View style={[styles.toolsIconWrap, { backgroundColor: theme.surfaceMuted }]}>
                     <Ionicons name="help-circle-outline" size={16} color={theme.primary} />
                   </View>
@@ -617,7 +633,10 @@ export default function AccountScreen() {
                   </Text>
                   <Ionicons name="chevron-forward" size={16} color={theme.textSecondary} />
                 </TouchableOpacity>
-                <TouchableOpacity style={[styles.toolsRow, { borderColor: theme.borderSoft }]} onPress={() => {}}>
+                <TouchableOpacity
+                  style={[styles.toolsRow, { borderColor: theme.borderSoft }]}
+                  onPress={() => handleComingSoon(t('supportLegal'))}
+                >
                   <View style={[styles.toolsIconWrap, { backgroundColor: theme.surfaceMuted }]}>
                     <Ionicons name="document-text-outline" size={16} color={theme.primary} />
                   </View>
@@ -635,7 +654,7 @@ export default function AccountScreen() {
               <TouchableOpacity onPress={handleSignOut}>
                 <Text style={[styles.link, { color: theme.primary }]}>{t('switchAccount')}</Text>
               </TouchableOpacity>
-              <TouchableOpacity onPress={() => {}}>
+              <TouchableOpacity onPress={() => handleComingSoon(t('supportDeleteAccount'))}>
                 <Text style={[styles.link, styles.destructiveLink, { color: theme.fail }]}>
                   {t('supportDeleteAccount')}
                 </Text>
