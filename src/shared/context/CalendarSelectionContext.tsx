@@ -1,11 +1,10 @@
 import { createContext, ReactNode, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-
-type ImportedCalendar = {
-  id: string;
-  title: string;
-  sourceName?: string;
-};
+import {
+  parseStoredCalendarSelection,
+  toggleCalendarSelectionInList,
+  type ImportedCalendar,
+} from '@shared/utils/calendarSelectionUtils';
 
 type CalendarSelectionContextValue = {
   selectedCalendars: ImportedCalendar[];
@@ -26,13 +25,7 @@ export const CalendarSelectionProvider = ({ children }: Props) => {
   const [hydrated, setHydrated] = useState(false);
 
   const toggleCalendarSelection = useCallback((calendar: ImportedCalendar) => {
-    setSelectedCalendars((prev) => {
-      const exists = prev.some((entry) => entry.id === calendar.id);
-      if (exists) {
-        return prev.filter((entry) => entry.id !== calendar.id);
-      }
-      return [...prev, calendar];
-    });
+    setSelectedCalendars((prev) => toggleCalendarSelectionInList(prev, calendar));
   }, []);
 
   const clearImportedCalendars = useCallback(() => {
@@ -45,7 +38,7 @@ export const CalendarSelectionProvider = ({ children }: Props) => {
       try {
         const raw = await AsyncStorage.getItem(STORAGE_KEY);
         if (raw && isMounted) {
-          const parsed = JSON.parse(raw) as ImportedCalendar[];
+          const parsed = parseStoredCalendarSelection(raw);
           setSelectedCalendars(parsed);
         }
       } catch (error) {

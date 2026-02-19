@@ -1,12 +1,13 @@
 import { createContext, ReactNode, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useAuth } from '@hooks/useSupabaseAuth';
-
-export const languageDefinitions = [
-  { code: 'en', shortLabel: 'EN', flag: '🇬🇧', labelKey: 'languageEnglish' },
-  { code: 'de', shortLabel: 'DE', flag: '🇩🇪', labelKey: 'languageGerman' },
-] as const;
-export type LanguageCode = (typeof languageDefinitions)[number]['code'];
+import {
+  getLanguageStorageKey,
+  interpolate,
+  isValidLanguage,
+  languageDefinitions,
+  type LanguageCode,
+} from '@shared/utils/languageUtils';
 
 type TranslationVars = Record<string, string | number>;
 
@@ -700,12 +701,6 @@ const translations = {
   },
 } as const;
 
-const LANGUAGE_STORAGE_KEY_BASE = 'employee-portal-language';
-const getLanguageStorageKey = (employeeId?: string | null) =>
-  employeeId ? `${LANGUAGE_STORAGE_KEY_BASE}:${employeeId}` : null;
-const isValidLanguage = (value: string | null): value is LanguageCode =>
-  languageDefinitions.some((definition) => definition.code === value);
-
 type TranslationKey = keyof typeof translations['en'];
 
 type LanguageContextValue = {
@@ -718,14 +713,6 @@ export const LanguageContext = createContext<LanguageContextValue | undefined>(u
 
 type Props = {
   children: ReactNode;
-};
-
-const interpolate = (value: string, vars?: TranslationVars) => {
-  if (!vars) return value;
-  return Object.entries(vars).reduce(
-    (text, [key, varValue]) => text.replace(`{${key}}`, String(varValue)),
-    value
-  );
 };
 
 export const LanguageProvider = ({ children }: Props) => {
