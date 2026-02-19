@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" role="img" aria-labelledby="title desc">
+  <title id="title">Shiftor app icon</title>
+  <desc id="desc">Shiftor mark on dark navy background.</desc>
+  <rect x="0" y="0" width="1024" height="1024" fill="#0B1220"/>
+  <svg x="132" y="186" width="760" height="652" viewBox="0 0 420 360" aria-hidden="true">
+    <defs>
+      <linearGradient id="shiftorBlue" x1="72" y1="58" x2="350" y2="278" gradientUnits="userSpaceOnUse">
+        <stop offset="0" stop-color="#2F7DF2" />
+        <stop offset="1" stop-color="#2467D8" />
+      </linearGradient>
+      <linearGradient id="shiftorGreen" x1="78" y1="334" x2="345" y2="120" gradientUnits="userSpaceOnUse">
+        <stop offset="0" stop-color="#2D9A56" />
+        <stop offset="1" stop-color="#4BC355" />
+      </linearGradient>
+    </defs>
+    <path d="M100 58h275c5 0 8 5 4 9L146 262c-11 10-27 17-45 17-31 0-55-24-55-55V113c0-31 24-55 54-55Z" fill="url(#shiftorBlue)"/>
+    <path d="M38 334h222c53 0 92-39 92-92v-84c0-30-24-54-54-54-14 0-27 5-37 14L38 334Z" fill="url(#shiftorGreen)"/>
+  </svg>
+</svg>
