@@ -177,18 +177,6 @@ export default function CalendarDayDetailsScreen() {
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]} edges={['left', 'right']}>
       <View style={styles.header}>
-        <Pressable
-          style={[styles.backButton, { backgroundColor: theme.surfaceMuted, borderColor: theme.borderSoft }]}
-          onPress={() => {
-            if (router.canGoBack()) {
-              router.back();
-              return;
-            }
-            router.replace('/calendar');
-          }}
-        >
-          <Ionicons name="chevron-back" size={20} color={theme.textSecondary} />
-        </Pressable>
         <View style={styles.headerText}>
           <Text style={[styles.title, { color: theme.textPrimary }]}>{t('calendarDetailTitle')}</Text>
           {activeDayLabel ? (
@@ -314,20 +302,10 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   header: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     paddingHorizontal: 18,
     paddingTop: 10,
     paddingBottom: 8,
-  },
-  backButton: {
-    width: 34,
-    height: 34,
-    borderRadius: 17,
-    borderWidth: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 12,
   },
   headerText: {
     flex: 1,

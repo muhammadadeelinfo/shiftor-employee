@@ -116,10 +116,8 @@ const formatCountdownLabel = (
 };
 
 export default function ShiftDetailsScreen() {
-  const { id, from, date } = useLocalSearchParams();
+  const { id } = useLocalSearchParams();
   const shiftId = Array.isArray(id) ? id[0] : id;
-  const fromParam = Array.isArray(from) ? from[0] : from;
-  const dateParam = Array.isArray(date) ? date[0] : date;
   const queryClient = useQueryClient();
   const { user } = useAuth();
   const userId = user?.id;
@@ -232,40 +230,9 @@ export default function ShiftDetailsScreen() {
     { paddingBottom: 40 + insets.bottom, backgroundColor: theme.background },
   ];
 
-  const handleBack = () => {
-    if (fromParam === 'calendar-day') {
-      if (dateParam) {
-        router.replace(`/calendar-day/${dateParam}`);
-        return;
-      }
-      router.replace('/calendar');
-      return;
-    }
-    if (fromParam === 'calendar') {
-      router.replace('/calendar');
-      return;
-    }
-    if (fromParam === 'shifts') {
-      router.replace('/my-shifts');
-      return;
-    }
-    if (router.canGoBack()) {
-      router.back();
-      return;
-    }
-    router.replace('/my-shifts');
-  };
-
   return (
     <ScrollView contentContainerStyle={contentStyle}>
       <View style={styles.headerContainer}>
-        <Pressable
-          style={({ pressed }) => [styles.backButton, pressed && styles.backButtonPressed]}
-          onPress={handleBack}
-          accessibilityLabel={t('back')}
-        >
-          <Ionicons name="chevron-back" size={24} color="#1f2937" />
-        </Pressable>
         <Text style={styles.tabLabel}>{t('shiftOverview')}</Text>
       </View>
       <LinearGradient
