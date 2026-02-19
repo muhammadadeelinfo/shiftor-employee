@@ -179,7 +179,13 @@ export default function CalendarDayDetailsScreen() {
       <View style={styles.header}>
         <Pressable
           style={[styles.backButton, { backgroundColor: theme.surfaceMuted, borderColor: theme.borderSoft }]}
-          onPress={() => router.back()}
+          onPress={() => {
+            if (router.canGoBack()) {
+              router.back();
+              return;
+            }
+            router.replace('/calendar');
+          }}
         >
           <Ionicons name="chevron-back" size={20} color={theme.textSecondary} />
         </Pressable>
