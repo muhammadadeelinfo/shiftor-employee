@@ -12,7 +12,6 @@ import {
 } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import type { ComponentProps } from 'react';
 import { PrimaryButton } from '@shared/components/PrimaryButton';
 import { useShiftFeed } from '@features/shifts/useShiftFeed';
 import { getShiftPhase, phaseMeta, type ShiftPhase } from '@shared/utils/shiftPhase';
@@ -26,7 +25,6 @@ import * as Calendar from 'expo-calendar';
 import { useTheme } from '@shared/themeContext';
 import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
 import { layoutTokens } from '@shared/theme/layout';
-import { openAddressInMaps } from '@shared/utils/maps';
 
 const WEEKDAY_LABELS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
@@ -177,12 +175,6 @@ export default function CalendarScreen() {
   const [importedEventsByDay, setImportedEventsByDay] = useState<
     Record<string, ImportedCalendarEvent[]>
   >({});
-  const [activeDayKey, setActiveDayKey] = useState<string | null>(null);
-  const [dayDetailModalVisible, setDayDetailModalVisible] = useState(false);
-  const closeDayDetailModal = useCallback(() => {
-    setDayDetailModalVisible(false);
-    setActiveDayKey(null);
-  }, []);
   const legendGroups = useMemo(
     () => [
       {
@@ -302,46 +294,6 @@ export default function CalendarScreen() {
     });
     return map;
   }, [selectedCalendars]);
-
-  const activeDayShifts = useMemo(() => {
-    if (!activeDayKey) {
-      return [];
-    }
-    return shiftsByDay.get(activeDayKey) ?? [];
-  }, [activeDayKey, shiftsByDay]);
-
-  const activeDayImportedEvents = useMemo(() => {
-    if (!activeDayKey) {
-      return [];
-    }
-    return importedEventsByDay[activeDayKey] ?? [];
-  }, [activeDayKey, importedEventsByDay]);
-
-  const sortedActiveDayImportedEvents = useMemo(() => {
-    return [...activeDayImportedEvents].sort((a, b) => {
-      const aTime = a.startDate ? new Date(a.startDate).getTime() : 0;
-      const bTime = b.startDate ? new Date(b.startDate).getTime() : 0;
-      return aTime - bTime;
-    });
-  }, [activeDayImportedEvents]);
-
-  const activeDayLabel = useMemo(() => {
-    if (!activeDayKey) {
-      return null;
-    }
-    const parsed = activeDayKey.split('-').map((part) => Number(part));
-    if (parsed.length !== 3 || parsed.some((part) => Number.isNaN(part))) {
-      return null;
-    }
-    const [year, month, day] = parsed;
-    const date = new Date(year, month - 1, day);
-    return date.toLocaleDateString(undefined, {
-      weekday: 'long',
-      month: 'long',
-      day: 'numeric',
-    });
-  }, [activeDayKey]);
-
 
   const handleMonthChange = useCallback(
     (offset: number) => {
@@ -641,8 +593,9 @@ export default function CalendarScreen() {
                           ]}
                           accessibilityRole="button"
                           onPress={() => {
-                            setActiveDayKey(key);
-                            setDayDetailModalVisible(true);
+                            router.push({
+                              pathname: `/calendar-day/${key}`,
+                            });
                           }}
                         >
                           <Text
@@ -782,191 +735,6 @@ export default function CalendarScreen() {
           ))}
         </View>
       </ScrollView>
-      <Modal
-        transparent
-        visible={dayDetailModalVisible}
-        animationType="slide"
-        onRequestClose={closeDayDetailModal}
-      >
-        <Pressable
-          style={[styles.dayDetailBackdrop, { backgroundColor: 'rgba(3, 8, 25, 0.62)' }]}
-          onPress={closeDayDetailModal}
-        />
-        <View
-          style={[
-            styles.dayDetailCard,
-            { backgroundColor: theme.surface, borderColor: theme.borderSoft, shadowColor: '#010614' },
-          ]}
-        >
-            <View style={styles.dayDetailHeader}>
-              <View>
-                <Text style={[styles.dayDetailTitle, { color: theme.textPrimary }]}>
-                  {t('calendarDetailTitle')}
-                </Text>
-                {activeDayLabel ? (
-                  <Text style={[styles.dayDetailDate, { color: theme.textSecondary }]}>
-                    {activeDayLabel}
-                  </Text>
-                ) : null}
-              </View>
-            <Pressable
-              style={[
-                styles.dayDetailCloseButton,
-                { backgroundColor: theme.surfaceMuted, borderColor: theme.borderSoft },
-              ]}
-              onPress={closeDayDetailModal}
-            >
-              <Ionicons name="close" size={18} color={theme.textSecondary} />
-            </Pressable>
-          </View>
-          <ScrollView
-            style={styles.dayDetailScroll}
-            contentContainerStyle={styles.dayDetailScrollContent}
-            showsVerticalScrollIndicator
-            indicatorStyle="black"
-            nestedScrollEnabled
-          >
-            <View style={styles.dayDetailSection}>
-              <Text
-                style={[styles.dayDetailSectionTitle, { color: theme.textSecondary }]}
-              >
-                {t('calendarDetailShiftsTitle')}
-              </Text>
-              {activeDayShifts.length ? (
-                activeDayShifts.map((shift) => {
-                  const { startLabel, endLabel } = formatShiftTime(shift);
-                  const shiftPhase = getShiftPhase(shift.start, shift.end);
-                  const phaseInfo = phaseMeta[shiftPhase];
-                  const phaseLabel = t(PHASE_TRANSLATION_KEYS[shiftPhase]);
-                  const locationLabel = buildShiftLocation(shift);
-                  return (
-                    <Pressable
-                      key={shift.id}
-                      style={({ pressed }) => [
-                        styles.dayDetailShiftCard,
-                        { backgroundColor: theme.surfaceElevated },
-                        pressed && styles.dayDetailShiftCardPressed,
-                      ]}
-                      onPress={() => {
-                        closeDayDetailModal();
-                        router.push({
-                          pathname: `/shift-details/${shift.id}`,
-                          params: { from: 'calendar' },
-                        });
-                      }}
-                      accessibilityRole="button"
-                    >
-                      <View style={styles.dayDetailShiftHeader}>
-                      <Text style={[styles.dayDetailShiftTitle, { color: theme.textPrimary }]}>{shift.title}</Text>
-                        <View
-                          style={[
-                            styles.dayDetailPhaseChip,
-                            { backgroundColor: phaseInfo.background },
-                          ]}
-                        >
-                          <Ionicons
-                            name={phaseInfo.icon as ComponentProps<typeof Ionicons>['name']}
-                            size={16}
-                            color={phaseInfo.color}
-                            style={styles.dayDetailPhaseIcon}
-                          />
-                          <Text style={[styles.dayDetailPhaseLabel, { color: phaseInfo.color }]}>
-                            {phaseLabel}
-                          </Text>
-                        </View>
-                      </View>
-                      <Text style={[styles.dayDetailShiftTime, { color: theme.textSecondary }]}>
-                        {startLabel} — {endLabel}
-                      </Text>
-                      {locationLabel ? (
-                        <View style={styles.dayDetailLocationRow}>
-                          <Text style={[styles.dayDetailLocation, { color: theme.textSecondary }]}>
-                            {locationLabel}
-                          </Text>
-                          <Pressable
-                            style={({ pressed }) => [
-                              styles.dayDetailMapButton,
-                              {
-                                backgroundColor: theme.surfaceMuted,
-                                borderColor: theme.borderSoft,
-                              },
-                              pressed && styles.dayDetailMapButtonPressed,
-                            ]}
-                            onPress={(event) => {
-                              event.stopPropagation();
-                              openAddressInMaps(locationLabel);
-                            }}
-                            accessibilityRole="button"
-                            accessibilityLabel={t('openInMaps')}
-                            hitSlop={8}
-                          >
-                            <Ionicons name="map-outline" size={15} color={theme.info} />
-                          </Pressable>
-                        </View>
-                      ) : null}
-                      {shift.description ? (
-                        <Text style={[styles.dayDetailDescription, { color: theme.textSecondary }]}>
-                          {shift.description}
-                        </Text>
-                      ) : null}
-                    </Pressable>
-                  );
-                })
-              ) : (
-                <Text style={[styles.dayDetailEmptyText, { color: theme.textSecondary }]}>
-                  {t('calendarDetailNoEvents')}
-                </Text>
-              )}
-            </View>
-            <View style={styles.dayDetailSection}>
-              <Text
-                style={[styles.dayDetailSectionTitle, { color: theme.textSecondary }]}
-              >
-                {t('calendarDetailImportedTitle')}
-              </Text>
-              {sortedActiveDayImportedEvents.length ? (
-                sortedActiveDayImportedEvents.map((event) => {
-                  const eventTime = event.startDate
-                    ? new Date(event.startDate).toLocaleTimeString(undefined, {
-                        hour: 'numeric',
-                        minute: '2-digit',
-                      })
-                    : null;
-                  return (
-                    <View key={`${event.calendarId}-${event.title ?? 'event'}`} style={styles.dayDetailItem}>
-                      <View style={styles.dayDetailImportedRow}>
-                        <View
-                          style={[
-                            styles.dayDetailImportedDot,
-                            { backgroundColor: event.color ?? '#38bdf8' },
-                          ]}
-                        />
-                        <View style={styles.dayDetailImportedMeta}>
-                      <Text style={[styles.dayDetailItemTitle, { color: theme.textPrimary }]}>
-                      {event.title ?? t('calendarDetailImportedUntitled')}
-                      </Text>
-                      <Text style={[styles.dayDetailItemMeta, { color: theme.textSecondary }]}>
-                        {event.calendarTitle ?? t('calendarDetailImportedCalendarFallback')}
-                      </Text>
-                      {eventTime ? (
-                        <Text style={[styles.dayDetailItemMeta, { color: theme.textSecondary }]}>
-                          {t('calendarDetailTimeLabel')}: {eventTime}
-                        </Text>
-                          ) : null}
-                        </View>
-                      </View>
-                    </View>
-                  );
-                })
-              ) : (
-                <Text style={[styles.dayDetailEmptyText, { color: theme.textSecondary }]}>
-                  {t('calendarDetailNoImports')}
-                </Text>
-              )}
-            </View>
-          </ScrollView>
-        </View>
-      </Modal>
       <Modal transparent visible={showEmptyModal} animationType="fade">
         <View style={styles.emptyModalBackdrop}>
           <LinearGradient
