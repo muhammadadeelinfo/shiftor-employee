@@ -6,7 +6,7 @@ import { useLanguage } from '@shared/context/LanguageContext';
 
 const iconConfig: Record<
   string,
-  { active: string; inactive: string; labelKey: 'shiftsTabTitle' | 'tabCalendar' | 'tabQrClockIn' | 'tabProfile' }
+  { active: string; inactive: string; labelKey: 'shiftsTabTitle' | 'tabCalendar' | 'tabQrClockIn' | 'tabAccount' }
 > = {
   'my-shifts': {
     active: 'list',
@@ -23,10 +23,10 @@ const iconConfig: Record<
     inactive: 'qr-code-outline',
     labelKey: 'tabQrClockIn',
   },
-  profile: {
+  account: {
     active: 'person-circle',
     inactive: 'person-circle-outline',
-    labelKey: 'tabProfile',
+    labelKey: 'tabAccount',
   },
 };
 
@@ -76,7 +76,7 @@ function ThemeAwareTabs({ insets }: { insets: ReturnType<typeof useSafeAreaInset
       <Tabs.Screen name="my-shifts" />
       <Tabs.Screen name="calendar" />
       <Tabs.Screen name="qr-clock-in" />
-      <Tabs.Screen name="profile" />
+      <Tabs.Screen name="account" />
       <Tabs.Screen name="notifications" options={{ href: null }} />
       <Tabs.Screen name="calendar-settings" options={{ href: null }} />
     </Tabs>

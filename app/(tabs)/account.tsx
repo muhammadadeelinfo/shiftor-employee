@@ -241,7 +241,7 @@ const shiftStatus = (metadata?: Record<string, unknown> | null) => {
   return 'Active';
 };
 
-export default function ProfileScreen() {
+export default function AccountScreen() {
   const router = useRouter();
   const { user, signOut } = useAuth();
   const { unreadCount } = useNotifications();
@@ -327,7 +327,7 @@ export default function ProfileScreen() {
           isIOS ? { bottom: tabBarHeight + insets.bottom } : undefined
         }
         ListFooterComponent={<View style={[styles.footerSpacer, { height: tabBarHeight + insets.bottom }]} />}
-        data={[{ key: 'profile' }]}
+        data={[{ key: 'account' }]}
         keyExtractor={(item) => item.key}
         ListHeaderComponentStyle={styles.headerSpacing}
         ListHeaderComponent={
@@ -446,7 +446,48 @@ export default function ProfileScreen() {
               ]}
             >
               <Text style={[styles.sectionHeading, { color: theme.textPrimary }]}>
-                {t('toolsSectionTitle')}
+                {t('securitySectionTitle')}
+              </Text>
+              <View style={styles.toolsList}>
+                <TouchableOpacity style={[styles.toolsRow, { borderColor: theme.borderSoft }]} onPress={() => {}}>
+                  <View style={[styles.toolsIconWrap, { backgroundColor: theme.surfaceMuted }]}>
+                    <Ionicons name="key-outline" size={16} color={theme.primary} />
+                  </View>
+                  <Text style={[styles.toolsLabel, { color: theme.textPrimary }]}>
+                    {t('securityResetPassword')}
+                  </Text>
+                  <Ionicons name="chevron-forward" size={16} color={theme.textSecondary} />
+                </TouchableOpacity>
+                <TouchableOpacity style={[styles.toolsRow, { borderColor: theme.borderSoft }]} onPress={() => {}}>
+                  <View style={[styles.toolsIconWrap, { backgroundColor: theme.surfaceMuted }]}>
+                    <Ionicons name="phone-portrait-outline" size={16} color={theme.primary} />
+                  </View>
+                  <Text style={[styles.toolsLabel, { color: theme.textPrimary }]}>
+                    {t('securityManageSessions')}
+                  </Text>
+                  <Ionicons name="chevron-forward" size={16} color={theme.textSecondary} />
+                </TouchableOpacity>
+                <TouchableOpacity style={[styles.toolsRow, { borderColor: theme.borderSoft }]} onPress={() => {}}>
+                  <View style={[styles.toolsIconWrap, { backgroundColor: theme.surfaceMuted }]}>
+                    <Ionicons name="shield-checkmark-outline" size={16} color={theme.primary} />
+                  </View>
+                  <Text style={[styles.toolsLabel, { color: theme.textPrimary }]}>
+                    {t('securityEnable2fa')}
+                  </Text>
+                  <Ionicons name="chevron-forward" size={16} color={theme.textSecondary} />
+                </TouchableOpacity>
+              </View>
+            </View>
+
+            <View
+              style={[
+                styles.sectionCard,
+                { backgroundColor: theme.surface, borderColor: theme.borderSoft },
+                isIOS && styles.sectionCardIOS,
+              ]}
+            >
+              <Text style={[styles.sectionHeading, { color: theme.textPrimary }]}>
+                {t('notificationsSectionTitle')}
               </Text>
               <View style={styles.toolsList}>
                 <TouchableOpacity
@@ -457,7 +498,7 @@ export default function ProfileScreen() {
                     <Ionicons name="notifications-outline" size={16} color={theme.primary} />
                   </View>
                   <Text style={[styles.toolsLabel, { color: theme.textPrimary }]}>
-                    {t('notificationBellLabel')}
+                    {t('notificationsPush')}
                   </Text>
                   {unreadCount > 0 ? (
                     <View style={styles.toolsBadge}>
@@ -466,6 +507,89 @@ export default function ProfileScreen() {
                   ) : null}
                   <Ionicons name="chevron-forward" size={16} color={theme.textSecondary} />
                 </TouchableOpacity>
+                <TouchableOpacity style={[styles.toolsRow, { borderColor: theme.borderSoft }]} onPress={() => {}}>
+                  <View style={[styles.toolsIconWrap, { backgroundColor: theme.surfaceMuted }]}>
+                    <Ionicons name="mail-outline" size={16} color={theme.primary} />
+                  </View>
+                  <Text style={[styles.toolsLabel, { color: theme.textPrimary }]}>
+                    {t('notificationsEmail')}
+                  </Text>
+                  <Ionicons name="chevron-forward" size={16} color={theme.textSecondary} />
+                </TouchableOpacity>
+              </View>
+            </View>
+
+            <View
+              style={[
+                styles.sectionCard,
+                { backgroundColor: theme.surface, borderColor: theme.borderSoft },
+                isIOS && styles.sectionCardIOS,
+              ]}
+            >
+              <Text style={[styles.sectionHeading, { color: theme.textPrimary }]}>
+                {t('preferencesTitle')}
+              </Text>
+              <Text style={[styles.sectionHint, { color: theme.textSecondary }]}>
+                {t('preferencesLanguageHint')}
+              </Text>
+              <View style={styles.preferenceGroup}>
+                <Text style={[styles.preferenceLabel, { color: theme.textSecondary }]}>
+                  {t('languageLabel')}
+                </Text>
+                <View
+                  style={[
+                    styles.languageToggleList,
+                    {
+                      backgroundColor: theme.surfaceMuted,
+                      borderColor: theme.borderSoft,
+                    },
+                  ]}
+                >
+                  {languageDefinitions.map((definition) => {
+                    const isActive = language === definition.code;
+                    return (
+                      <TouchableOpacity
+                        key={definition.code}
+                        onPress={() => setLanguage(definition.code)}
+                        style={[
+                          styles.languageToggleItem,
+                          {
+                            backgroundColor: isActive ? theme.surface : 'transparent',
+                            borderColor: isActive ? theme.primary : 'transparent',
+                          },
+                          isActive && styles.languageToggleItemActive,
+                        ]}
+                      >
+                        {isActive ? (
+                          <LinearGradient
+                            colors={[`${theme.primary}22`, `${theme.primaryAccent}33`]}
+                            start={[0, 0]}
+                            end={[1, 1]}
+                            style={styles.languageActiveGradient}
+                            pointerEvents="none"
+                          />
+                        ) : null}
+                        <View style={styles.languageChipLeft}>
+                          <Text style={styles.languageFlag}>{definition.flag}</Text>
+                          <Text
+                            style={[
+                              styles.languageShortLabel,
+                              { color: isActive ? theme.primary : theme.textPrimary },
+                            ]}
+                          >
+                            {t(definition.labelKey)}
+                          </Text>
+                        </View>
+                        {isActive ? <Ionicons name="checkmark-circle" size={16} color={theme.primary} /> : null}
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
+              </View>
+              <Text style={[styles.sectionHint, { color: theme.textSecondary }]}>
+                {t('preferencesCalendarHint')}
+              </Text>
+              <View style={styles.toolsList}>
                 <TouchableOpacity
                   style={[styles.toolsRow, { borderColor: theme.borderSoft }]}
                   onPress={() => router.push('/calendar-settings')}
@@ -479,37 +603,6 @@ export default function ProfileScreen() {
                   <Ionicons name="chevron-forward" size={16} color={theme.textSecondary} />
                 </TouchableOpacity>
               </View>
-              <View style={[styles.preferenceGroup, styles.toolsPreferenceGroup]}>
-                <Text style={[styles.preferenceLabel, { color: theme.textSecondary }]}>
-                  {t('languageLabel')}
-                </Text>
-                <View style={styles.languageToggleList}>
-                  {languageDefinitions.map((definition) => {
-                    const isActive = language === definition.code;
-                    return (
-                      <TouchableOpacity
-                        key={definition.code}
-                        onPress={() => setLanguage(definition.code)}
-                        style={[
-                          styles.languageToggleItem,
-                          isActive && styles.languageToggleItemActive,
-                          { backgroundColor: isActive ? theme.primary : theme.surfaceMuted },
-                        ]}
-                      >
-                        <Text style={styles.languageFlag}>{definition.flag}</Text>
-                        <Text
-                          style={[
-                            styles.languageShortLabel,
-                            isActive ? styles.languageShortLabelActive : { color: theme.textPrimary },
-                          ]}
-                        >
-                          {definition.shortLabel}
-                        </Text>
-                      </TouchableOpacity>
-                    );
-                  })}
-                </View>
-              </View>
             </View>
 
             <View
@@ -519,7 +612,29 @@ export default function ProfileScreen() {
                 isIOS && styles.sectionCardIOS,
               ]}
             >
-              <Text style={[styles.sectionHeading, { color: theme.textPrimary }]}>{t('security')}</Text>
+              <Text style={[styles.sectionHeading, { color: theme.textPrimary }]}>
+                {t('supportSectionTitle')}
+              </Text>
+              <View style={styles.toolsList}>
+                <TouchableOpacity style={[styles.toolsRow, { borderColor: theme.borderSoft }]} onPress={() => {}}>
+                  <View style={[styles.toolsIconWrap, { backgroundColor: theme.surfaceMuted }]}>
+                    <Ionicons name="help-circle-outline" size={16} color={theme.primary} />
+                  </View>
+                  <Text style={[styles.toolsLabel, { color: theme.textPrimary }]}>
+                    {t('supportHelpCenter')}
+                  </Text>
+                  <Ionicons name="chevron-forward" size={16} color={theme.textSecondary} />
+                </TouchableOpacity>
+                <TouchableOpacity style={[styles.toolsRow, { borderColor: theme.borderSoft }]} onPress={() => {}}>
+                  <View style={[styles.toolsIconWrap, { backgroundColor: theme.surfaceMuted }]}>
+                    <Ionicons name="document-text-outline" size={16} color={theme.primary} />
+                  </View>
+                  <Text style={[styles.toolsLabel, { color: theme.textPrimary }]}>
+                    {t('supportLegal')}
+                  </Text>
+                  <Ionicons name="chevron-forward" size={16} color={theme.textSecondary} />
+                </TouchableOpacity>
+              </View>
               <PrimaryButton
                 title={t('signOut')}
                 onPress={handleSignOut}
@@ -527,6 +642,11 @@ export default function ProfileScreen() {
               />
               <TouchableOpacity onPress={handleSignOut}>
                 <Text style={[styles.link, { color: theme.primary }]}>{t('switchAccount')}</Text>
+              </TouchableOpacity>
+              <TouchableOpacity onPress={() => {}}>
+                <Text style={[styles.link, styles.destructiveLink, { color: theme.fail }]}>
+                  {t('supportDeleteAccount')}
+                </Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -713,6 +833,11 @@ const styles = StyleSheet.create({
     marginBottom: 14,
     letterSpacing: -0.2,
   },
+  sectionHint: {
+    fontSize: 12,
+    marginTop: -6,
+    marginBottom: 10,
+  },
   toolsList: {
     marginTop: 4,
   },
@@ -869,32 +994,46 @@ const styles = StyleSheet.create({
   },
   languageToggleList: {
     flexDirection: 'row',
-    gap: 6,
+    gap: 8,
+    borderRadius: 14,
+    padding: 6,
+    borderWidth: 1,
   },
   languageToggleItem: {
     flex: 1,
     borderRadius: 10,
-    paddingVertical: 8,
-    minHeight: 36,
+    paddingVertical: 10,
+    paddingHorizontal: 10,
+    minHeight: 42,
     borderWidth: 1,
-    borderColor: 'transparent',
     alignItems: 'center',
-    justifyContent: 'center',
     flexDirection: 'row',
-    gap: 4,
+    justifyContent: 'space-between',
+    position: 'relative',
+    overflow: 'hidden',
   },
   languageToggleItemActive: {
-    borderColor: 'rgba(255,255,255,0.18)',
+    shadowColor: '#000',
+    shadowOpacity: 0.12,
+    shadowOffset: { width: 0, height: 4 },
+    shadowRadius: 8,
+    elevation: 2,
+  },
+  languageActiveGradient: {
+    ...StyleSheet.absoluteFillObject,
+    borderRadius: 10,
+  },
+  languageChipLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
   },
   languageFlag: {
-    fontSize: 12,
+    fontSize: 15,
   },
   languageShortLabel: {
-    fontSize: 12,
+    fontSize: 13,
     fontWeight: '600',
-  },
-  languageShortLabelActive: {
-    color: '#fff',
   },
   button: {
     marginTop: 16,
@@ -906,5 +1045,8 @@ const styles = StyleSheet.create({
     marginTop: 12,
     fontSize: 13,
     fontWeight: '600',
+  },
+  destructiveLink: {
+    marginTop: 10,
   },
 });
