@@ -1,37 +1,20 @@
 import Constants from 'expo-constants';
-
-const REQUIRED_EXPO_EXTRA_KEYS = ['supabaseUrl', 'supabaseAnonKey', 'apiBaseUrl'] as const;
-
-type RequiredExtraKey = (typeof REQUIRED_EXPO_EXTRA_KEYS)[number];
-
-const parseBooleanExtra = (value: unknown): boolean => {
-  if (typeof value === 'boolean') return value;
-  if (typeof value !== 'string') return false;
-  const normalized = value.trim().toLowerCase();
-  return ['1', 'true', 'yes', 'on'].includes(normalized);
-};
+import {
+  buildNotificationsHealthEndpoint,
+  getRuntimeConfigIssuesFromExtra,
+  isMissingTableError,
+  parseBooleanExtra,
+} from './runtimeHealthUtils';
 
 export const getRuntimeConfigIssues = (): string[] => {
   const extra = (Constants.expoConfig?.extra ?? {}) as Record<string, unknown>;
-  const issues: string[] = [];
-
-  REQUIRED_EXPO_EXTRA_KEYS.forEach((key) => {
-    const value = extra[key as RequiredExtraKey];
-    if (typeof value !== 'string' || !value.trim()) {
-      issues.push(`Missing required runtime config: ${key}`);
-    }
-  });
-
-  return issues;
+  return getRuntimeConfigIssuesFromExtra(extra);
 };
 
 export const shouldRunNotificationsTableHealthCheck = (): boolean => {
   const extra = (Constants.expoConfig?.extra ?? {}) as Record<string, unknown>;
   return parseBooleanExtra(extra.requireNotificationsTableHealthCheck);
 };
-
-const isMissingTableError = (status: number, body: string): boolean =>
-  status === 404 && body.includes('PGRST205');
 
 export const checkNotificationsTableHealth = async (
   timeoutMs = 8000
@@ -45,7 +28,7 @@ export const checkNotificationsTableHealth = async (
     return { ok: false, issue: 'Cannot check notifications table: missing Supabase config.' };
   }
 
-  const endpoint = `${supabaseUrl.replace(/\/+$/, '')}/rest/v1/notifications?select=id&limit=1`;
+  const endpoint = buildNotificationsHealthEndpoint(supabaseUrl);
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 

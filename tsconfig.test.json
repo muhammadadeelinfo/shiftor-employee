@@ -24,10 +24,12 @@
     "src/shared/utils/shiftPhase.ts",
     "src/shared/utils/notificationUtils.ts",
     "src/shared/utils/mapUrl.ts",
+    "src/shared/utils/runtimeHealthUtils.ts",
     "tests/timeUtils.test.ts",
     "tests/shiftPhase.test.ts",
     "tests/notificationUtils.test.ts",
     "tests/maps.test.ts",
-    "tests/shiftConfirmationStatus.test.ts"
+    "tests/shiftConfirmationStatus.test.ts",
+    "tests/runtimeHealthUtils.test.ts"
   ]
 }
