@@ -1,9 +1,11 @@
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   Alert,
   FlatList,
   Linking,
   Platform,
   StyleSheet,
+  Switch,
   Text,
   TouchableOpacity,
   useWindowDimensions,
@@ -29,6 +31,12 @@ import {
   shouldStackForCompactWidth,
 } from '@shared/utils/responsiveLayout';
 import Constants from 'expo-constants';
+import {
+  isBiometricAvailable,
+  loadBiometricUnlockPreference,
+  requestBiometricUnlock,
+  saveBiometricUnlockPreference,
+} from '@shared/utils/biometricAuth';
 
 const normalizeContactString = (value?: unknown) =>
   typeof value === 'string' && value.trim() ? value.trim() : undefined;
@@ -264,6 +272,9 @@ export default function AccountScreen() {
   const contentMaxWidth = getContentMaxWidth(width);
   const employeeId = user?.id;
   const metadata = user?.user_metadata;
+  const [biometricEnabled, setBiometricEnabled] = useState(false);
+  const [biometricAvailable, setBiometricAvailable] = useState(false);
+  const [isBiometricLoading, setIsBiometricLoading] = useState(true);
   const metadataRecord =
     metadata && typeof metadata === 'object' ? (metadata as Record<string, unknown>) : undefined;
   const {
@@ -413,6 +424,11 @@ export default function AccountScreen() {
       : '';
   const appBuild = iosBuildNumber || androidBuildCode;
   const appVersionLabel = appBuild ? `${appVersion} (${appBuild})` : appVersion;
+  const biometricStatusLabel = useMemo(() => {
+    if (isBiometricLoading) return t('biometricStatusChecking');
+    if (!biometricAvailable) return t('biometricStatusUnavailable');
+    return biometricEnabled ? t('biometricStatusEnabled') : t('biometricStatusDisabled');
+  }, [biometricAvailable, biometricEnabled, isBiometricLoading, t]);
   const initials = profileName(user)
     .split(' ')
     .filter(Boolean)
@@ -420,6 +436,80 @@ export default function AccountScreen() {
     .slice(0, 2)
     .join('')
     .toUpperCase();
+
+  useEffect(() => {
+    let isMounted = true;
+
+    (async () => {
+      if (!employeeId) {
+        if (!isMounted) return;
+        setBiometricEnabled(false);
+        setBiometricAvailable(false);
+        setIsBiometricLoading(false);
+        return;
+      }
+
+      setIsBiometricLoading(true);
+      const [enabled, available] = await Promise.all([
+        loadBiometricUnlockPreference(employeeId),
+        isBiometricAvailable().catch(() => false),
+      ]);
+      if (!isMounted) return;
+
+      if (enabled && !available) {
+        await saveBiometricUnlockPreference(false, employeeId).catch(() => {
+          /* ignore storage failures */
+        });
+      }
+
+      setBiometricEnabled(enabled && available);
+      setBiometricAvailable(available);
+      setIsBiometricLoading(false);
+    })();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [employeeId]);
+
+  const handleBiometricToggle = useCallback(
+    async (nextValue: boolean) => {
+      if (!employeeId) return;
+
+      if (!nextValue) {
+        await saveBiometricUnlockPreference(false, employeeId);
+        setBiometricEnabled(false);
+        return;
+      }
+
+      const available = await isBiometricAvailable().catch(() => false);
+      setBiometricAvailable(available);
+      if (!available) {
+        Alert.alert(t('biometricUnlockTitle'), t('biometricEnableUnavailableBody'));
+        setBiometricEnabled(false);
+        await saveBiometricUnlockPreference(false, employeeId).catch(() => {
+          /* ignore storage failures */
+        });
+        return;
+      }
+
+      const result = await requestBiometricUnlock(
+        t('biometricEnablePrompt'),
+        t('biometricUsePasscode')
+      );
+      if (!result.success) {
+        setBiometricEnabled(false);
+        Alert.alert(t('biometricUnlockTitle'), t('biometricEnableFailedBody'));
+        return;
+      }
+
+      await saveBiometricUnlockPreference(true, employeeId);
+      setBiometricEnabled(true);
+      Alert.alert(t('biometricUnlockTitle'), t('biometricEnableSuccessBody'));
+    },
+    [employeeId, t]
+  );
+
   return (
     <SafeAreaView style={[styles.safeArea, { backgroundColor: theme.background }]} edges={['left', 'right']}>
       <FlatList
@@ -666,6 +756,28 @@ export default function AccountScreen() {
                 {t('securitySectionTitle')}
               </Text>
               <View style={styles.toolsList}>
+                <View style={[styles.toolsRow, { borderColor: theme.borderSoft }]}>
+                  <View style={[styles.toolsIconWrap, { backgroundColor: theme.surfaceMuted }]}>
+                    <Ionicons name="finger-print-outline" size={16} color={theme.primary} />
+                  </View>
+                  <View style={styles.biometricMeta}>
+                    <Text style={[styles.toolsLabel, { color: theme.textPrimary }]}>
+                      {t('biometricUnlockSetting')}
+                    </Text>
+                    <Text style={[styles.biometricStatusText, { color: theme.textSecondary }]}>
+                      {biometricStatusLabel}
+                    </Text>
+                  </View>
+                  <Switch
+                    value={biometricEnabled && biometricAvailable}
+                    onValueChange={(value) => {
+                      void handleBiometricToggle(value);
+                    }}
+                    disabled={isBiometricLoading || !biometricAvailable}
+                    trackColor={{ true: theme.primary, false: theme.border }}
+                    thumbColor={biometricEnabled && biometricAvailable ? theme.primaryAccent : '#fff'}
+                  />
+                </View>
                 <TouchableOpacity
                   style={[styles.toolsRow, { borderColor: theme.borderSoft }]}
                   onPress={() => void handleResetPassword()}
@@ -1056,6 +1168,15 @@ const styles = StyleSheet.create({
     flexShrink: 1,
     fontSize: 14,
     fontWeight: '600',
+  },
+  biometricMeta: {
+    flex: 1,
+    minWidth: 0,
+  },
+  biometricStatusText: {
+    marginTop: 2,
+    fontSize: 11,
+    fontWeight: '500',
   },
   toolsBadge: {
     minWidth: 20,

@@ -34,6 +34,9 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
       NSUserNotificationsUsageDescription:
         process.env.IOS_NOTIFICATIONS_USAGE_DESCRIPTION ??
         'Notifications keep you updated about shifts and schedule changes.',
+      NSFaceIDUsageDescription:
+        process.env.IOS_FACE_ID_USAGE_DESCRIPTION ??
+        'Face ID is used to unlock your account quickly and securely.',
     },
   },
   extra: {
