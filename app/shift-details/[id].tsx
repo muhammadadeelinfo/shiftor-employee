@@ -1,5 +1,7 @@
 import {
   ActivityIndicator,
+  Alert,
+  Linking,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -20,6 +22,7 @@ import { getShiftPhase, phaseMeta, ShiftPhase } from '@shared/utils/shiftPhase';
 import { useTheme } from '@shared/themeContext';
 import { useLanguage, type TranslationKey } from '@shared/context/LanguageContext';
 import { openAddressInMaps } from '@shared/utils/maps';
+import { SUPPORT_FALLBACK_URL } from '@shared/utils/support';
 
 const statusStyles: Record<
   Shift['status'],
@@ -189,6 +192,41 @@ export default function ShiftDetailsScreen() {
   const contactPhone = shiftToShow.objectContactPhone;
   const handleOpenMaps = () => {
     openAddressInMaps(locationSubtext);
+  };
+  const openExternal = async (url: string, title: string, fallbackUrl?: string) => {
+    try {
+      const supported = await Linking.canOpenURL(url);
+      if (supported) {
+        await Linking.openURL(url);
+        return;
+      }
+      if (fallbackUrl) {
+        const fallbackSupported = await Linking.canOpenURL(fallbackUrl);
+        if (fallbackSupported) {
+          await Linking.openURL(fallbackUrl);
+          return;
+        }
+      }
+      Alert.alert(title, t('unableOpenLinkDevice'));
+    } catch {
+      Alert.alert(title, t('unableOpenLinkDevice'));
+    }
+  };
+  const handleCallContact = async () => {
+    if (!contactPhone) {
+      Alert.alert(t('callLabel'), t('notProvided'));
+      return;
+    }
+    const normalized = contactPhone.replace(/[^\d+]/g, '');
+    const telUrl = `tel:${normalized || contactPhone}`;
+    await openExternal(telUrl, t('callLabel'));
+  };
+  const handleEmailContact = async () => {
+    if (!contactEmail) {
+      Alert.alert(t('emailLabel'), t('notProvided'));
+      return;
+    }
+    await openExternal(`mailto:${contactEmail}`, t('emailLabel'), SUPPORT_FALLBACK_URL);
   };
 
   const shiftEnd = new Date(shiftToShow.end);
@@ -404,12 +442,40 @@ export default function ShiftDetailsScreen() {
       <View style={[styles.section, sectionBackgroundStyle]}>
         <Text style={[styles.sectionHeading, { color: textSecondaryColor }]}>{t('needAHand')}</Text>
         <Text style={[styles.sectionBody, { color: textPrimaryColor }]}>{reachOutCopy}</Text>
-        <Text style={[styles.sectionBody, { color: textPrimaryColor }]}>
-          {t('callLabel')}: {contactPhone ?? t('notProvided')}
-        </Text>
-        <Text style={[styles.sectionBody, { color: textPrimaryColor }]}>
-          {t('emailLabel')}: {contactEmail ?? t('notProvided')}
-        </Text>
+        <Pressable
+          style={({ pressed }) => [
+            styles.contactActionButton,
+            { backgroundColor: theme.surfaceMuted, borderColor: theme.borderSoft },
+            pressed && styles.mapActionButtonPressed,
+          ]}
+          onPress={() => {
+            void handleCallContact();
+          }}
+          accessibilityRole="button"
+          accessibilityLabel={`${t('callLabel')}: ${contactPhone ?? t('notProvided')}`}
+        >
+          <Ionicons name="call-outline" size={16} color={theme.info} />
+          <Text style={[styles.mapActionLabel, { color: theme.info }]}>
+            {t('callLabel')}: {contactPhone ?? t('notProvided')}
+          </Text>
+        </Pressable>
+        <Pressable
+          style={({ pressed }) => [
+            styles.contactActionButton,
+            { backgroundColor: theme.surfaceMuted, borderColor: theme.borderSoft },
+            pressed && styles.mapActionButtonPressed,
+          ]}
+          onPress={() => {
+            void handleEmailContact();
+          }}
+          accessibilityRole="button"
+          accessibilityLabel={`${t('emailLabel')}: ${contactEmail ?? t('notProvided')}`}
+        >
+          <Ionicons name="mail-outline" size={16} color={theme.info} />
+          <Text style={[styles.mapActionLabel, { color: theme.info }]}>
+            {t('emailLabel')}: {contactEmail ?? t('notProvided')}
+          </Text>
+        </Pressable>
       </View>
 
       <View style={styles.cta}>
@@ -682,6 +748,17 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   mapActionButton: {
+    marginTop: 10,
+    alignSelf: 'flex-start',
+    flexDirection: 'row',
+    alignItems: 'center',
+    columnGap: 6,
+    paddingVertical: 8,
+    paddingHorizontal: 10,
+    borderRadius: 999,
+    borderWidth: 1,
+  },
+  contactActionButton: {
     marginTop: 10,
     alignSelf: 'flex-start',
     flexDirection: 'row',
