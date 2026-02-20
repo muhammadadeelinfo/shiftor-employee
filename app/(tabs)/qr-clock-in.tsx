@@ -80,7 +80,7 @@ export default function QrClockInScreen() {
             <Ionicons name="qr-code-outline" size={18} color={theme.primary} />
           </View>
           <Text style={[styles.instructions, { color: theme.textSecondary }]}>{t('qrInstructions')}</Text>
-        </View>
+        </LinearGradient>
         <View style={[styles.preview, previewStyle, { borderColor: theme.borderSoft }]}>
           <CameraView
             style={styles.camera}
