@@ -101,6 +101,20 @@ export default function LoginScreen() {
     }
   };
 
+  const handleSupportEmail = async () => {
+    const supportUrl = 'mailto:support@shiftorapp.com';
+    try {
+      const supported = await Linking.canOpenURL(supportUrl);
+      if (!supported) {
+        Alert.alert(t('supportHelpCenter'), t('unableOpenLinkDevice'));
+        return;
+      }
+      await Linking.openURL(supportUrl);
+    } catch {
+      Alert.alert(t('supportHelpCenter'), t('unableOpenLinkDevice'));
+    }
+  };
+
   const { width } = useWindowDimensions();
 
   return (
@@ -216,7 +230,7 @@ export default function LoginScreen() {
             <TouchableOpacity
               style={styles.supportRow}
               activeOpacity={0.7}
-              onPress={() => Linking.openURL('mailto:support@shiftorapp.com')}
+              onPress={() => void handleSupportEmail()}
               disabled={loading}
             >
               <Ionicons name="help-circle-outline" size={18} color="#60a5fa" />
