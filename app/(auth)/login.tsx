@@ -216,7 +216,7 @@ export default function LoginScreen() {
             <TouchableOpacity
               style={styles.supportRow}
               activeOpacity={0.7}
-              onPress={() => Linking.openURL('mailto:hello@employeeportal.com')}
+              onPress={() => Linking.openURL('mailto:support@shiftorapp.com')}
               disabled={loading}
             >
               <Ionicons name="help-circle-outline" size={18} color="#60a5fa" />
