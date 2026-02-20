@@ -22,7 +22,6 @@ import { useTheme } from '@shared/themeContext';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { layoutTokens } from '@shared/theme/layout';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { getContentMaxWidth } from '@shared/utils/responsiveLayout';
 
 const getMonthLabel = (date: Date) => date.toLocaleDateString([], { month: 'long', year: 'numeric' });
 
@@ -42,10 +41,11 @@ export default function MyShiftsScreen() {
   const { t } = useLanguage();
   const { theme } = useTheme();
   const { width, height } = useWindowDimensions();
+  const isTablet = width >= 768;
   const isLargeTablet = width >= 1024;
   const isTabletLandscape = isLargeTablet && width > height;
-  const contentMaxWidth =
-    width >= 1366 ? 980 : width >= 1024 ? 920 : getContentMaxWidth(width);
+  const showTabletGrid = isTabletLandscape && width >= 1180;
+  const horizontalPadding = isTablet ? 20 : layoutTokens.screenHorizontal;
   const { orderedShifts, isLoading, error, refetch } = useShiftFeed();
   const [confirmingId, setConfirmingId] = useState<string | null>(null);
   const [confirmingAll, setConfirmingAll] = useState(false);
@@ -175,13 +175,58 @@ export default function MyShiftsScreen() {
     {
       backgroundColor: theme.background,
       paddingTop: layoutTokens.screenTop,
+      paddingHorizontal: horizontalPadding,
     },
   ];
   const listContentStyle = [styles.list, { backgroundColor: theme.background }];
+  const shiftRows = useMemo(() => {
+    if (!showTabletGrid) return [];
+    const rows: (typeof orderedShifts)[] = [];
+    for (let index = 0; index < orderedShifts.length; index += 2) {
+      rows.push(orderedShifts.slice(index, index + 2));
+    }
+    return rows;
+  }, [orderedShifts, showTabletGrid]);
+
+  const renderShiftCard = useCallback(
+    (shift: (typeof orderedShifts)[number]) => {
+      const assignmentId = shift.assignmentId;
+      return (
+        <View key={shift.id} onLayout={handleShiftLayout(shift.id)} style={showTabletGrid ? styles.gridCard : null}>
+          <ShiftCard
+            shift={shift}
+            isPrimary={shift.id === focusedShiftId}
+            onPress={() =>
+              router.push({
+                pathname: `/shift-details/${shift.id}`,
+                params: { from: 'shifts' },
+              })
+            }
+            onConfirm={assignmentId ? () => handleConfirm(assignmentId) : undefined}
+            confirmLoading={
+              assignmentId
+                ? confirmingId === assignmentId || (confirmingAll && pendingAssignmentIdSet.has(assignmentId))
+                : false
+            }
+          />
+        </View>
+      );
+    },
+    [
+      confirmingAll,
+      confirmingId,
+      focusedShiftId,
+      handleConfirm,
+      handleShiftLayout,
+      pendingAssignmentIdSet,
+      router,
+      showTabletGrid,
+    ]
+  );
 
   return (
     <SafeAreaView style={containerStyle} edges={['left', 'right']}>
-      <View style={[styles.contentFrame, contentMaxWidth ? { maxWidth: contentMaxWidth } : null]}>
+      <View style={styles.contentFrame}>
         <View
           style={[
             styles.pageHeader,
@@ -245,32 +290,14 @@ export default function MyShiftsScreen() {
         >
           {showSkeletons && renderSkeletons()}
           {!error &&
-            orderedShifts.map((shift) => (
-              <View key={shift.id} onLayout={handleShiftLayout(shift.id)}>
-                {(() => {
-                  const assignmentId = shift.assignmentId;
-                  return (
-                <ShiftCard
-                  shift={shift}
-                  isPrimary={shift.id === focusedShiftId}
-                  onPress={() =>
-                    router.push({
-                      pathname: `/shift-details/${shift.id}`,
-                      params: { from: 'shifts' },
-                    })
-                  }
-                  onConfirm={assignmentId ? () => handleConfirm(assignmentId) : undefined}
-                  confirmLoading={
-                    assignmentId
-                      ? confirmingId === assignmentId ||
-                        (confirmingAll && pendingAssignmentIdSet.has(assignmentId))
-                      : false
-                  }
-                />
-                  );
-                })()}
-              </View>
-            ))}
+            (showTabletGrid
+              ? shiftRows.map((row, rowIndex) => (
+                  <View key={`row-${rowIndex}`} style={styles.gridRow}>
+                    {row.map((shift) => renderShiftCard(shift))}
+                    {row.length === 1 ? <View style={styles.gridSpacer} /> : null}
+                  </View>
+                ))
+              : orderedShifts.map((shift) => renderShiftCard(shift)))}
           {!error && !orderedShifts.length && !isLoading && renderListEmptyState()}
         </ScrollView>
       </View>
@@ -367,6 +394,16 @@ const styles = StyleSheet.create({
   scrollView: {
     borderTopLeftRadius: layoutTokens.cardRadiusLg,
     borderTopRightRadius: layoutTokens.cardRadiusLg,
+  },
+  gridRow: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  gridCard: {
+    flex: 1,
+  },
+  gridSpacer: {
+    flex: 1,
   },
   errorCard: {
     backgroundColor: 'rgba(239, 68, 68, 0.15)',

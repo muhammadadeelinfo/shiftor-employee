@@ -39,10 +39,8 @@ export default function TabsLayout() {
 function ThemeAwareTabs({ insets }: { insets: ReturnType<typeof useSafeAreaInsets> }) {
   const { theme } = useTheme();
   const { t } = useLanguage();
-  const { width, height } = useWindowDimensions();
+  const { width } = useWindowDimensions();
   const isTablet = width >= 768;
-  const isTabletLandscape = isTablet && width > height;
-  const tabBarMaxWidth = isTabletLandscape ? 1080 : isTablet ? 960 : undefined;
   return (
     <Tabs
       screenOptions={({ route }) => {
@@ -69,11 +67,9 @@ function ThemeAwareTabs({ insets }: { insets: ReturnType<typeof useSafeAreaInset
             shadowRadius: 12,
             elevation: 8,
             width: '100%',
-            alignSelf: 'center',
-            maxWidth: tabBarMaxWidth,
-            borderTopLeftRadius: isTablet ? 16 : 0,
-            borderTopRightRadius: isTablet ? 16 : 0,
-            overflow: 'hidden',
+            alignSelf: 'stretch',
+            borderTopLeftRadius: 0,
+            borderTopRightRadius: 0,
           },
           tabBarItemStyle: {
             justifyContent: 'center',

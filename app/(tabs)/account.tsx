@@ -26,7 +26,6 @@ import { layoutTokens } from '@shared/theme/layout';
 import { useRouter } from 'expo-router';
 import { openAddressInMaps } from '@shared/utils/maps';
 import {
-  getContentMaxWidth,
   shouldStackForCompactWidth,
 } from '@shared/utils/responsiveLayout';
 import {
@@ -264,11 +263,10 @@ export default function AccountScreen() {
   const { t, language, setLanguage } = useLanguage();
   const insets = useSafeAreaInsets();
   const tabBarHeight = useBottomTabBarHeight();
-  const { width } = useWindowDimensions();
+  const { width, height } = useWindowDimensions();
+  const isLargeTablet = width >= 1024;
   const isIOS = Platform.OS === 'ios';
   const shouldStackHeroHeader = shouldStackForCompactWidth(width);
-  const contentMaxWidth =
-    width >= 1366 ? 980 : width >= 1024 ? 920 : getContentMaxWidth(width);
   const employeeId = user?.id;
   const metadata = user?.user_metadata;
   const metadataRecord =
@@ -466,7 +464,7 @@ export default function AccountScreen() {
         keyExtractor={(item) => item.key}
         ListHeaderComponentStyle={styles.headerSpacing}
         ListHeaderComponent={
-          <View style={[styles.constrained, contentMaxWidth ? { maxWidth: contentMaxWidth } : null]}>
+          <View style={styles.constrained}>
             <LinearGradient
               colors={heroGradientColors}
               style={[
@@ -522,7 +520,6 @@ export default function AccountScreen() {
             style={[
               styles.body,
               styles.constrained,
-              contentMaxWidth ? { maxWidth: contentMaxWidth } : null,
               isIOS && styles.bodyIOS,
             ]}
           >

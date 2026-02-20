@@ -26,7 +26,6 @@ import * as Calendar from 'expo-calendar';
 import { useTheme } from '@shared/themeContext';
 import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
 import { layoutTokens } from '@shared/theme/layout';
-import { getContentMaxWidth } from '@shared/utils/responsiveLayout';
 
 const WEEKDAY_LABELS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
@@ -160,13 +159,10 @@ export default function CalendarScreen() {
   const { t } = useLanguage();
   const { theme } = useTheme();
   const { width, height } = useWindowDimensions();
+  const isTablet = width >= 768;
   const isLargeTablet = width >= 1024;
   const isTabletLandscape = isLargeTablet && width > height;
-  const contentMaxWidth =
-    width >= 1366 ? 980 : width >= 1024 ? 920 : getContentMaxWidth(width);
-  const contentFrameMaxWidth = contentMaxWidth
-    ? contentMaxWidth + layoutTokens.screenHorizontal * 2
-    : undefined;
+  const horizontalPadding = isTablet ? 20 : layoutTokens.screenHorizontal;
   const insets = useSafeAreaInsets();
   const tabBarHeight = useBottomTabBarHeight();
   const isIOS = Platform.OS === 'ios';
@@ -455,6 +451,7 @@ export default function CalendarScreen() {
     {
       backgroundColor: theme.background,
       paddingTop: 0,
+      paddingHorizontal: horizontalPadding,
     },
   ];
   const heroGradientColors: [string, string, ...string[]] = [
@@ -494,7 +491,7 @@ export default function CalendarScreen() {
   return (
     <SafeAreaView style={containerStyle} edges={['left', 'right']}>
       <LinearGradient colors={heroGradientColors} style={styles.background} />
-      <View style={[styles.contentFrame, contentFrameMaxWidth ? { maxWidth: contentFrameMaxWidth } : null]}>
+      <View style={styles.contentFrame}>
       <ScrollView
         contentContainerStyle={scrollContentStyle}
         refreshControl={<RefreshControl refreshing={isLoading} onRefresh={() => refetch()} />}
@@ -805,7 +802,7 @@ const styles = StyleSheet.create({
   contentFrame: {
     flex: 1,
     width: '100%',
-    paddingHorizontal: layoutTokens.screenHorizontal,
+    paddingHorizontal: 0,
   },
   monthCard: {
     backgroundColor: '#fff',

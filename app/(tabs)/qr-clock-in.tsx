@@ -8,15 +8,14 @@ import { useTheme } from '@shared/themeContext';
 import { LinearGradient } from 'expo-linear-gradient';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { layoutTokens } from '@shared/theme/layout';
-import { getContentMaxWidth } from '@shared/utils/responsiveLayout';
 
 export default function QrClockInScreen() {
   const { theme } = useTheme();
   const { width, height } = useWindowDimensions();
+  const isTablet = width >= 768;
   const isLargeTablet = width >= 1024;
   const isTabletLandscape = isLargeTablet && width > height;
-  const contentMaxWidth =
-    width >= 1366 ? 980 : width >= 1024 ? 920 : getContentMaxWidth(width);
+  const horizontalPadding = isTablet ? 20 : layoutTokens.screenHorizontal;
   const previewStyle = isTabletLandscape
     ? { maxHeight: Math.min(height * 0.68, 760) }
     : null;
@@ -62,14 +61,13 @@ export default function QrClockInScreen() {
 
   return (
     <SafeAreaView
-      style={[styles.container, { backgroundColor: theme.background }]}
+      style={[styles.container, { backgroundColor: theme.background, paddingHorizontal: horizontalPadding }]}
       edges={['left', 'right']}
     >
       <View
         style={[
           styles.contentFrame,
           isLargeTablet && styles.contentFrameTablet,
-          contentMaxWidth ? { maxWidth: contentMaxWidth } : null,
         ]}
       >
         <LinearGradient
