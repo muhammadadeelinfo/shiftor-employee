@@ -184,9 +184,9 @@ export default function ShiftDetailsScreen() {
     minutesUntilStart <= 0
       ? t('liveNow')
       : formatCountdownLabel(minutesUntilStart, t('liveNow'), t('shiftCountdownLessThanMinute'));
-  const opsContact = shiftToShow.objectName ?? t('shiftOpsTeam');
-  const contactEmail = 'ops@company.com';
-  const contactPhone = '+1 (415) 555-0101';
+  const opsContact = shiftToShow.objectContactName ?? shiftToShow.objectName ?? t('shiftOpsTeam');
+  const contactEmail = shiftToShow.objectContactEmail;
+  const contactPhone = shiftToShow.objectContactPhone;
   const handleOpenMaps = () => {
     openAddressInMaps(locationSubtext);
   };
@@ -405,10 +405,10 @@ export default function ShiftDetailsScreen() {
         <Text style={[styles.sectionHeading, { color: textSecondaryColor }]}>{t('needAHand')}</Text>
         <Text style={[styles.sectionBody, { color: textPrimaryColor }]}>{reachOutCopy}</Text>
         <Text style={[styles.sectionBody, { color: textPrimaryColor }]}>
-          {t('callLabel')}: {contactPhone}
+          {t('callLabel')}: {contactPhone ?? t('notProvided')}
         </Text>
         <Text style={[styles.sectionBody, { color: textPrimaryColor }]}>
-          {t('emailLabel')}: {contactEmail}
+          {t('emailLabel')}: {contactEmail ?? t('notProvided')}
         </Text>
       </View>
 

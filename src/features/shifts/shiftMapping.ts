@@ -20,6 +20,9 @@ export type Shift = {
   location: string;
   objectName?: string;
   objectAddress?: string;
+  objectContactName?: string;
+  objectContactPhone?: string;
+  objectContactEmail?: string;
   start: string;
   end: string;
   status: ShiftStatus;
@@ -114,6 +117,15 @@ export const mapShiftRecord = (raw: Record<string, unknown>): Shift => {
   const objectAddress =
     pickValue(raw, ['objectAddress', 'shiftAddress', 'address', 'object_address']) ??
     (objectMeta ? pickValue(objectMeta, ['address']) : undefined);
+  const objectContactName =
+    pickValue(raw, ['objectContactName', 'contactName', 'opsName']) ??
+    (objectMeta ? pickValue(objectMeta, ['contactName', 'opsName']) : undefined);
+  const objectContactPhone =
+    pickValue(raw, ['objectContactPhone', 'contactPhone', 'opsPhone', 'phone']) ??
+    (objectMeta ? pickValue(objectMeta, ['contactPhone', 'opsPhone', 'phone']) : undefined);
+  const objectContactEmail =
+    pickValue(raw, ['objectContactEmail', 'contactEmail', 'opsEmail', 'email']) ??
+    (objectMeta ? pickValue(objectMeta, ['contactEmail', 'opsEmail', 'email']) : undefined);
   const description = pickValue(raw, ['description', 'shiftDescription']);
   const statusValue = pickValue(raw, ['status', 'shiftStatus']) ?? 'scheduled';
   return {
@@ -122,6 +134,9 @@ export const mapShiftRecord = (raw: Record<string, unknown>): Shift => {
     location,
     objectName,
     objectAddress,
+    objectContactName,
+    objectContactPhone,
+    objectContactEmail,
     start,
     end,
     status: normalizeStatus(statusValue),
