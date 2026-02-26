@@ -585,36 +585,6 @@ export default function StartupScreen() {
               <Text style={[styles.title, { color: theme.textPrimary }]}>{t('startupJobsTitle')}</Text>
               <Text style={[styles.heroSubtitle, { color: theme.textSecondary }]}>{t('welcomePublicNote')}</Text>
             </View>
-            <View style={styles.authActionsRow}>
-              <TouchableOpacity
-                onPress={() => router.push('/login')}
-                activeOpacity={0.85}
-                style={[
-                  styles.authActionButton,
-                  { backgroundColor: theme.surface, borderColor: theme.border },
-                ]}
-                accessibilityRole="button"
-                accessibilityLabel={t('startupJobsGoToLogin')}
-              >
-                <Text style={[styles.authActionText, { color: theme.textPrimary }]}>
-                  {t('startupJobsGoToLogin')}
-                </Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                onPress={() => router.push('/login?mode=signup')}
-                activeOpacity={0.85}
-                style={[
-                  styles.authActionButton,
-                  { backgroundColor: theme.surface, borderColor: theme.border },
-                ]}
-                accessibilityRole="button"
-                accessibilityLabel={t('startupJobsGoToSignup')}
-              >
-                <Text style={[styles.authActionText, { color: theme.textPrimary }]}>
-                  {t('startupJobsGoToSignup')}
-                </Text>
-              </TouchableOpacity>
-            </View>
           </View>
 
           <View style={styles.statRow}>
@@ -781,40 +751,29 @@ export default function StartupScreen() {
             colors={[theme.heroGradientEnd, theme.heroGradientStart]}
             start={[0, 0]}
             end={[1, 1]}
-            style={[styles.authFooterCard, { borderColor: theme.border }]}
+            style={[styles.authNextStepCard, { borderColor: theme.border }]}
           >
-            <Text style={[styles.authFooterTitle, { color: theme.textPrimary }]}>
+            <Text style={[styles.authNextStepTitle, { color: theme.textPrimary }]}>
               {t('startupJobsReadyTitle')}
             </Text>
-            <Text style={[styles.authFooterSubtitle, { color: theme.textSecondary }]}>
+            <Text style={[styles.authNextStepSubtitle, { color: theme.textSecondary }]}>
               {t('startupJobsReadySubtitle')}
             </Text>
-            <View style={styles.authFooterActions}>
-              <TouchableOpacity
-                onPress={() => router.push('/login')}
-                activeOpacity={0.85}
-                style={[
-                  styles.authFooterButton,
-                  { backgroundColor: theme.surface, borderColor: theme.border },
-                ]}
-              >
-                <Text style={[styles.authFooterButtonText, { color: theme.textPrimary }]}>
-                  {t('startupJobsGoToLogin')}
-                </Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                onPress={() => router.push('/login?mode=signup')}
-                activeOpacity={0.85}
-                style={[
-                  styles.authFooterButton,
-                  { backgroundColor: theme.primary, borderColor: theme.primary },
-                ]}
-              >
-                <Text style={[styles.authFooterButtonText, styles.authFooterButtonTextOnPrimary]}>
-                  {t('startupJobsGoToSignup')}
-                </Text>
-              </TouchableOpacity>
-            </View>
+            <TouchableOpacity
+              onPress={() => router.push('/login')}
+              activeOpacity={0.85}
+              style={[
+                styles.authNextStepButton,
+                { backgroundColor: theme.primary, borderColor: theme.primary },
+              ]}
+            >
+              <Text style={styles.authNextStepButtonText}>{t('welcomeAuthCta')}</Text>
+            </TouchableOpacity>
+            <TouchableOpacity onPress={() => router.push('/login?mode=signup')} activeOpacity={0.72}>
+              <Text style={[styles.authNextStepLink, { color: theme.textSecondary }]}>
+                {t('startupJobsGoToSignup')}
+              </Text>
+            </TouchableOpacity>
           </LinearGradient>
         ) : null}
       </View>
@@ -869,24 +828,6 @@ const styles = StyleSheet.create({
   heroTitleWrap: {
     flexShrink: 1,
     paddingRight: 8,
-  },
-  authActionsRow: {
-    flexDirection: 'row',
-    gap: 8,
-    alignItems: 'center',
-  },
-  authActionButton: {
-    borderRadius: 999,
-    borderWidth: 1,
-    paddingHorizontal: 14,
-    paddingVertical: 9,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  authActionText: {
-    fontSize: 12,
-    fontWeight: '800',
-    letterSpacing: 0.2,
   },
   title: {
     fontSize: 30,
@@ -1039,39 +980,38 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '700',
   },
-  authFooterCard: {
+  authNextStepCard: {
     marginTop: 10,
     borderWidth: 1,
     borderRadius: 18,
     padding: 16,
   },
-  authFooterTitle: {
+  authNextStepTitle: {
     fontSize: 18,
     fontWeight: '800',
     marginBottom: 4,
   },
-  authFooterSubtitle: {
+  authNextStepSubtitle: {
     fontSize: 13,
     lineHeight: 18,
     marginBottom: 12,
   },
-  authFooterActions: {
-    flexDirection: 'row',
-    gap: 8,
-  },
-  authFooterButton: {
-    flex: 1,
-    borderRadius: 12,
+  authNextStepButton: {
+    borderRadius: 10,
     borderWidth: 1,
     paddingVertical: 10,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  authFooterButtonText: {
-    fontSize: 13,
+  authNextStepButtonText: {
+    fontSize: 14,
     fontWeight: '700',
-  },
-  authFooterButtonTextOnPrimary: {
     color: '#fff',
+  },
+  authNextStepLink: {
+    marginTop: 10,
+    textAlign: 'center',
+    fontSize: 13,
+    fontWeight: '600',
   },
 });
