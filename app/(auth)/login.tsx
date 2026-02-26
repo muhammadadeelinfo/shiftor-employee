@@ -38,6 +38,49 @@ const getStringMetadataField = (user: User, field: string): string | null => {
   return typeof value === 'string' && value.trim() ? value.trim() : null;
 };
 
+const isRpcSignatureMismatchError = (error: unknown) => {
+  if (!error || typeof error !== 'object') return false;
+  const code = 'code' in error ? String((error as { code?: unknown }).code ?? '') : '';
+  const message = 'message' in error ? String((error as { message?: unknown }).message ?? '') : '';
+  return (
+    code === 'PGRST202' ||
+    code === '42883' ||
+    /Could not find the function/i.test(message) ||
+    /request_employee_company_link/i.test(message)
+  );
+};
+
+const requestCompanyLink = async (joinCode: string, fullName?: string | null) => {
+  if (!supabase) {
+    throw new Error('Supabase client not configured');
+  }
+
+  const normalizedCode = joinCode.trim().toUpperCase();
+  const normalizedName = (fullName ?? '').trim();
+  const attempts: Array<Record<string, unknown>> = [
+    { join_code: normalizedCode, full_name: normalizedName || null },
+    { join_code: normalizedCode },
+  ];
+
+  let lastSignatureError: unknown = null;
+  for (const params of attempts) {
+    const { data, error } = await supabase.rpc('request_employee_company_link', params);
+    if (!error) {
+      return data;
+    }
+    if (isRpcSignatureMismatchError(error)) {
+      lastSignatureError = error;
+      continue;
+    }
+    throw error;
+  }
+
+  if (lastSignatureError) {
+    throw lastSignatureError;
+  }
+  throw new Error('Failed to request company link.');
+};
+
 export default function LoginScreen() {
   const router = useRouter();
   const params = useLocalSearchParams<{ mode?: string }>();
@@ -127,17 +170,8 @@ export default function LoginScreen() {
         const requestedFullName = getStringMetadataField(authedUser, 'full_name');
 
         if (requestedCompanyCode) {
-          const { data: linkData, error: linkError } = await supabase.rpc(
-            'request_employee_company_link',
-            {
-              join_code: requestedCompanyCode,
-              full_name: requestedFullName,
-            }
-          );
-
-          if (linkError) {
-            console.warn('Failed to link account to company', linkError);
-          } else {
+          try {
+            const linkData = await requestCompanyLink(requestedCompanyCode, requestedFullName);
             const payload =
               linkData && typeof linkData === 'object' ? (linkData as Record<string, unknown>) : {};
             const status = typeof payload.status === 'string' ? payload.status : null;
@@ -162,13 +196,15 @@ export default function LoginScreen() {
                   ? t('companyLinkSwitchRequestedBody')
                   : t('companyLinkRequestedBody')
               );
-              await supabase.auth.updateUser({
-                data: {
-                  ...(authedUser.user_metadata ?? {}),
-                  requested_company_code: null,
-                },
-              });
+                await supabase.auth.updateUser({
+                  data: {
+                    ...(authedUser.user_metadata ?? {}),
+                    requested_company_code: null,
+                  },
+                });
             }
+          } catch (linkError) {
+            console.warn('Failed to link account to company', linkError);
           }
         }
       }
@@ -186,7 +222,7 @@ export default function LoginScreen() {
   const handleSignup = async () => {
     const trimmedEmail = email.trim();
     const trimmedName = fullName.trim();
-    const trimmedCompanyCode = companyCode.trim();
+    const trimmedCompanyCode = companyCode.trim().toUpperCase();
 
     if (!trimmedEmail || !password || !confirmPassword) {
       Alert.alert(t('authEmailPasswordRequiredTitle'), t('authEmailPasswordRequiredBody'));
