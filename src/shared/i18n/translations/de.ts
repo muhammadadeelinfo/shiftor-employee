@@ -324,6 +324,8 @@ export const deTranslations = {
       'Deine Anfrage für den Firmenzugriff wurde gesendet. Nach Freigabe durch die Firma werden deine Schichten angezeigt.',
     companyLinkSwitchRequestedBody:
       'Deine Firmenwechsel-Anfrage wurde gesendet. Nach Freigabe kannst du die neue Firma nutzen.',
+    companyLinkAlreadyActiveBody:
+      'Dein Konto ist für diese Firma bereits aktiv.',
     companyLinkInvalidCodeBody:
       'Der Firmen-Code wurde nicht erkannt. Bitte frage deinen Arbeitgeber nach einem gültigen Code und versuche es erneut.',
     companyLinkCodeExpiredBody:

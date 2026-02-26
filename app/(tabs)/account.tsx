@@ -455,6 +455,10 @@ export default function AccountScreen() {
         Alert.alert(t('companyLinkTitle'), t('companyLinkInvalidCodeBody'));
         return;
       }
+      if (status === 'active') {
+        Alert.alert(t('companyLinkTitle'), t('companyLinkAlreadyActiveBody'));
+        return;
+      }
       if (status === 'code_expired') {
         Alert.alert(t('companyLinkTitle'), t('companyLinkCodeExpiredBody'));
         return;

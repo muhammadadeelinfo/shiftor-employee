@@ -147,6 +147,8 @@ export default function LoginScreen() {
 
             if (status === 'invalid_code') {
               Alert.alert(t('companyLinkTitle'), t('companyLinkInvalidCodeBody'));
+            } else if (status === 'active') {
+              Alert.alert(t('companyLinkTitle'), t('companyLinkAlreadyActiveBody'));
             } else if (status === 'code_expired') {
               Alert.alert(t('companyLinkTitle'), t('companyLinkCodeExpiredBody'));
             } else if (status === 'code_exhausted') {

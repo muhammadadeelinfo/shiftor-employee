@@ -322,6 +322,8 @@ export const enTranslations = {
       'Your company access request was sent. You will see shifts after your company approves your account.',
     companyLinkSwitchRequestedBody:
       'Your company switch request was sent. You can use the new company after approval.',
+    companyLinkAlreadyActiveBody:
+      'Your account is already active for this company.',
     companyLinkInvalidCodeBody:
       'The company code was not recognized. Ask your employer for a valid company code and try again.',
     companyLinkCodeExpiredBody:
