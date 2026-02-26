@@ -267,7 +267,7 @@ export const deTranslations = {
     loginTitle: 'Mitarbeiterportal',
     loginCreateTitle: 'Konto erstellen',
     loginSignInSubtitle: 'Mit deinen Firmen-Zugangsdaten anmelden.',
-    loginEmailPlaceholder: 'du@firma.de',
+    loginEmailPlaceholder: 'du@beispiel.de',
     loginPasswordPlaceholder: 'Passwort',
     loginCreateButton: 'Konto erstellen',
     loginSignInButton: 'Anmelden',

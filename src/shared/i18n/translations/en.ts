@@ -266,7 +266,7 @@ export const enTranslations = {
     loginTitle: 'Employee Portal',
     loginCreateTitle: 'Create your account',
     loginSignInSubtitle: 'Sign in with your company credentials.',
-    loginEmailPlaceholder: 'you@company.com',
+    loginEmailPlaceholder: 'you@example.com',
     loginPasswordPlaceholder: 'Password',
     loginCreateButton: 'Create account',
     loginSignInButton: 'Sign in',
