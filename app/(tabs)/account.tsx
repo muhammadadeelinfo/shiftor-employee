@@ -46,6 +46,7 @@ const capitalizeFirstLetter = (value: string) => {
 };
 
 type EmployeeProfile = Record<string, unknown>;
+type CompanySummary = Record<string, unknown>;
 
 const isMissingColumnError = (error: unknown) =>
   typeof error === 'object' &&
@@ -116,6 +117,30 @@ const fetchEmployeeProfile = async (
   }
 
   return null;
+};
+
+const fetchCompanySummary = async (companyId: string): Promise<CompanySummary | null> => {
+  if (!supabase) {
+    return null;
+  }
+  const { data, error } = await supabase
+    .from('companies')
+    .select('*')
+    .eq('id', companyId)
+    .limit(1)
+    .maybeSingle();
+
+  if (error) {
+    if (isMissingColumnError(error)) {
+      return null;
+    }
+    console.warn('Failed to load company summary', error);
+    return null;
+  }
+  if (!data || typeof data !== 'object') {
+    return null;
+  }
+  return data as CompanySummary;
 };
 
 const getStringField = (source?: Record<string, unknown>, key?: string) => {
@@ -311,11 +336,27 @@ export default function AccountScreen() {
   const contactAddress =
     normalizeContactString(getProfileAddress(employeeRecord)) ?? getMetadataAddressDeep(metadata);
   const linkedCompanyId = getLinkedCompanyId(employeeRecord, metadataRecord);
+  const { data: companySummary } = useQuery({
+    queryKey: ['companySummary', linkedCompanyId],
+    queryFn: () => (linkedCompanyId ? fetchCompanySummary(linkedCompanyId) : null),
+    enabled: Boolean(linkedCompanyId),
+    staleTime: 60_000,
+  });
   const requestedCompanyCode = getStringField(metadataRecord, 'requested_company_code');
   const [joinCode, setJoinCode] = useState(requestedCompanyCode ?? '');
   const [linkingCompany, setLinkingCompany] = useState(false);
   const canRequestCompanyAccess = Boolean(user?.id);
   const isSwitchFlow = Boolean(linkedCompanyId);
+  const currentCompanyName =
+    getStringField(companySummary ?? undefined, 'name') ??
+    getStringField(employeeRecord ?? undefined, 'companyName') ??
+    getStringField(employeeRecord ?? undefined, 'company_name') ??
+    t('companyUnknownName');
+  const currentCompanyStatus =
+    getStringField(companySummary ?? undefined, 'status') ??
+    getStringField(employeeRecord ?? undefined, 'companyStatus') ??
+    getStringField(employeeRecord ?? undefined, 'company_status') ??
+    t('notProvided');
   const handleSignOut = () => {
     signOut();
   };
@@ -780,6 +821,39 @@ export default function AccountScreen() {
                 <Text style={[styles.sectionHeading, { color: theme.textPrimary }]}>
                   {isSwitchFlow ? t('companySwitchSectionTitle') : t('companyJoinSectionTitle')}
                 </Text>
+                {isSwitchFlow ? (
+                  <View>
+                    <Text style={[styles.contactSectionTitle, { color: theme.textSecondary }]}>
+                      {t('companyCurrentInfoLabel')}
+                    </Text>
+                    <View style={styles.aboutMetaList}>
+                      <View style={[styles.aboutMetaRow, { borderColor: theme.borderSoft }]}>
+                        <Text style={[styles.aboutMetaLabel, { color: theme.textSecondary }]}>
+                          {t('companyCurrentNameLabel')}
+                        </Text>
+                        <Text style={[styles.aboutMetaValue, { color: theme.textPrimary }]}>
+                          {currentCompanyName}
+                        </Text>
+                      </View>
+                      <View style={[styles.aboutMetaRow, { borderColor: theme.borderSoft }]}>
+                        <Text style={[styles.aboutMetaLabel, { color: theme.textSecondary }]}>
+                          {t('companyCurrentIdLabel')}
+                        </Text>
+                        <Text style={[styles.aboutMetaValue, { color: theme.textPrimary }]}>
+                          {linkedCompanyId}
+                        </Text>
+                      </View>
+                      <View style={[styles.aboutMetaRow, { borderColor: theme.borderSoft }]}>
+                        <Text style={[styles.aboutMetaLabel, { color: theme.textSecondary }]}>
+                          {t('companyCurrentStatusLabel')}
+                        </Text>
+                        <Text style={[styles.aboutMetaValue, { color: theme.textPrimary }]}>
+                          {currentCompanyStatus}
+                        </Text>
+                      </View>
+                    </View>
+                  </View>
+                ) : null}
                 <Text style={[styles.sectionHint, { color: theme.textSecondary }]}>
                   {isSwitchFlow ? t('companySwitchSectionHint') : t('companyJoinSectionHint')}
                 </Text>

@@ -346,6 +346,11 @@ export const enTranslations = {
     companySwitchConfirmBody:
       'This will request moving your account to another company. Continue?',
     companyJoinPendingHint: 'A company access request is already pending for your account.',
+    companyCurrentInfoLabel: 'Current company',
+    companyCurrentNameLabel: 'Name',
+    companyCurrentIdLabel: 'Company ID',
+    companyCurrentStatusLabel: 'Status',
+    companyUnknownName: 'Unknown company',
     securityResetLinkSent: 'Password reset link sent to {email}.',
     securitySessionsSignedOutOthers: 'Signed out from other active sessions.',
     security2faEnabled: 'Two-factor authentication is enabled ({count} factor(s)).',

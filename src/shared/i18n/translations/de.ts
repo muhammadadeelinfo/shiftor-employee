@@ -348,6 +348,11 @@ export const deTranslations = {
     companySwitchConfirmBody:
       'Damit beantragst du den Wechsel deines Kontos zu einer anderen Firma. Fortfahren?',
     companyJoinPendingHint: 'Für dein Konto ist bereits eine Firmenzugriff-Anfrage offen.',
+    companyCurrentInfoLabel: 'Aktuelle Firma',
+    companyCurrentNameLabel: 'Name',
+    companyCurrentIdLabel: 'Firmen-ID',
+    companyCurrentStatusLabel: 'Status',
+    companyUnknownName: 'Unbekannte Firma',
     securityResetLinkSent: 'Link zum Zurücksetzen des Passworts wurde an {email} gesendet.',
     securitySessionsSignedOutOthers: 'Du wurdest von anderen aktiven Sitzungen abgemeldet.',
     security2faEnabled: 'Die Zwei-Faktor-Authentifizierung ist aktiviert ({count} Faktor(en)).',
