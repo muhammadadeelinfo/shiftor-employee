@@ -16,6 +16,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { PrimaryButton } from '@shared/components/PrimaryButton';
+import { User } from '@supabase/supabase-js';
 import { supabase } from '@lib/supabaseClient';
 import { useRouter } from 'expo-router';
 import { useLanguage } from '@shared/context/LanguageContext';
@@ -27,6 +28,13 @@ import {
 
 const REMEMBER_KEY = 'employee-portal-remember-me';
 const EMAIL_KEY = 'employee-portal-remembered-email';
+
+const getStringMetadataField = (user: User, field: string): string | null => {
+  const metadata = user.user_metadata;
+  if (!metadata || typeof metadata !== 'object') return null;
+  const value = (metadata as Record<string, unknown>)[field];
+  return typeof value === 'string' && value.trim() ? value.trim() : null;
+};
 
 export default function LoginScreen() {
   const router = useRouter();
@@ -88,12 +96,49 @@ export default function LoginScreen() {
         await AsyncStorage.removeItem(EMAIL_KEY);
       }
 
-      const { error } = await supabase.auth.signInWithPassword({
+      const { data, error } = await supabase.auth.signInWithPassword({
         email: trimmedEmail,
         password: trimmedPassword,
       });
       if (error) {
         throw error;
+      }
+
+      const authedUser = data.user;
+      if (authedUser) {
+        const requestedCompanyCode = getStringMetadataField(authedUser, 'requested_company_code');
+        const requestedFullName = getStringMetadataField(authedUser, 'full_name');
+
+        if (requestedCompanyCode) {
+          const { data: linkData, error: linkError } = await supabase.rpc(
+            'request_employee_company_link',
+            {
+              join_code: requestedCompanyCode,
+              full_name: requestedFullName,
+            }
+          );
+
+          if (linkError) {
+            console.warn('Failed to link account to company', linkError);
+          } else {
+            const payload =
+              linkData && typeof linkData === 'object' ? (linkData as Record<string, unknown>) : {};
+            const status = typeof payload.status === 'string' ? payload.status : null;
+            const ok = payload.ok === true;
+
+            if (status === 'invalid_code') {
+              Alert.alert(t('companyLinkTitle'), t('companyLinkInvalidCodeBody'));
+            } else if (ok) {
+              Alert.alert(t('companyLinkTitle'), t('companyLinkRequestedBody'));
+              await supabase.auth.updateUser({
+                data: {
+                  ...(authedUser.user_metadata ?? {}),
+                  requested_company_code: null,
+                },
+              });
+            }
+          }
+        }
       }
       router.replace('(tabs)/my-shifts');
     } catch (error) {
@@ -236,6 +281,15 @@ export default function LoginScreen() {
             onPress={handleAuthenticate}
             loading={loading}
           />
+          <TouchableOpacity
+            style={styles.signupRow}
+            activeOpacity={0.7}
+            onPress={() => router.push('/signup')}
+            disabled={loading}
+          >
+            <Ionicons name="person-add-outline" size={18} color="#60a5fa" />
+            <Text style={styles.signupText}>{t('loginNeedAccount')}</Text>
+          </TouchableOpacity>
           <>
             <TouchableOpacity
               style={styles.supportRow}
@@ -379,6 +433,17 @@ const styles = StyleSheet.create({
     marginTop: 16,
   },
   supportText: {
+    color: '#60a5fa',
+    fontSize: 13,
+    fontWeight: '600',
+    marginLeft: 6,
+  },
+  signupRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 14,
+  },
+  signupText: {
     color: '#60a5fa',
     fontSize: 13,
     fontWeight: '600',

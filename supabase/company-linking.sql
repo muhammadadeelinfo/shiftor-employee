@@ -1,0 +1,316 @@
+-- Company linking flow for public self-signup users.
+-- Run this in Supabase SQL editor after confirming the `companies` table exists.
+
+create extension if not exists pgcrypto;
+
+create table if not exists public.company_join_codes (
+  id uuid primary key default gen_random_uuid(),
+  company_id uuid not null references public.companies (id) on delete cascade,
+  code text not null unique,
+  is_active boolean not null default true,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+comment on table public.company_join_codes is
+  'Company-issued join codes that employees can enter during self-signup.';
+
+create table if not exists public.employee_company_links (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references auth.users (id) on delete cascade,
+  company_id uuid not null references public.companies (id) on delete cascade,
+  status text not null default 'pending' check (status in ('pending', 'active', 'rejected')),
+  requested_code text not null,
+  requested_full_name text,
+  requested_email text,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  unique (user_id, company_id)
+);
+
+comment on table public.employee_company_links is
+  'Tracks company association requests from self-signup users.';
+
+alter table public.company_join_codes enable row level security;
+alter table public.employee_company_links enable row level security;
+
+drop policy if exists "Users can view own company links" on public.employee_company_links;
+create policy "Users can view own company links"
+  on public.employee_company_links
+  for select
+  using (user_id = auth.uid());
+
+drop function if exists public.request_employee_company_link(text, text);
+create or replace function public.request_employee_company_link(join_code text, full_name text default null)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  caller_id uuid := auth.uid();
+  normalized_code text := upper(trim(join_code));
+  target_company_id uuid;
+  resolved_status text;
+begin
+  if caller_id is null then
+    raise exception 'Authentication required';
+  end if;
+
+  if normalized_code is null or normalized_code = '' then
+    return jsonb_build_object('ok', false, 'status', 'invalid_code');
+  end if;
+
+  select cjc.company_id
+  into target_company_id
+  from public.company_join_codes cjc
+  where upper(cjc.code) = normalized_code
+    and cjc.is_active = true
+  limit 1;
+
+  if target_company_id is null then
+    return jsonb_build_object('ok', false, 'status', 'invalid_code');
+  end if;
+
+  insert into public.employee_company_links (
+    user_id,
+    company_id,
+    status,
+    requested_code,
+    requested_full_name,
+    requested_email
+  )
+  values (
+    caller_id,
+    target_company_id,
+    'pending',
+    normalized_code,
+    nullif(trim(full_name), ''),
+    (select email from auth.users where id = caller_id)
+  )
+  on conflict (user_id, company_id)
+  do update set
+    requested_code = excluded.requested_code,
+    requested_full_name = coalesce(excluded.requested_full_name, employee_company_links.requested_full_name),
+    requested_email = excluded.requested_email,
+    status = case
+      when employee_company_links.status = 'active' then 'active'
+      else 'pending'
+    end,
+    updated_at = now()
+  returning status into resolved_status;
+
+  return jsonb_build_object(
+    'ok', true,
+    'status', resolved_status,
+    'companyId', target_company_id
+  );
+end;
+$$;
+
+revoke all on function public.request_employee_company_link(text, text) from public;
+grant execute on function public.request_employee_company_link(text, text) to authenticated;
+
+drop function if exists public.approve_employee_company_link(uuid);
+create or replace function public.approve_employee_company_link(link_id uuid)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  link_record public.employee_company_links%rowtype;
+  user_col text;
+  user_col_type text;
+  company_col text;
+  company_col_type text;
+  email_col text;
+  full_name_col text;
+  status_col text;
+  user_email text;
+  user_full_name text;
+  set_parts text[] := array[]::text[];
+  insert_cols text[] := array[]::text[];
+  insert_vals text[] := array[]::text[];
+  where_user text;
+  where_company text;
+  rows_affected integer := 0;
+begin
+  if link_id is null then
+    raise exception 'link_id is required';
+  end if;
+
+  select *
+  into link_record
+  from public.employee_company_links
+  where id = link_id
+  for update;
+
+  if not found then
+    return jsonb_build_object('ok', false, 'status', 'not_found');
+  end if;
+
+  if link_record.status = 'active' then
+    return jsonb_build_object(
+      'ok', true,
+      'status', 'already_active',
+      'companyId', link_record.company_id,
+      'userId', link_record.user_id
+    );
+  end if;
+
+  select column_name, data_type
+  into user_col, user_col_type
+  from information_schema.columns
+  where table_schema = 'public'
+    and table_name = 'employees'
+    and column_name in ('auth_user_id', 'user_id', 'userId', 'employee_id', 'employeeId', 'id')
+  order by case column_name
+    when 'auth_user_id' then 1
+    when 'user_id' then 2
+    when 'userId' then 3
+    when 'employee_id' then 4
+    when 'employeeId' then 5
+    when 'id' then 6
+    else 999
+  end
+  limit 1;
+
+  select column_name, data_type
+  into company_col, company_col_type
+  from information_schema.columns
+  where table_schema = 'public'
+    and table_name = 'employees'
+    and column_name in ('company_id', 'companyId')
+  order by case column_name
+    when 'company_id' then 1
+    when 'companyId' then 2
+    else 999
+  end
+  limit 1;
+
+  if user_col is null or company_col is null then
+    return jsonb_build_object(
+      'ok', false,
+      'status', 'missing_required_columns',
+      'detail', 'employees table requires one user id column and one company id column'
+    );
+  end if;
+
+  select column_name
+  into email_col
+  from information_schema.columns
+  where table_schema = 'public'
+    and table_name = 'employees'
+    and column_name = 'email'
+  limit 1;
+
+  select column_name
+  into full_name_col
+  from information_schema.columns
+  where table_schema = 'public'
+    and table_name = 'employees'
+    and column_name in ('full_name', 'name')
+  order by case column_name
+    when 'full_name' then 1
+    when 'name' then 2
+    else 999
+  end
+  limit 1;
+
+  select column_name
+  into status_col
+  from information_schema.columns
+  where table_schema = 'public'
+    and table_name = 'employees'
+    and column_name = 'status'
+  limit 1;
+
+  select
+    au.email,
+    coalesce(
+      nullif(trim(au.raw_user_meta_data ->> 'full_name'), ''),
+      link_record.requested_full_name
+    )
+  into user_email, user_full_name
+  from auth.users au
+  where au.id = link_record.user_id;
+
+  where_user := case when user_col_type = 'uuid' then '$4::uuid' else '$5' end;
+  where_company := case when company_col_type = 'uuid' then '$1::uuid' else '$6' end;
+
+  set_parts := array_append(set_parts, format('%I = %s', company_col, where_company));
+  if email_col is not null then
+    set_parts := array_append(set_parts, format('%I = coalesce(%I, $2)', email_col, email_col));
+  end if;
+  if full_name_col is not null then
+    set_parts := array_append(set_parts, format('%I = coalesce(%I, $3)', full_name_col, full_name_col));
+  end if;
+  if status_col is not null then
+    set_parts := array_append(set_parts, format('%I = %L', status_col, 'active'));
+  end if;
+
+  execute format(
+    'update public.employees set %s where %I = %s',
+    array_to_string(set_parts, ', '),
+    user_col,
+    where_user
+  )
+  using
+    link_record.company_id,
+    user_email,
+    user_full_name,
+    link_record.user_id,
+    link_record.user_id::text,
+    link_record.company_id::text;
+
+  get diagnostics rows_affected = row_count;
+
+  if rows_affected = 0 then
+    insert_cols := array_append(insert_cols, format('%I', user_col));
+    insert_vals := array_append(insert_vals, where_user);
+    insert_cols := array_append(insert_cols, format('%I', company_col));
+    insert_vals := array_append(insert_vals, where_company);
+    if email_col is not null then
+      insert_cols := array_append(insert_cols, format('%I', email_col));
+      insert_vals := array_append(insert_vals, '$2');
+    end if;
+    if full_name_col is not null then
+      insert_cols := array_append(insert_cols, format('%I', full_name_col));
+      insert_vals := array_append(insert_vals, '$3');
+    end if;
+    if status_col is not null then
+      insert_cols := array_append(insert_cols, format('%I', status_col));
+      insert_vals := array_append(insert_vals, quote_literal('active'));
+    end if;
+
+    execute format(
+      'insert into public.employees (%s) values (%s)',
+      array_to_string(insert_cols, ', '),
+      array_to_string(insert_vals, ', ')
+    )
+    using
+      link_record.company_id,
+      user_email,
+      user_full_name,
+      link_record.user_id,
+      link_record.user_id::text,
+      link_record.company_id::text;
+  end if;
+
+  update public.employee_company_links
+  set status = 'active', updated_at = now()
+  where id = link_record.id;
+
+  return jsonb_build_object(
+    'ok', true,
+    'status', 'approved',
+    'companyId', link_record.company_id,
+    'userId', link_record.user_id
+  );
+end;
+$$;
+
+revoke all on function public.approve_employee_company_link(uuid) from public;
+revoke all on function public.approve_employee_company_link(uuid) from authenticated;
+grant execute on function public.approve_employee_company_link(uuid) to service_role;
