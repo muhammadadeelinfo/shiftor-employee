@@ -41,9 +41,6 @@ import { useAuth } from '@hooks/useSupabaseAuth';
 import { useQuery } from '@tanstack/react-query';
 import { getShifts, type Shift } from '@features/shifts/shiftsService';
 import { useShiftNotifications } from '@shared/hooks/useShiftNotifications';
-import * as Print from 'expo-print';
-import * as Sharing from 'expo-sharing';
-import * as FileSystem from 'expo-file-system/legacy';
 
 type ReportOptionKey =
   | 'includeEmployeeName'
@@ -75,23 +72,30 @@ const formatHourValue = (hours: number) => {
 const REPORT_FOLDER_NAME = 'EmployeePortalReports';
 const BRAND_LAUNCH_MS = 2000;
 
-const buildReportDestination = async (reportType: 'monthly' | 'summary') => {
-  const baseDirectory = FileSystem.documentDirectory ?? FileSystem.cacheDirectory;
+const buildReportDestination = async (
+  reportType: 'monthly' | 'summary',
+  fileSystem: typeof import('expo-file-system/legacy')
+) => {
+  const baseDirectory = fileSystem.documentDirectory ?? fileSystem.cacheDirectory;
   if (!baseDirectory) {
     return null;
   }
   const directory = `${baseDirectory}${REPORT_FOLDER_NAME}/`;
-  await FileSystem.makeDirectoryAsync(directory, { intermediates: true });
+  await fileSystem.makeDirectoryAsync(directory, { intermediates: true });
   const timestamp = new Date().toISOString().replace(/[^0-9]/g, '');
   const slug = reportType === 'monthly' ? 'Monthly' : 'Summary';
   const fileName = `${slug}-Report-${timestamp}.pdf`;
   return { directory, fileName, destination: `${directory}${fileName}` };
 };
 
-const saveReportToDevice = async (uri: string, reportType: 'monthly' | 'summary') => {
-  const info = await buildReportDestination(reportType);
+const saveReportToDevice = async (
+  uri: string,
+  reportType: 'monthly' | 'summary',
+  fileSystem: typeof import('expo-file-system/legacy')
+) => {
+  const info = await buildReportDestination(reportType, fileSystem);
   if (!info) return null;
-  await FileSystem.copyAsync({
+  await fileSystem.copyAsync({
     from: uri,
     to: info.destination,
   });
@@ -309,18 +313,22 @@ function LayoutContentInner() {
     let isMounted = true;
 
     (async () => {
-      const { setNotificationHandler } = await import('expo-notifications');
-      if (!isMounted) return;
+      try {
+        const { setNotificationHandler } = await import('expo-notifications');
+        if (!isMounted) return;
 
-      setNotificationHandler({
-        handleNotification: async () => ({
-          shouldPlaySound: false,
-          shouldSetBadge: false,
-          shouldShowAlert: true,
-          shouldShowBanner: true,
-          shouldShowList: true,
-        }),
-      });
+        setNotificationHandler({
+          handleNotification: async () => ({
+            shouldPlaySound: false,
+            shouldSetBadge: false,
+            shouldShowAlert: true,
+            shouldShowBanner: true,
+            shouldShowList: true,
+          }),
+        });
+      } catch (error) {
+        console.warn('Failed to initialize notification handler.', error);
+      }
     })();
 
     return () => {
@@ -688,6 +696,11 @@ function LayoutContentInner() {
       reportType === 'monthly' ? t('reportMonthlyDescribe') : t('reportSummaryDescribe');
 
     try {
+      const [Print, Sharing, FileSystem] = await Promise.all([
+        import('expo-print'),
+        import('expo-sharing'),
+        import('expo-file-system/legacy'),
+      ]);
       const html = buildReportHtml(
         title,
         description,
@@ -702,7 +715,7 @@ function LayoutContentInner() {
         }
       );
       const { uri } = await Print.printToFileAsync({ html });
-      const savedUri = await saveReportToDevice(uri, reportType);
+      const savedUri = await saveReportToDevice(uri, reportType, FileSystem);
       if (savedUri) {
         const relative =
           FileSystem.documentDirectory && savedUri.startsWith(FileSystem.documentDirectory)
@@ -1066,7 +1079,11 @@ function LayoutContent() {
 
 export default function RootLayout() {
   useEffect(() => {
-    initializeMonitoring();
+    try {
+      initializeMonitoring();
+    } catch (error) {
+      console.warn('Monitoring initialization failed.', error);
+    }
   }, []);
 
   return (
