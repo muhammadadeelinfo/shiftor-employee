@@ -311,7 +311,7 @@ export const enTranslations = {
     authPasswordMinLengthBody: 'Password must be at least 8 characters.',
     authPasswordMismatchBody: 'Passwords do not match.',
     signupTitle: 'Create account',
-    signupSubtitle: 'Sign up and connect your account to your company profile.',
+    signupSubtitle: 'Create your account with email and password.',
     signupFullNamePlaceholder: 'Full name (optional)',
     signupCompanyCodePlaceholder: 'Company code (optional)',
     signupConfirmPasswordPlaceholder: 'Confirm password',

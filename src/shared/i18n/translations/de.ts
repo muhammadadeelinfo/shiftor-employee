@@ -313,7 +313,7 @@ export const deTranslations = {
     authPasswordMinLengthBody: 'Das Passwort muss mindestens 8 Zeichen lang sein.',
     authPasswordMismatchBody: 'Die Passwörter stimmen nicht überein.',
     signupTitle: 'Konto erstellen',
-    signupSubtitle: 'Registriere dich und verknüpfe dein Konto mit deinem Firmenprofil.',
+    signupSubtitle: 'Erstelle dein Konto mit E-Mail und Passwort.',
     signupFullNamePlaceholder: 'Vollständiger Name (optional)',
     signupCompanyCodePlaceholder: 'Firmen-Code (optional)',
     signupConfirmPasswordPlaceholder: 'Passwort bestätigen',

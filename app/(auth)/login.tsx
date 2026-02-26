@@ -99,8 +99,6 @@ export default function LoginScreen() {
   const [emailError, setEmailError] = useState<string | null>(null);
   const [passwordError, setPasswordError] = useState<string | null>(null);
   const passwordInputRef = useRef<TextInput>(null);
-  const [fullName, setFullName] = useState('');
-  const [companyCode, setCompanyCode] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const confirmPasswordInputRef = useRef<TextInput>(null);
@@ -236,8 +234,6 @@ export default function LoginScreen() {
 
   const handleSignup = async () => {
     const trimmedEmail = email.trim();
-    const trimmedName = fullName.trim();
-    const trimmedCompanyCode = companyCode.trim().toUpperCase();
 
     if (!trimmedEmail || !password || !confirmPassword) {
       Alert.alert(t('authEmailPasswordRequiredTitle'), t('authEmailPasswordRequiredBody'));
@@ -273,10 +269,6 @@ export default function LoginScreen() {
         password,
         options: {
           emailRedirectTo: authRedirectUrl || undefined,
-          data: {
-            full_name: trimmedName || null,
-            requested_company_code: trimmedCompanyCode || null,
-          },
         },
       });
 
@@ -351,39 +343,6 @@ export default function LoginScreen() {
             </TouchableOpacity>
           </View>
           <Text style={styles.subtitle}>{mode === 'signin' ? t('loginSignInSubtitle') : t('signupSubtitle')}</Text>
-          {mode === 'signup' ? (
-            <View style={styles.emailField}>
-              <TextInput
-                style={styles.emailInput}
-                autoCapitalize="words"
-                autoCorrect={false}
-                textContentType="name"
-                autoComplete="name"
-                placeholder={t('signupFullNamePlaceholder')}
-                placeholderTextColor="#94a3b8"
-                value={fullName}
-                onChangeText={setFullName}
-                returnKeyType="next"
-                editable={!loading}
-              />
-            </View>
-          ) : null}
-          {mode === 'signup' ? (
-            <View style={styles.emailField}>
-              <TextInput
-                style={styles.emailInput}
-                autoCapitalize="characters"
-                autoCorrect={false}
-                autoComplete="off"
-                placeholder={t('signupCompanyCodePlaceholder')}
-                placeholderTextColor="#94a3b8"
-                value={companyCode}
-                onChangeText={(value) => setCompanyCode(value.toUpperCase())}
-                returnKeyType="next"
-                editable={!loading}
-              />
-            </View>
-          ) : null}
           <View style={styles.emailField}>
             <TextInput
               style={styles.emailInput}
