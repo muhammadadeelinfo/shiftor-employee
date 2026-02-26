@@ -322,6 +322,13 @@ export const enTranslations = {
       'Your company access request was sent. You will see shifts after your company approves your account.',
     companyLinkInvalidCodeBody:
       'The company code was not recognized. Ask your employer for a valid company code and try again.',
+    companyLinkEnterCodeBody: 'Enter your company code to request access.',
+    companyJoinSectionTitle: 'Join your company',
+    companyJoinSectionHint:
+      'If you already have an employee account, enter your company code to request access.',
+    companyJoinCodePlaceholder: 'Company code',
+    companyJoinRequestButton: 'Request company access',
+    companyJoinPendingHint: 'A company access request is already pending for your account.',
     securityResetLinkSent: 'Password reset link sent to {email}.',
     securitySessionsSignedOutOthers: 'Signed out from other active sessions.',
     security2faEnabled: 'Two-factor authentication is enabled ({count} factor(s)).',

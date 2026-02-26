@@ -324,6 +324,13 @@ export const deTranslations = {
       'Deine Anfrage für den Firmenzugriff wurde gesendet. Nach Freigabe durch die Firma werden deine Schichten angezeigt.',
     companyLinkInvalidCodeBody:
       'Der Firmen-Code wurde nicht erkannt. Bitte frage deinen Arbeitgeber nach einem gültigen Code und versuche es erneut.',
+    companyLinkEnterCodeBody: 'Gib deinen Firmen-Code ein, um Zugriff anzufragen.',
+    companyJoinSectionTitle: 'Firma verbinden',
+    companyJoinSectionHint:
+      'Wenn du bereits ein Mitarbeiterkonto hast, gib deinen Firmen-Code ein, um Zugriff anzufragen.',
+    companyJoinCodePlaceholder: 'Firmen-Code',
+    companyJoinRequestButton: 'Firmenzugriff anfragen',
+    companyJoinPendingHint: 'Für dein Konto ist bereits eine Firmenzugriff-Anfrage offen.',
     securityResetLinkSent: 'Link zum Zurücksetzen des Passworts wurde an {email} gesendet.',
     securitySessionsSignedOutOthers: 'Du wurdest von anderen aktiven Sitzungen abgemeldet.',
     security2faEnabled: 'Die Zwei-Faktor-Authentifizierung ist aktiviert ({count} Faktor(en)).',

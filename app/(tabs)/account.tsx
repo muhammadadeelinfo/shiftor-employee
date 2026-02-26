@@ -6,6 +6,7 @@ import {
   Platform,
   StyleSheet,
   Text,
+  TextInput,
   TouchableOpacity,
   useWindowDimensions,
   View,
@@ -224,6 +225,19 @@ const getProfileAddress = (profile?: EmployeeProfile | null) => {
   return composed.length ? composed.join(', ') : undefined;
 };
 
+const getLinkedCompanyId = (
+  profile?: EmployeeProfile | null,
+  metadata?: Record<string, unknown>
+) => {
+  const profileCompanyId =
+    getStringField(profile ?? undefined, 'companyId') ??
+    getStringField(profile ?? undefined, 'company_id');
+  if (profileCompanyId) {
+    return profileCompanyId;
+  }
+  return getStringField(metadata, 'companyId') ?? getStringField(metadata, 'company_id');
+};
+
 const getMetadataPhoneDeep = (metadata?: Record<string, unknown>) =>
   getPhoneNumber(metadata) ??
   getNestedString(metadata, ['contact', 'phone']) ??
@@ -296,6 +310,11 @@ export default function AccountScreen() {
     getMetadataPhoneDeep(metadata);
   const contactAddress =
     normalizeContactString(getProfileAddress(employeeRecord)) ?? getMetadataAddressDeep(metadata);
+  const linkedCompanyId = getLinkedCompanyId(employeeRecord, metadataRecord);
+  const requestedCompanyCode = getStringField(metadataRecord, 'requested_company_code');
+  const [joinCode, setJoinCode] = useState(requestedCompanyCode ?? '');
+  const [linkingCompany, setLinkingCompany] = useState(false);
+  const canRequestCompanyAccess = !linkedCompanyId;
   const handleSignOut = () => {
     signOut();
   };
@@ -386,6 +405,44 @@ export default function AccountScreen() {
   };
   const handleHelpCenter = async () => {
     await openExternalUrl(t('supportHelpCenter'), supportPageUrl, SUPPORT_FALLBACK_URL);
+  };
+  const handleRequestCompanyAccess = async () => {
+    const normalizedJoinCode = joinCode.trim().toUpperCase();
+    if (!normalizedJoinCode) {
+      Alert.alert(t('companyLinkTitle'), t('companyLinkEnterCodeBody'));
+      return;
+    }
+    if (!supabase) {
+      Alert.alert(t('companyLinkTitle'), t('authClientUnavailable'));
+      return;
+    }
+
+    try {
+      setLinkingCompany(true);
+      const fullName = getStringField(metadataRecord, 'full_name') ?? profileName(user);
+      const { data, error } = await supabase.rpc('request_employee_company_link', {
+        join_code: normalizedJoinCode,
+        full_name: fullName,
+      });
+      if (error) throw error;
+
+      const payload = data && typeof data === 'object' ? (data as Record<string, unknown>) : {};
+      const status = typeof payload.status === 'string' ? payload.status : null;
+      const ok = payload.ok === true;
+
+      if (status === 'invalid_code') {
+        Alert.alert(t('companyLinkTitle'), t('companyLinkInvalidCodeBody'));
+        return;
+      }
+
+      if (ok) {
+        Alert.alert(t('companyLinkTitle'), t('companyLinkRequestedBody'));
+      }
+    } catch (error) {
+      Alert.alert(t('companyLinkTitle'), error instanceof Error ? error.message : t('authUnableSignIn'));
+    } finally {
+      setLinkingCompany(false);
+    }
   };
   const handleDeleteAccount = async () => {
     const email = user?.email?.trim() || '';
@@ -669,6 +726,50 @@ export default function AccountScreen() {
                 </TouchableOpacity>
               </View>
             </View>
+
+            {canRequestCompanyAccess ? (
+              <View
+                style={[
+                  styles.sectionCard,
+                  { backgroundColor: theme.surface, borderColor: theme.borderSoft },
+                  isIOS && styles.sectionCardIOS,
+                ]}
+              >
+                <Text style={[styles.sectionHeading, { color: theme.textPrimary }]}>
+                  {t('companyJoinSectionTitle')}
+                </Text>
+                <Text style={[styles.sectionHint, { color: theme.textSecondary }]}>
+                  {t('companyJoinSectionHint')}
+                </Text>
+                <View
+                  style={[
+                    styles.companyJoinInputWrap,
+                    { backgroundColor: theme.surfaceMuted, borderColor: theme.borderSoft },
+                  ]}
+                >
+                  <TextInput
+                    value={joinCode}
+                    onChangeText={setJoinCode}
+                    placeholder={t('companyJoinCodePlaceholder')}
+                    placeholderTextColor={theme.textPlaceholder}
+                    autoCapitalize="characters"
+                    autoCorrect={false}
+                    editable={!linkingCompany}
+                    style={[styles.companyJoinInput, { color: theme.textPrimary }]}
+                  />
+                </View>
+                {requestedCompanyCode ? (
+                  <Text style={[styles.companyJoinPendingText, { color: theme.textSecondary }]}>
+                    {t('companyJoinPendingHint')}
+                  </Text>
+                ) : null}
+                <PrimaryButton
+                  title={t('companyJoinRequestButton')}
+                  onPress={() => void handleRequestCompanyAccess()}
+                  loading={linkingCompany}
+                />
+              </View>
+            ) : null}
 
             <View
               style={[
@@ -1182,6 +1283,20 @@ const styles = StyleSheet.create({
   aboutMetaValue: {
     fontSize: 13,
     fontWeight: '700',
+  },
+  companyJoinInputWrap: {
+    borderWidth: 1,
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    marginBottom: 10,
+  },
+  companyJoinInput: {
+    minHeight: 44,
+    fontSize: 14,
+  },
+  companyJoinPendingText: {
+    fontSize: 12,
+    marginBottom: 10,
   },
   preferenceGroup: {
     marginBottom: 16,
