@@ -95,6 +95,7 @@ export default function LoginScreen() {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [rememberMe, setRememberMe] = useState(true);
+  const [rememberedEmail, setRememberedEmail] = useState('');
   const [emailError, setEmailError] = useState<string | null>(null);
   const [passwordError, setPasswordError] = useState<string | null>(null);
   const passwordInputRef = useRef<TextInput>(null);
@@ -112,10 +113,13 @@ export default function LoginScreen() {
       }
       const storedEmail = await AsyncStorage.getItem(EMAIL_KEY);
       if (storedEmail) {
-        setEmail(storedEmail);
+        setRememberedEmail(storedEmail);
+        if (params.mode !== 'signup') {
+          setEmail(storedEmail);
+        }
       }
     })();
-  }, []);
+  }, [params.mode]);
 
   useEffect(() => {
     if (params.mode === 'signup') {
@@ -125,16 +129,27 @@ export default function LoginScreen() {
     }
   }, [params.mode]);
 
+  useEffect(() => {
+    if (mode === 'signup') {
+      setEmail('');
+      setEmailError(null);
+      return;
+    }
+    if (mode === 'signin' && rememberMe && rememberedEmail && !email.trim()) {
+      setEmail(rememberedEmail);
+    }
+  }, [mode, rememberMe, rememberedEmail, email]);
+
   const handleAuthenticate = async () => {
     const trimmedEmail = email.trim();
-    const trimmedPassword = password.trim();
+    const submittedPassword = password;
     const nextEmailError =
       !trimmedEmail
         ? t('authEmailPasswordRequiredBody')
         : /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmedEmail)
           ? null
           : t('authInvalidEmailBody');
-    const nextPasswordError = !trimmedPassword ? t('authEmailPasswordRequiredBody') : null;
+    const nextPasswordError = !submittedPassword ? t('authEmailPasswordRequiredBody') : null;
     setEmailError(nextEmailError);
     setPasswordError(nextPasswordError);
 
@@ -158,7 +173,7 @@ export default function LoginScreen() {
 
       const { data, error } = await supabase.auth.signInWithPassword({
         email: trimmedEmail,
-        password: trimmedPassword,
+        password: submittedPassword,
       });
       if (error) {
         throw error;
@@ -341,6 +356,9 @@ export default function LoginScreen() {
               <TextInput
                 style={styles.emailInput}
                 autoCapitalize="words"
+                autoCorrect={false}
+                textContentType="name"
+                autoComplete="name"
                 placeholder={t('signupFullNamePlaceholder')}
                 placeholderTextColor="#94a3b8"
                 value={fullName}
@@ -355,10 +373,12 @@ export default function LoginScreen() {
               <TextInput
                 style={styles.emailInput}
                 autoCapitalize="characters"
+                autoCorrect={false}
+                autoComplete="off"
                 placeholder={t('signupCompanyCodePlaceholder')}
                 placeholderTextColor="#94a3b8"
                 value={companyCode}
-                onChangeText={setCompanyCode}
+                onChangeText={(value) => setCompanyCode(value.toUpperCase())}
                 returnKeyType="next"
                 editable={!loading}
               />
@@ -369,6 +389,8 @@ export default function LoginScreen() {
               style={styles.emailInput}
               keyboardType="email-address"
               autoCapitalize="none"
+              autoCorrect={false}
+              autoComplete="email"
               placeholder={t('loginEmailPlaceholder')}
               placeholderTextColor="#94a3b8"
               value={email}
@@ -401,6 +423,8 @@ export default function LoginScreen() {
               style={styles.passwordInput}
               secureTextEntry={!showPassword}
               autoCapitalize="none"
+              autoCorrect={false}
+              autoComplete={mode === 'signup' ? 'new-password' : 'current-password'}
               placeholder={t('loginPasswordPlaceholder')}
               placeholderTextColor="#94a3b8"
               value={password}
@@ -410,7 +434,7 @@ export default function LoginScreen() {
                   setPasswordError(null);
                 }
               }}
-              textContentType="password"
+              textContentType={mode === 'signup' ? 'newPassword' : 'password'}
               ref={passwordInputRef}
               returnKeyType={mode === 'signup' ? 'next' : 'done'}
               onSubmitEditing={() =>
@@ -441,11 +465,13 @@ export default function LoginScreen() {
                 style={styles.passwordInput}
                 secureTextEntry={!showConfirmPassword}
                 autoCapitalize="none"
+                autoCorrect={false}
+                autoComplete="new-password"
                 placeholder={t('signupConfirmPasswordPlaceholder')}
                 placeholderTextColor="#94a3b8"
                 value={confirmPassword}
                 onChangeText={setConfirmPassword}
-                textContentType="password"
+                textContentType="newPassword"
                 ref={confirmPasswordInputRef}
                 returnKeyType="done"
                 onSubmitEditing={handleSignup}
@@ -480,15 +506,6 @@ export default function LoginScreen() {
               />
             </View>
           )}
-          <TouchableOpacity
-            style={styles.backRow}
-            activeOpacity={0.7}
-            onPress={() => router.push('/startup')}
-            disabled={loading}
-          >
-            <Ionicons name="arrow-back-circle-outline" size={18} color="#94a3b8" />
-            <Text style={styles.backText}>{t('loginBackToJobs')}</Text>
-          </TouchableOpacity>
           <PrimaryButton
             title={mode === 'signin' ? t('loginSignInButton') : t('signupCreateButton')}
             onPress={mode === 'signin' ? handleAuthenticate : handleSignup}
@@ -656,17 +673,6 @@ const styles = StyleSheet.create({
   },
   supportText: {
     color: '#60a5fa',
-    fontSize: 13,
-    fontWeight: '600',
-    marginLeft: 6,
-  },
-  backRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  backText: {
-    color: '#94a3b8',
     fontSize: 13,
     fontWeight: '600',
     marginLeft: 6,

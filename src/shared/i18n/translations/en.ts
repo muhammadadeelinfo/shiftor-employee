@@ -265,7 +265,7 @@ export const enTranslations = {
     tabQuickActions: 'Quick Actions',
     loginTitle: 'Employee Portal',
     loginCreateTitle: 'Create your account',
-    loginSignInSubtitle: 'Sign in with your company credentials.',
+    loginSignInSubtitle: 'Sign in with your email and password.',
     loginEmailPlaceholder: 'you@example.com',
     loginPasswordPlaceholder: 'Password',
     loginCreateButton: 'Create account',

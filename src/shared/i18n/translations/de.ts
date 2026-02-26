@@ -266,7 +266,7 @@ export const deTranslations = {
     tabQuickActions: 'Schnellaktionen',
     loginTitle: 'Mitarbeiterportal',
     loginCreateTitle: 'Konto erstellen',
-    loginSignInSubtitle: 'Mit deinen Firmen-Zugangsdaten anmelden.',
+    loginSignInSubtitle: 'Melde dich mit E-Mail und Passwort an.',
     loginEmailPlaceholder: 'du@beispiel.de',
     loginPasswordPlaceholder: 'Passwort',
     loginCreateButton: 'Konto erstellen',
