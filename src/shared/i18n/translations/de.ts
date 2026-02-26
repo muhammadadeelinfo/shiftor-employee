@@ -333,8 +333,18 @@ export const deTranslations = {
     unableOpenLinkDevice: 'Dieser Link kann auf deinem Gerät nicht geöffnet werden.',
     rootCheckingSession: 'Sitzung wird überprüft...',
     rootPreparingWorkspace: 'Arbeitsbereich wird vorbereitet…',
+    welcomeTitle: 'Shiftor Employee',
+    welcomeSubtitle:
+      'Entdecke zuerst Jobs und melde dich an oder registriere dich, wenn du bereit bist.',
+    welcomeBrowseJobs: 'Jobs durchsuchen',
+    welcomeAuthCta: 'Anmelden / Konto erstellen',
+    welcomePublicNote: 'Keine Einladung nötig, um offene Stellen anzusehen.',
     startupJobsTitle: 'Jobs',
     startupJobsGoToLogin: 'Zum Login',
+    startupJobsGoToSignup: 'Konto erstellen',
+    startupJobsReadyTitle: 'Bereit für den nächsten Schritt?',
+    startupJobsReadySubtitle:
+      'Melde dich an oder erstelle ein Konto, um dich mit einer Firma zu verbinden und Schichten zu verwalten.',
     startupJobsCount: '{count} Jobs',
     startupJobsShownCount: '{count} angezeigt',
     startupJobsSearchPlaceholder: 'Titel, Ort, Art, Firma suchen',

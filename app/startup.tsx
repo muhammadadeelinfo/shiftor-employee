@@ -570,7 +570,7 @@ export default function StartupScreen() {
     >
       <View pointerEvents="none" style={styles.bgOrbs}>
         <View style={[styles.orb, styles.orbTop, { backgroundColor: 'rgba(129, 140, 248, 0.16)' }]} />
-        <View style={[styles.orb, styles.orbBottom, { backgroundColor: 'rgba(168, 85, 247, 0.14)' }]} />
+        <View style={[styles.orb, styles.orbBottom, { backgroundColor: 'rgba(56, 189, 248, 0.14)' }]} />
       </View>
 
       <View style={styles.content}>
@@ -581,18 +581,40 @@ export default function StartupScreen() {
           style={[styles.heroCard, { borderColor: theme.border }]}
         >
           <View style={styles.heroTopActions}>
-            <View>
+            <View style={styles.heroTitleWrap}>
               <Text style={[styles.title, { color: theme.textPrimary }]}>{t('startupJobsTitle')}</Text>
+              <Text style={[styles.heroSubtitle, { color: theme.textSecondary }]}>{t('welcomePublicNote')}</Text>
             </View>
-            <TouchableOpacity
-              onPress={() => router.push('/login')}
-              activeOpacity={0.85}
-              style={[styles.loginIconButton, { backgroundColor: theme.surface, borderColor: theme.border }]}
-              accessibilityRole="button"
-              accessibilityLabel={t('startupJobsGoToLogin')}
-            >
-              <Ionicons name="log-in-outline" size={20} color={theme.textPrimary} />
-            </TouchableOpacity>
+            <View style={styles.authActionsRow}>
+              <TouchableOpacity
+                onPress={() => router.push('/login')}
+                activeOpacity={0.85}
+                style={[
+                  styles.authActionButton,
+                  { backgroundColor: theme.surface, borderColor: theme.border },
+                ]}
+                accessibilityRole="button"
+                accessibilityLabel={t('startupJobsGoToLogin')}
+              >
+                <Text style={[styles.authActionText, { color: theme.textPrimary }]}>
+                  {t('startupJobsGoToLogin')}
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={() => router.push('/login?mode=signup')}
+                activeOpacity={0.85}
+                style={[
+                  styles.authActionButton,
+                  { backgroundColor: theme.surface, borderColor: theme.border },
+                ]}
+                accessibilityRole="button"
+                accessibilityLabel={t('startupJobsGoToSignup')}
+              >
+                <Text style={[styles.authActionText, { color: theme.textPrimary }]}>
+                  {t('startupJobsGoToSignup')}
+                </Text>
+              </TouchableOpacity>
+            </View>
           </View>
 
           <View style={styles.statRow}>
@@ -753,6 +775,48 @@ export default function StartupScreen() {
               </View>
             ))
           : null}
+
+        {shouldShowJobsSection ? (
+          <LinearGradient
+            colors={[theme.heroGradientEnd, theme.heroGradientStart]}
+            start={[0, 0]}
+            end={[1, 1]}
+            style={[styles.authFooterCard, { borderColor: theme.border }]}
+          >
+            <Text style={[styles.authFooterTitle, { color: theme.textPrimary }]}>
+              {t('startupJobsReadyTitle')}
+            </Text>
+            <Text style={[styles.authFooterSubtitle, { color: theme.textSecondary }]}>
+              {t('startupJobsReadySubtitle')}
+            </Text>
+            <View style={styles.authFooterActions}>
+              <TouchableOpacity
+                onPress={() => router.push('/login')}
+                activeOpacity={0.85}
+                style={[
+                  styles.authFooterButton,
+                  { backgroundColor: theme.surface, borderColor: theme.border },
+                ]}
+              >
+                <Text style={[styles.authFooterButtonText, { color: theme.textPrimary }]}>
+                  {t('startupJobsGoToLogin')}
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={() => router.push('/login?mode=signup')}
+                activeOpacity={0.85}
+                style={[
+                  styles.authFooterButton,
+                  { backgroundColor: theme.primary, borderColor: theme.primary },
+                ]}
+              >
+                <Text style={[styles.authFooterButtonText, styles.authFooterButtonTextOnPrimary]}>
+                  {t('startupJobsGoToSignup')}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </LinearGradient>
+        ) : null}
       </View>
     </ScrollView>
   );
@@ -800,20 +864,38 @@ const styles = StyleSheet.create({
   heroTopActions: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'flex-start',
+    alignItems: 'center',
   },
-  loginIconButton: {
-    width: 42,
-    height: 42,
+  heroTitleWrap: {
+    flexShrink: 1,
+    paddingRight: 8,
+  },
+  authActionsRow: {
+    flexDirection: 'row',
+    gap: 8,
+    alignItems: 'center',
+  },
+  authActionButton: {
     borderRadius: 999,
     borderWidth: 1,
+    paddingHorizontal: 14,
+    paddingVertical: 9,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  authActionText: {
+    fontSize: 12,
+    fontWeight: '800',
+    letterSpacing: 0.2,
   },
   title: {
     fontSize: 30,
     fontWeight: '900',
-    marginBottom: 8,
+    marginBottom: 4,
+  },
+  heroSubtitle: {
+    fontSize: 12,
+    fontWeight: '600',
   },
   statRow: {
     flexDirection: 'row',
@@ -956,5 +1038,40 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 14,
     fontWeight: '700',
+  },
+  authFooterCard: {
+    marginTop: 10,
+    borderWidth: 1,
+    borderRadius: 18,
+    padding: 16,
+  },
+  authFooterTitle: {
+    fontSize: 18,
+    fontWeight: '800',
+    marginBottom: 4,
+  },
+  authFooterSubtitle: {
+    fontSize: 13,
+    lineHeight: 18,
+    marginBottom: 12,
+  },
+  authFooterActions: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  authFooterButton: {
+    flex: 1,
+    borderRadius: 12,
+    borderWidth: 1,
+    paddingVertical: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  authFooterButtonText: {
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  authFooterButtonTextOnPrimary: {
+    color: '#fff',
   },
 });

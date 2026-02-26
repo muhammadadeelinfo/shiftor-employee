@@ -14,6 +14,7 @@ Use this checklist for every Android Google Play release.
 
 - [ ] `.env` includes required values: `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `DATABASE_URL`, `DIRECT_URL`, `API_BASE_URL`.
 - [ ] Android release values are set: `APP_VERSION`, `ANDROID_PACKAGE`, `ANDROID_VERSION_CODE`, `EXPO_SCHEME`.
+- [ ] Legal URLs are set and valid HTTPS links: `LEGAL_PRIVACY_URL`, `LEGAL_TERMS_URL`.
 - [ ] Optional but recommended for production: `SENTRY_DSN`, `SENTRY_ORG`, `SENTRY_PROJECT`.
 - [ ] Run:
 
@@ -35,6 +36,12 @@ npx expo config --type public --json
 
 ```bash
 npm run release:check
+```
+
+- [ ] Run:
+
+```bash
+npm run check:play-readiness
 ```
 
 - [ ] Run Android emulator health check:

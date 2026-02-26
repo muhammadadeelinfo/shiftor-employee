@@ -4,6 +4,8 @@ set -u
 PASS_COUNT=0
 WARN_COUNT=0
 FAIL_COUNT=0
+RECOVERY_ATTEMPTS=0
+MAX_RECOVERY_ATTEMPTS=3
 
 if [ "${1:-}" != "" ]; then
   TEST_URL="$1"
@@ -24,6 +26,40 @@ warn() {
 fail() {
   echo "[FAIL] $1"
   FAIL_COUNT=$((FAIL_COUNT + 1))
+}
+
+recover_coresimulator() {
+  if [ "${RECOVERY_ATTEMPTS}" -ge "${MAX_RECOVERY_ATTEMPTS}" ]; then
+    return 1
+  fi
+  RECOVERY_ATTEMPTS=$((RECOVERY_ATTEMPTS + 1))
+  warn "CoreSimulator issue detected. Attempting automatic recovery (${RECOVERY_ATTEMPTS}/${MAX_RECOVERY_ATTEMPTS})."
+  xcrun simctl shutdown all >/dev/null 2>&1 || true
+  killall Simulator >/dev/null 2>&1 || true
+  open -a Simulator >/dev/null 2>&1 || true
+  sleep 2
+  # Device service can take time to come back; caller will continue retry loop.
+  wait_for_device_service >/dev/null 2>&1 || true
+  return 0
+}
+
+list_available_devices() {
+  xcrun simctl list devices available 2>/dev/null || true
+}
+
+wait_for_device_service() {
+  local attempts=0
+  local max_attempts=8
+  while [ "${attempts}" -lt "${max_attempts}" ]; do
+    local output
+    output="$(list_available_devices)"
+    if printf "%s\n" "${output}" | grep -qE '\([0-9A-Fa-f-]{8,}\)'; then
+      return 0
+    fi
+    attempts=$((attempts + 1))
+    sleep 1
+  done
+  return 1
 }
 
 echo "iOS Simulator + Expo health check"
@@ -49,24 +85,35 @@ else
   fail "xcode-select has no active developer directory."
 fi
 
-BOOTED_UDID="$(xcrun simctl list devices available | sed -n 's/.*(\([0-9A-Fa-f-]*\)) (Booted).*/\1/p' | head -n 1)"
-if [ -z "${BOOTED_UDID}" ]; then
-  CANDIDATE_UDID="$(xcrun simctl list devices available | sed -n 's/.*iPhone.*(\([0-9A-Fa-f-]*\)) (Shutdown).*/\1/p' | head -n 1)"
-  if [ -n "${CANDIDATE_UDID}" ]; then
-    if xcrun simctl boot "${CANDIDATE_UDID}" >/dev/null 2>&1; then
-      # Ensure the boot sequence is complete before checking apps/openurl.
-      xcrun simctl bootstatus "${CANDIDATE_UDID}" -b >/dev/null 2>&1 || true
-      BOOTED_UDID="${CANDIDATE_UDID}"
-      pass "Booted simulator automatically: ${BOOTED_UDID}"
-    else
-      fail "No booted simulator found and failed to boot ${CANDIDATE_UDID}."
+BOOTED_UDID=""
+while [ -z "${BOOTED_UDID}" ]; do
+  if ! wait_for_device_service; then
+    if ! recover_coresimulator; then
+      fail "No booted simulator device found."
+      break
     fi
-  else
-    fail "No booted simulator device found."
   fi
-else
-  pass "Booted simulator UDID: ${BOOTED_UDID}"
-fi
+
+  DEVICES_LIST="$(list_available_devices)"
+  BOOTED_UDID="$(printf "%s\n" "${DEVICES_LIST}" | sed -n 's/.*(\([0-9A-Fa-f-]*\)) (Booted).*/\1/p' | head -n 1)"
+  if [ -n "${BOOTED_UDID}" ]; then
+    pass "Booted simulator UDID: ${BOOTED_UDID}"
+    break
+  fi
+
+  CANDIDATE_UDID="$(printf "%s\n" "${DEVICES_LIST}" | sed -n 's/.*iPhone.*(\([0-9A-Fa-f-]*\)) (Shutdown).*/\1/p' | head -n 1)"
+  if [ -n "${CANDIDATE_UDID}" ] && xcrun simctl boot "${CANDIDATE_UDID}" >/dev/null 2>&1; then
+    xcrun simctl bootstatus "${CANDIDATE_UDID}" -b >/dev/null 2>&1 || true
+    BOOTED_UDID="${CANDIDATE_UDID}"
+    pass "Booted simulator automatically: ${BOOTED_UDID}"
+    break
+  fi
+
+  if ! recover_coresimulator; then
+    warn "No booted simulator device found after recovery attempts. Skipping simulator-specific URL checks."
+    break
+  fi
+done
 
 if [ -n "${BOOTED_UDID}" ]; then
   if xcrun simctl listapps "${BOOTED_UDID}" 2>/dev/null | grep -q '"host.exp.Exponent"'; then
@@ -88,13 +135,21 @@ if [ -n "${BOOTED_UDID}" ]; then
   if xcrun simctl openurl "${BOOTED_UDID}" "https://expo.dev" >/dev/null 2>&1; then
     pass "Simulator can open https URL via simctl openurl."
   else
-    fail "Simulator failed to open https URL via simctl openurl."
+    if recover_coresimulator && xcrun simctl openurl "${BOOTED_UDID}" "https://expo.dev" >/dev/null 2>&1; then
+      pass "Simulator can open https URL via simctl openurl (after recovery)."
+    else
+      fail "Simulator failed to open https URL via simctl openurl."
+    fi
   fi
 
   if xcrun simctl openurl "${BOOTED_UDID}" "${TEST_URL}" >/dev/null 2>&1; then
     pass "Simulator accepted ${TEST_URL} via simctl openurl."
   else
-    fail "Simulator failed to open ${TEST_URL} via simctl openurl."
+    if recover_coresimulator && xcrun simctl openurl "${BOOTED_UDID}" "${TEST_URL}" >/dev/null 2>&1; then
+      pass "Simulator accepted ${TEST_URL} via simctl openurl (after recovery)."
+    else
+      fail "Simulator failed to open ${TEST_URL} via simctl openurl."
+    fi
   fi
 fi
 

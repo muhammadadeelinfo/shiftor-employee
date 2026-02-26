@@ -20,7 +20,7 @@ const run = async () => {
   const languageAfterRestart = await loadStoredLanguage(storage, key!);
   assert.strictEqual(languageAfterRestart, 'de');
 
-  assert.strictEqual(getStartupRoute(false), '/startup');
+  assert.strictEqual(getStartupRoute(false), '/welcome');
   assert.strictEqual(getStartupRoute(true), '(tabs)/my-shifts');
 };
 
