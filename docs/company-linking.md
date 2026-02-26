@@ -19,7 +19,10 @@ insert into public.company_join_codes (company_id, code, is_active)
 values ('<company-uuid>', 'SHIFTOR-ACME', true);
 ```
 
-Codes are case-insensitive in the RPC.
+Codes are case-insensitive in the RPC. Optional controls are available:
+
+- `expires_at` to expire a code automatically.
+- `max_uses` to cap total successful first-time requests.
 
 ## 3. User flow
 
@@ -27,6 +30,7 @@ Codes are case-insensitive in the RPC.
 2. App stores that code in Supabase user metadata.
 3. On first login, app calls `request_employee_company_link(join_code, full_name)`.
 4. A row is created in `employee_company_links` with `status = 'pending'`.
+5. Invalid/expired/exhausted/rate-limited attempts are returned with explicit statuses.
 
 ## 4. Approve links (admin workflow)
 
@@ -52,10 +56,23 @@ This function:
 - maps user/company columns dynamically (`auth_user_id` / `user_id` / `employee_id` / `id`, and `company_id` / `companyId`)
 - fills `email`, `full_name` or `name`, and `status` when those columns exist
 
-To reject a request manually:
+To reject a request:
 
 ```sql
-update public.employee_company_links
-set status = 'rejected', updated_at = now()
-where id = '<link-id-uuid>';
+select public.reject_employee_company_link('<link-id-uuid>', 'Rejected by admin');
+```
+
+## 5. Audit trail
+
+All linking events are logged in:
+
+- `public.company_link_audit_logs`
+
+Example:
+
+```sql
+select action, actor_user_id, company_id, link_id, created_at
+from public.company_link_audit_logs
+order by created_at desc
+limit 50;
 ```

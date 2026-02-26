@@ -145,6 +145,12 @@ export default function LoginScreen() {
 
             if (status === 'invalid_code') {
               Alert.alert(t('companyLinkTitle'), t('companyLinkInvalidCodeBody'));
+            } else if (status === 'code_expired') {
+              Alert.alert(t('companyLinkTitle'), t('companyLinkCodeExpiredBody'));
+            } else if (status === 'code_exhausted') {
+              Alert.alert(t('companyLinkTitle'), t('companyLinkCodeExhaustedBody'));
+            } else if (status === 'rate_limited') {
+              Alert.alert(t('companyLinkTitle'), t('companyLinkRateLimitedBody'));
             } else if (ok) {
               Alert.alert(t('companyLinkTitle'), t('companyLinkRequestedBody'));
               await supabase.auth.updateUser({

@@ -8,9 +8,23 @@ create table if not exists public.company_join_codes (
   company_id uuid not null references public.companies (id) on delete cascade,
   code text not null unique,
   is_active boolean not null default true,
+  expires_at timestamptz,
+  max_uses integer check (max_uses is null or max_uses > 0),
+  use_count integer not null default 0,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
+
+alter table public.company_join_codes
+  add column if not exists expires_at timestamptz;
+alter table public.company_join_codes
+  add column if not exists max_uses integer;
+alter table public.company_join_codes
+  add column if not exists use_count integer not null default 0;
+alter table public.company_join_codes
+  drop constraint if exists company_join_codes_max_uses_check;
+alter table public.company_join_codes
+  add constraint company_join_codes_max_uses_check check (max_uses is null or max_uses > 0);
 
 comment on table public.company_join_codes is
   'Company-issued join codes that employees can enter during self-signup.';
@@ -31,8 +45,28 @@ create table if not exists public.employee_company_links (
 comment on table public.employee_company_links is
   'Tracks company association requests from self-signup users.';
 
+create table if not exists public.company_link_audit_logs (
+  id uuid primary key default gen_random_uuid(),
+  company_id uuid not null references public.companies (id) on delete cascade,
+  actor_user_id uuid references auth.users (id) on delete set null,
+  link_id uuid references public.employee_company_links (id) on delete set null,
+  code_id uuid references public.company_join_codes (id) on delete set null,
+  action text not null,
+  metadata jsonb,
+  created_at timestamptz not null default now()
+);
+
+comment on table public.company_link_audit_logs is
+  'Audit trail for employee-company linking lifecycle events.';
+
+create index if not exists company_link_audit_logs_company_created_idx
+  on public.company_link_audit_logs (company_id, created_at desc);
+create index if not exists company_link_audit_logs_actor_created_idx
+  on public.company_link_audit_logs (actor_user_id, created_at desc);
+
 alter table public.company_join_codes enable row level security;
 alter table public.employee_company_links enable row level security;
+alter table public.company_link_audit_logs enable row level security;
 
 drop policy if exists "Users can view own company links" on public.employee_company_links;
 create policy "Users can view own company links"
@@ -50,27 +84,109 @@ as $$
 declare
   caller_id uuid := auth.uid();
   normalized_code text := upper(trim(join_code));
+  code_record public.company_join_codes%rowtype;
   target_company_id uuid;
+  resolved_email text;
+  recent_attempt_count integer := 0;
+  existing_link_id uuid;
   resolved_status text;
 begin
   if caller_id is null then
     raise exception 'Authentication required';
   end if;
 
+  select count(*)
+  into recent_attempt_count
+  from public.company_link_audit_logs
+  where actor_user_id = caller_id
+    and action in (
+      'request_submitted',
+      'request_invalid_code',
+      'request_code_expired',
+      'request_code_exhausted',
+      'request_rate_limited'
+    )
+    and created_at >= now() - interval '10 minutes';
+
+  if recent_attempt_count >= 20 then
+    insert into public.company_link_audit_logs (company_id, actor_user_id, action, metadata)
+    values (
+      coalesce((select company_id from public.employee_company_links where user_id = caller_id order by updated_at desc limit 1), null),
+      caller_id,
+      'request_rate_limited',
+      jsonb_build_object('code', normalized_code)
+    );
+    return jsonb_build_object('ok', false, 'status', 'rate_limited');
+  end if;
+
   if normalized_code is null or normalized_code = '' then
+    insert into public.company_link_audit_logs (company_id, actor_user_id, action, metadata)
+    values (
+      coalesce((select company_id from public.employee_company_links where user_id = caller_id order by updated_at desc limit 1), null),
+      caller_id,
+      'request_invalid_code',
+      jsonb_build_object('reason', 'empty')
+    );
     return jsonb_build_object('ok', false, 'status', 'invalid_code');
   end if;
 
-  select cjc.company_id
-  into target_company_id
+  select cjc.*
+  into code_record
   from public.company_join_codes cjc
   where upper(cjc.code) = normalized_code
     and cjc.is_active = true
   limit 1;
 
-  if target_company_id is null then
+  if code_record.id is null then
+    insert into public.company_link_audit_logs (company_id, actor_user_id, action, metadata)
+    values (null, caller_id, 'request_invalid_code', jsonb_build_object('code', normalized_code));
     return jsonb_build_object('ok', false, 'status', 'invalid_code');
   end if;
+
+  target_company_id := code_record.company_id;
+
+  if code_record.expires_at is not null and code_record.expires_at <= now() then
+    insert into public.company_link_audit_logs (company_id, actor_user_id, action, code_id, metadata)
+    values (
+      target_company_id,
+      caller_id,
+      'request_code_expired',
+      code_record.id,
+      jsonb_build_object('code', normalized_code)
+    );
+    return jsonb_build_object('ok', false, 'status', 'code_expired');
+  end if;
+
+  if code_record.max_uses is not null and code_record.use_count >= code_record.max_uses then
+    insert into public.company_link_audit_logs (company_id, actor_user_id, action, code_id, metadata)
+    values (
+      target_company_id,
+      caller_id,
+      'request_code_exhausted',
+      code_record.id,
+      jsonb_build_object('code', normalized_code)
+    );
+    return jsonb_build_object('ok', false, 'status', 'code_exhausted');
+  end if;
+
+  select id
+  into existing_link_id
+  from public.employee_company_links
+  where user_id = caller_id
+    and company_id = target_company_id
+  limit 1;
+
+  if existing_link_id is null then
+    update public.company_join_codes
+    set use_count = use_count + 1,
+        updated_at = now()
+    where id = code_record.id;
+  end if;
+
+  select email
+  into resolved_email
+  from auth.users
+  where id = caller_id;
 
   insert into public.employee_company_links (
     user_id,
@@ -86,7 +202,7 @@ begin
     'pending',
     normalized_code,
     nullif(trim(full_name), ''),
-    (select email from auth.users where id = caller_id)
+    resolved_email
   )
   on conflict (user_id, company_id)
   do update set
@@ -99,6 +215,25 @@ begin
     end,
     updated_at = now()
   returning status into resolved_status;
+
+  insert into public.company_link_audit_logs (
+    company_id,
+    actor_user_id,
+    code_id,
+    action,
+    metadata
+  )
+  values (
+    target_company_id,
+    caller_id,
+    code_record.id,
+    'request_submitted',
+    jsonb_build_object(
+      'code', normalized_code,
+      'status', resolved_status,
+      'hadExistingLink', existing_link_id is not null
+    )
+  );
 
   return jsonb_build_object(
     'ok', true,
@@ -151,6 +286,14 @@ begin
   end if;
 
   if link_record.status = 'active' then
+    insert into public.company_link_audit_logs (company_id, actor_user_id, link_id, action, metadata)
+    values (
+      link_record.company_id,
+      auth.uid(),
+      link_record.id,
+      'approve_skipped_already_active',
+      jsonb_build_object('userId', link_record.user_id)
+    );
     return jsonb_build_object(
       'ok', true,
       'status', 'already_active',
@@ -302,6 +445,15 @@ begin
   set status = 'active', updated_at = now()
   where id = link_record.id;
 
+  insert into public.company_link_audit_logs (company_id, actor_user_id, link_id, action, metadata)
+  values (
+    link_record.company_id,
+    auth.uid(),
+    link_record.id,
+    'approved',
+    jsonb_build_object('userId', link_record.user_id)
+  );
+
   return jsonb_build_object(
     'ok', true,
     'status', 'approved',
@@ -314,3 +466,57 @@ $$;
 revoke all on function public.approve_employee_company_link(uuid) from public;
 revoke all on function public.approve_employee_company_link(uuid) from authenticated;
 grant execute on function public.approve_employee_company_link(uuid) to service_role;
+
+drop function if exists public.reject_employee_company_link(uuid, text);
+create or replace function public.reject_employee_company_link(link_id uuid, reason text default null)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  link_record public.employee_company_links%rowtype;
+begin
+  if link_id is null then
+    raise exception 'link_id is required';
+  end if;
+
+  select *
+  into link_record
+  from public.employee_company_links
+  where id = link_id
+  for update;
+
+  if not found then
+    return jsonb_build_object('ok', false, 'status', 'not_found');
+  end if;
+
+  if link_record.status <> 'pending' then
+    return jsonb_build_object('ok', false, 'status', 'not_pending');
+  end if;
+
+  update public.employee_company_links
+  set status = 'rejected', updated_at = now()
+  where id = link_record.id;
+
+  insert into public.company_link_audit_logs (company_id, actor_user_id, link_id, action, metadata)
+  values (
+    link_record.company_id,
+    auth.uid(),
+    link_record.id,
+    'rejected',
+    jsonb_build_object('reason', nullif(trim(reason), ''))
+  );
+
+  return jsonb_build_object(
+    'ok', true,
+    'status', 'rejected',
+    'companyId', link_record.company_id,
+    'userId', link_record.user_id
+  );
+end;
+$$;
+
+revoke all on function public.reject_employee_company_link(uuid, text) from public;
+revoke all on function public.reject_employee_company_link(uuid, text) from authenticated;
+grant execute on function public.reject_employee_company_link(uuid, text) to service_role;

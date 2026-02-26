@@ -324,6 +324,12 @@ export const deTranslations = {
       'Deine Anfrage für den Firmenzugriff wurde gesendet. Nach Freigabe durch die Firma werden deine Schichten angezeigt.',
     companyLinkInvalidCodeBody:
       'Der Firmen-Code wurde nicht erkannt. Bitte frage deinen Arbeitgeber nach einem gültigen Code und versuche es erneut.',
+    companyLinkCodeExpiredBody:
+      'Dieser Firmen-Code ist abgelaufen. Bitte frage deinen Arbeitgeber nach einem neuen Code.',
+    companyLinkCodeExhaustedBody:
+      'Dieser Firmen-Code hat das Nutzungslimit erreicht. Bitte frage deinen Arbeitgeber nach einem neuen Code.',
+    companyLinkRateLimitedBody:
+      'Zu viele Versuche in kurzer Zeit. Bitte warte ein paar Minuten und versuche es erneut.',
     companyLinkEnterCodeBody: 'Gib deinen Firmen-Code ein, um Zugriff anzufragen.',
     companyJoinSectionTitle: 'Firma verbinden',
     companyJoinSectionHint:

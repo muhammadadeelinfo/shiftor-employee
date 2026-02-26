@@ -322,6 +322,12 @@ export const enTranslations = {
       'Your company access request was sent. You will see shifts after your company approves your account.',
     companyLinkInvalidCodeBody:
       'The company code was not recognized. Ask your employer for a valid company code and try again.',
+    companyLinkCodeExpiredBody:
+      'This company code has expired. Ask your employer for a new company code.',
+    companyLinkCodeExhaustedBody:
+      'This company code has reached its usage limit. Ask your employer for a new company code.',
+    companyLinkRateLimitedBody:
+      'Too many attempts in a short time. Please wait a few minutes and try again.',
     companyLinkEnterCodeBody: 'Enter your company code to request access.',
     companyJoinSectionTitle: 'Join your company',
     companyJoinSectionHint:

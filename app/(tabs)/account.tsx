@@ -434,6 +434,18 @@ export default function AccountScreen() {
         Alert.alert(t('companyLinkTitle'), t('companyLinkInvalidCodeBody'));
         return;
       }
+      if (status === 'code_expired') {
+        Alert.alert(t('companyLinkTitle'), t('companyLinkCodeExpiredBody'));
+        return;
+      }
+      if (status === 'code_exhausted') {
+        Alert.alert(t('companyLinkTitle'), t('companyLinkCodeExhaustedBody'));
+        return;
+      }
+      if (status === 'rate_limited') {
+        Alert.alert(t('companyLinkTitle'), t('companyLinkRateLimitedBody'));
+        return;
+      }
 
       if (ok) {
         Alert.alert(t('companyLinkTitle'), t('companyLinkRequestedBody'));
