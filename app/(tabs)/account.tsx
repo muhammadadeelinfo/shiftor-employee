@@ -407,6 +407,18 @@ export default function AccountScreen() {
   const handleHelpCenter = async () => {
     await openExternalUrl(t('supportHelpCenter'), supportPageUrl, SUPPORT_FALLBACK_URL);
   };
+  const confirmCompanySwitch = () =>
+    new Promise<boolean>((resolve) => {
+      Alert.alert(
+        t('companySwitchConfirmTitle'),
+        t('companySwitchConfirmBody'),
+        [
+          { text: t('commonCancel') || 'Cancel', style: 'cancel', onPress: () => resolve(false) },
+          { text: t('commonContinue') || 'Continue', onPress: () => resolve(true) },
+        ],
+        { cancelable: true, onDismiss: () => resolve(false) }
+      );
+    });
   const handleRequestCompanyAccess = async () => {
     const normalizedJoinCode = joinCode.trim().toUpperCase();
     if (!normalizedJoinCode) {
@@ -416,6 +428,12 @@ export default function AccountScreen() {
     if (!supabase) {
       Alert.alert(t('companyLinkTitle'), t('authClientUnavailable'));
       return;
+    }
+    if (isSwitchFlow) {
+      const confirmed = await confirmCompanySwitch();
+      if (!confirmed) {
+        return;
+      }
     }
 
     try {

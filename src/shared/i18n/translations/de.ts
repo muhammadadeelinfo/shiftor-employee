@@ -342,6 +342,9 @@ export const deTranslations = {
     companySwitchSectionHint:
       'Gib einen anderen Firmen-Code ein, um den Wechsel deines Kontos zu einer anderen Firma anzufragen.',
     companySwitchRequestButton: 'Firmenwechsel anfragen',
+    companySwitchConfirmTitle: 'Firmenwechsel bestätigen',
+    companySwitchConfirmBody:
+      'Damit beantragst du den Wechsel deines Kontos zu einer anderen Firma. Fortfahren?',
     companyJoinPendingHint: 'Für dein Konto ist bereits eine Firmenzugriff-Anfrage offen.',
     securityResetLinkSent: 'Link zum Zurücksetzen des Passworts wurde an {email} gesendet.',
     securitySessionsSignedOutOthers: 'Du wurdest von anderen aktiven Sitzungen abgemeldet.',
@@ -372,6 +375,8 @@ export const deTranslations = {
     startupJobsLoading: 'Startup-Jobs werden geladen...',
     startupJobsNoMatches: 'Keine passenden Jobs.',
     startupJobsApplyNow: 'Jetzt bewerben',
+    commonCancel: 'Abbrechen',
+    commonContinue: 'Weiter',
     startupJobsOpenLinkFailed: 'Der Job-Link konnte nicht geöffnet werden.',
     startupJobsMissingApiBaseUrl: 'API-Basis-URL fehlt. API_BASE_URL in der Umgebung setzen.',
     startupJobsMissingAccessToken: 'Bitte anmelden, um Jobs zu laden.',

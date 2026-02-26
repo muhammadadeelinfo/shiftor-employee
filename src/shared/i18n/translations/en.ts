@@ -340,6 +340,9 @@ export const enTranslations = {
     companySwitchSectionHint:
       'Enter another company code to request switching your account to a different company.',
     companySwitchRequestButton: 'Request company switch',
+    companySwitchConfirmTitle: 'Confirm company switch',
+    companySwitchConfirmBody:
+      'This will request moving your account to another company. Continue?',
     companyJoinPendingHint: 'A company access request is already pending for your account.',
     securityResetLinkSent: 'Password reset link sent to {email}.',
     securitySessionsSignedOutOthers: 'Signed out from other active sessions.',
@@ -370,6 +373,8 @@ export const enTranslations = {
     startupJobsApplyNow: 'Apply now',
     startupJobsOpenLinkFailed: 'Unable to open the job link.',
     startupJobsMissingApiBaseUrl: 'Missing API base URL. Set API_BASE_URL in environment.',
+    commonCancel: 'Cancel',
+    commonContinue: 'Continue',
     startupJobsMissingAccessToken: 'Please sign in to load jobs.',
     startupJobsLoadFailed: 'Failed to load startup jobs.',
     startupHealthChecksRunning: 'Running startup health checks...',
