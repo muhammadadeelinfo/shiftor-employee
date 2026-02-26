@@ -85,7 +85,7 @@ export const deTranslations = {
     security: 'Sicherheit',
     securitySectionTitle: 'Sicherheit',
     notificationsSectionTitle: 'Benachrichtigungen',
-    supportSectionTitle: 'Support',
+    supportSectionTitle: 'Hilfe & Support',
     accountSnapshot: 'Kontenübersicht',
     preferencesTitle: 'Einstellungen',
     securityResetPassword: 'Passwort zurücksetzen',
@@ -264,7 +264,7 @@ export const deTranslations = {
     tabAccount: 'Konto',
     tabNotifications: 'Benachrichtigungen',
     tabQuickActions: 'Schnellaktionen',
-    loginTitle: 'Employee Portal',
+    loginTitle: 'Mitarbeiterportal',
     loginCreateTitle: 'Konto erstellen',
     loginSignInSubtitle: 'Mit deinen Firmen-Zugangsdaten anmelden.',
     loginEmailPlaceholder: 'du@firma.de',
@@ -400,7 +400,7 @@ export const deTranslations = {
     appErrorTitle: 'Etwas ist schiefgelaufen',
     appErrorBody:
       'Die App hat einen unerwarteten Fehler abgefangen. Bitte versuche es erneut. Wenn es weiterhin passiert, starte die App neu.',
-    notFoundHeading: 'Employee Portal',
+    notFoundHeading: 'Mitarbeiterportal',
     notFoundSummaryOne:
       'Employee Portal ist eine Expo-App mit Supabase für Schichtdaten sowie gemeinsamer Prisma/Next.js-Integration.',
     notFoundSummaryTwo:
