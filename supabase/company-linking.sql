@@ -553,3 +553,57 @@ $$;
 revoke all on function public.reject_employee_company_link(uuid, text) from public;
 revoke all on function public.reject_employee_company_link(uuid, text) from authenticated;
 grant execute on function public.reject_employee_company_link(uuid, text) to service_role;
+
+drop function if exists public.get_employee_current_company_profile(uuid);
+create or replace function public.get_employee_current_company_profile(target_company_id uuid default null)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  caller_id uuid := auth.uid();
+  resolved_company_id uuid;
+  result jsonb;
+begin
+  if caller_id is null then
+    raise exception 'Authentication required';
+  end if;
+
+  if target_company_id is not null then
+    select ecl.company_id
+    into resolved_company_id
+    from public.employee_company_links ecl
+    where ecl.user_id = caller_id
+      and ecl.company_id = target_company_id
+      and ecl.status = 'active'
+    order by ecl.updated_at desc
+    limit 1;
+  end if;
+
+  if resolved_company_id is null then
+    select ecl.company_id
+    into resolved_company_id
+    from public.employee_company_links ecl
+    where ecl.user_id = caller_id
+      and ecl.status = 'active'
+    order by ecl.updated_at desc
+    limit 1;
+  end if;
+
+  if resolved_company_id is null then
+    return null;
+  end if;
+
+  select to_jsonb(c)
+  into result
+  from public.companies c
+  where c.id = resolved_company_id
+  limit 1;
+
+  return result;
+end;
+$$;
+
+revoke all on function public.get_employee_current_company_profile(uuid) from public;
+grant execute on function public.get_employee_current_company_profile(uuid) to authenticated;

@@ -1,7 +1,8 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Alert,
   FlatList,
+  Image,
   Linking,
   Platform,
   StyleSheet,
@@ -25,7 +26,6 @@ import { supabase } from '@lib/supabaseClient';
 import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
 import { layoutTokens } from '@shared/theme/layout';
 import { useRouter } from 'expo-router';
-import { openAddressInMaps } from '@shared/utils/maps';
 import {
   shouldStackForCompactWidth,
 } from '@shared/utils/responsiveLayout';
@@ -53,6 +53,44 @@ const isMissingColumnError = (error: unknown) =>
   error !== null &&
   'code' in error &&
   (error as { code?: string }).code === '42703';
+
+const isMissingFunctionError = (error: unknown) => {
+  if (!error || typeof error !== 'object') return false;
+  const code = 'code' in error ? String((error as { code?: unknown }).code ?? '') : '';
+  const message = 'message' in error ? String((error as { message?: unknown }).message ?? '') : '';
+  return code === '42883' || code === 'PGRST202' || /function .* does not exist/i.test(message);
+};
+
+const isRpcSignatureMismatchError = (error: unknown) => {
+  if (!error || typeof error !== 'object') return false;
+  const code = 'code' in error ? String((error as { code?: unknown }).code ?? '') : '';
+  const message = 'message' in error ? String((error as { message?: unknown }).message ?? '') : '';
+  return (
+    code === 'PGRST202' ||
+    code === '42883' ||
+    /Could not find the function/i.test(message) ||
+    /request_employee_company_link/i.test(message)
+  );
+};
+
+const getReadableErrorMessage = (error: unknown, fallback: string) => {
+  if (error instanceof Error && error.message.trim()) {
+    return error.message;
+  }
+  if (typeof error === 'string' && error.trim()) {
+    return error;
+  }
+  if (error && typeof error === 'object') {
+    const knownKeys = ['message', 'error_description', 'details', 'hint'] as const;
+    for (const key of knownKeys) {
+      const value = (error as Record<string, unknown>)[key];
+      if (typeof value === 'string' && value.trim()) {
+        return value;
+      }
+    }
+  }
+  return fallback;
+};
 
 const fetchEmployeeProfile = async (
   employeeId: string,
@@ -123,6 +161,17 @@ const fetchCompanySummary = async (companyId: string): Promise<CompanySummary | 
   if (!supabase) {
     return null;
   }
+  const { data: rpcData, error: rpcError } = await supabase.rpc(
+    'get_employee_current_company_profile',
+    { target_company_id: companyId }
+  );
+  if (!rpcError && rpcData && typeof rpcData === 'object' && !Array.isArray(rpcData)) {
+    return rpcData as CompanySummary;
+  }
+  if (rpcError && !isMissingFunctionError(rpcError)) {
+    console.warn('Failed to load company summary via RPC', rpcError);
+  }
+
   const { data, error } = await supabase
     .from('companies')
     .select('*')
@@ -141,6 +190,34 @@ const fetchCompanySummary = async (companyId: string): Promise<CompanySummary | 
     return null;
   }
   return data as CompanySummary;
+};
+
+const requestCompanyLink = async (joinCode: string, fullName: string) => {
+  if (!supabase) {
+    throw new Error('Supabase client not configured');
+  }
+  const attempts: Array<Record<string, unknown>> = [
+    { join_code: joinCode, full_name: fullName },
+    { join_code: joinCode },
+  ];
+
+  let lastSignatureError: unknown = null;
+  for (const params of attempts) {
+    const { data, error } = await supabase.rpc('request_employee_company_link', params);
+    if (!error) {
+      return data;
+    }
+    if (isRpcSignatureMismatchError(error)) {
+      lastSignatureError = error;
+      continue;
+    }
+    throw error;
+  }
+
+  if (lastSignatureError) {
+    throw lastSignatureError;
+  }
+  throw new Error('Failed to request company link.');
 };
 
 const getStringField = (source?: Record<string, unknown>, key?: string) => {
@@ -263,6 +340,74 @@ const getLinkedCompanyId = (
   return getStringField(metadata, 'companyId') ?? getStringField(metadata, 'company_id');
 };
 
+const getCompanyAddress = (source?: Record<string, unknown> | null) => {
+  if (!source) return undefined;
+  const direct = [
+    'address',
+    'full_address',
+    'fullAddress',
+    'street_address',
+    'streetAddress',
+    'location',
+  ]
+    .map((key) => getStringField(source, key))
+    .find(Boolean);
+  if (direct) return direct;
+
+  const composed = [
+    'line1',
+    'line2',
+    'street',
+    'city',
+    'state',
+    'postal_code',
+    'postalCode',
+    'country',
+  ]
+    .map((key) => getStringField(source, key))
+    .filter((part): part is string => Boolean(part));
+  return composed.length ? composed.join(', ') : undefined;
+};
+
+const getEmployeeCompanyAddress = (source?: Record<string, unknown> | null) => {
+  if (!source) return undefined;
+
+  const direct = [
+    'companyAddress',
+    'company_address',
+    'companyFullAddress',
+    'company_full_address',
+    'companyStreetAddress',
+    'company_street_address',
+    'companyLocation',
+    'company_location',
+  ]
+    .map((key) => getStringField(source, key))
+    .find(Boolean);
+  if (direct) return direct;
+
+  const composed = [
+    'companyLine1',
+    'company_line1',
+    'companyLine2',
+    'company_line2',
+    'companyStreet',
+    'company_street',
+    'companyCity',
+    'company_city',
+    'companyState',
+    'company_state',
+    'companyPostalCode',
+    'company_postal_code',
+    'companyCountry',
+    'company_country',
+  ]
+    .map((key) => getStringField(source, key))
+    .filter((part): part is string => Boolean(part));
+
+  return composed.length ? composed.join(', ') : undefined;
+};
+
 const getMetadataPhoneDeep = (metadata?: Record<string, unknown>) =>
   getPhoneNumber(metadata) ??
   getNestedString(metadata, ['contact', 'phone']) ??
@@ -344,6 +489,7 @@ export default function AccountScreen() {
   });
   const requestedCompanyCode = getStringField(metadataRecord, 'requested_company_code');
   const [joinCode, setJoinCode] = useState(requestedCompanyCode ?? '');
+  const joinCodeInputRef = useRef<TextInput | null>(null);
   const [linkingCompany, setLinkingCompany] = useState(false);
   const canRequestCompanyAccess = Boolean(user?.id);
   const isSwitchFlow = Boolean(linkedCompanyId);
@@ -352,11 +498,25 @@ export default function AccountScreen() {
     getStringField(employeeRecord ?? undefined, 'companyName') ??
     getStringField(employeeRecord ?? undefined, 'company_name') ??
     t('companyUnknownName');
-  const currentCompanyStatus =
-    getStringField(companySummary ?? undefined, 'status') ??
-    getStringField(employeeRecord ?? undefined, 'companyStatus') ??
-    getStringField(employeeRecord ?? undefined, 'company_status') ??
+  const currentCompanyLogoUrl =
+    getStringField(companySummary ?? undefined, 'logo_url') ??
+    getStringField(companySummary ?? undefined, 'logoUrl') ??
+    getStringField(companySummary ?? undefined, 'logo') ??
+    getStringField(employeeRecord ?? undefined, 'companyLogoUrl') ??
+    getStringField(employeeRecord ?? undefined, 'company_logo_url') ??
+    getStringField(employeeRecord ?? undefined, 'companyLogo') ??
+    getStringField(employeeRecord ?? undefined, 'company_logo');
+  const currentCompanyAddress =
+    getCompanyAddress(companySummary ?? undefined) ??
+    getEmployeeCompanyAddress(employeeRecord ?? undefined) ??
     t('notProvided');
+  const currentCompanyInitials = currentCompanyName
+    .split(' ')
+    .filter(Boolean)
+    .map((part) => part[0])
+    .slice(0, 2)
+    .join('')
+    .toUpperCase();
   const handleSignOut = () => {
     signOut();
   };
@@ -480,11 +640,7 @@ export default function AccountScreen() {
     try {
       setLinkingCompany(true);
       const fullName = getStringField(metadataRecord, 'full_name') ?? profileName(user);
-      const { data, error } = await supabase.rpc('request_employee_company_link', {
-        join_code: normalizedJoinCode,
-        full_name: fullName,
-      });
-      if (error) throw error;
+      const data = await requestCompanyLink(normalizedJoinCode, fullName);
 
       const payload = data && typeof data === 'object' ? (data as Record<string, unknown>) : {};
       const status = typeof payload.status === 'string' ? payload.status : null;
@@ -522,7 +678,7 @@ export default function AccountScreen() {
         );
       }
     } catch (error) {
-      Alert.alert(t('companyLinkTitle'), error instanceof Error ? error.message : t('authUnableSignIn'));
+      Alert.alert(t('companyLinkTitle'), getReadableErrorMessage(error, t('authUnableSignIn')));
     } finally {
       setLinkingCompany(false);
     }
@@ -826,29 +982,41 @@ export default function AccountScreen() {
                     <Text style={[styles.contactSectionTitle, { color: theme.textSecondary }]}>
                       {t('companyCurrentInfoLabel')}
                     </Text>
-                    <View style={styles.aboutMetaList}>
-                      <View style={[styles.aboutMetaRow, { borderColor: theme.borderSoft }]}>
-                        <Text style={[styles.aboutMetaLabel, { color: theme.textSecondary }]}>
-                          {t('companyCurrentNameLabel')}
-                        </Text>
-                        <Text style={[styles.aboutMetaValue, { color: theme.textPrimary }]}>
-                          {currentCompanyName}
-                        </Text>
+                    <View
+                      style={[
+                        styles.companyInfoCard,
+                        { backgroundColor: theme.surfaceMuted, borderColor: theme.borderSoft },
+                      ]}
+                    >
+                      <View style={[styles.companyProfileTop, { borderColor: theme.borderSoft }]}>
+                        <View style={[styles.companyLogoFrame, { borderColor: theme.borderSoft }]}>
+                          {currentCompanyLogoUrl ? (
+                            <Image
+                              source={{ uri: currentCompanyLogoUrl }}
+                              style={styles.companyLogoPreview}
+                              resizeMode="contain"
+                            />
+                          ) : (
+                            <Text style={[styles.companyLogoFallbackText, { color: theme.textPrimary }]}>
+                              {currentCompanyInitials || 'CO'}
+                            </Text>
+                          )}
+                        </View>
+                        <View style={styles.companyProfileBody}>
+                          <Text style={[styles.companyProfileLabel, { color: theme.textSecondary }]}>
+                            {t('companyCurrentNameLabel')}
+                          </Text>
+                          <Text style={[styles.companyProfileName, { color: theme.textPrimary }]}>
+                            {currentCompanyName}
+                          </Text>
+                        </View>
                       </View>
-                      <View style={[styles.aboutMetaRow, { borderColor: theme.borderSoft }]}>
-                        <Text style={[styles.aboutMetaLabel, { color: theme.textSecondary }]}>
-                          {t('companyCurrentIdLabel')}
+                      <View style={[styles.companyAddressRow, { borderColor: theme.borderSoft }]}>
+                        <Text style={[styles.companyProfileLabel, { color: theme.textSecondary }]}>
+                          {t('companyCurrentAddressLabel')}
                         </Text>
-                        <Text style={[styles.aboutMetaValue, { color: theme.textPrimary }]}>
-                          {linkedCompanyId}
-                        </Text>
-                      </View>
-                      <View style={[styles.aboutMetaRow, { borderColor: theme.borderSoft }]}>
-                        <Text style={[styles.aboutMetaLabel, { color: theme.textSecondary }]}>
-                          {t('companyCurrentStatusLabel')}
-                        </Text>
-                        <Text style={[styles.aboutMetaValue, { color: theme.textPrimary }]}>
-                          {currentCompanyStatus}
+                        <Text style={[styles.companyAddressValue, { color: theme.textPrimary }]}>
+                          {currentCompanyAddress}
                         </Text>
                       </View>
                     </View>
@@ -857,23 +1025,29 @@ export default function AccountScreen() {
                 <Text style={[styles.sectionHint, { color: theme.textSecondary }]}>
                   {isSwitchFlow ? t('companySwitchSectionHint') : t('companyJoinSectionHint')}
                 </Text>
-                <View
+                <TouchableOpacity
+                  activeOpacity={1}
+                  onPress={() => joinCodeInputRef.current?.focus()}
+                  disabled={linkingCompany}
                   style={[
                     styles.companyJoinInputWrap,
                     { backgroundColor: theme.surfaceMuted, borderColor: theme.borderSoft },
                   ]}
                 >
                   <TextInput
+                    ref={joinCodeInputRef}
                     value={joinCode}
                     onChangeText={setJoinCode}
                     placeholder={t('companyJoinCodePlaceholder')}
                     placeholderTextColor={theme.textPlaceholder}
                     autoCapitalize="characters"
                     autoCorrect={false}
+                    autoComplete="off"
                     editable={!linkingCompany}
+                    returnKeyType="done"
                     style={[styles.companyJoinInput, { color: theme.textPrimary }]}
                   />
-                </View>
+                </TouchableOpacity>
                 {requestedCompanyCode ? (
                   <Text style={[styles.companyJoinPendingText, { color: theme.textSecondary }]}>
                     {t('companyJoinPendingHint')}
@@ -1399,6 +1573,70 @@ const styles = StyleSheet.create({
   aboutMetaValue: {
     fontSize: 13,
     fontWeight: '700',
+    flex: 1,
+    textAlign: 'right',
+  },
+  companyInfoCard: {
+    marginTop: 2,
+    borderWidth: 1,
+    borderRadius: 14,
+    paddingHorizontal: 12,
+    paddingTop: 8,
+    paddingBottom: 10,
+  },
+  companyProfileTop: {
+    borderBottomWidth: 1,
+    paddingBottom: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  companyLogoFrame: {
+    width: 52,
+    height: 52,
+    borderRadius: 14,
+    borderWidth: 1,
+    backgroundColor: 'rgba(148, 163, 184, 0.12)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  companyLogoPreview: {
+    width: 42,
+    height: 42,
+    borderRadius: 10,
+    backgroundColor: 'rgba(148, 163, 184, 0.15)',
+  },
+  companyLogoFallbackText: {
+    fontSize: 16,
+    fontWeight: '800',
+    letterSpacing: 0.2,
+  },
+  companyProfileBody: {
+    flex: 1,
+    minWidth: 0,
+  },
+  companyProfileLabel: {
+    fontSize: 11,
+    fontWeight: '600',
+    textTransform: 'uppercase',
+    letterSpacing: 0.45,
+    marginBottom: 2,
+  },
+  companyProfileName: {
+    fontSize: 20,
+    fontWeight: '800',
+    lineHeight: 24,
+  },
+  companyAddressRow: {
+    paddingTop: 10,
+    paddingBottom: 4,
+    gap: 6,
+  },
+  companyAddressValue: {
+    fontSize: 14,
+    fontWeight: '500',
+    lineHeight: 21,
+    textAlign: 'left',
   },
   companyJoinInputWrap: {
     borderWidth: 1,
