@@ -322,6 +322,8 @@ export const deTranslations = {
     companyLinkTitle: 'Firmenzugriff',
     companyLinkRequestedBody:
       'Deine Anfrage für den Firmenzugriff wurde gesendet. Nach Freigabe durch die Firma werden deine Schichten angezeigt.',
+    companyLinkSwitchRequestedBody:
+      'Deine Firmenwechsel-Anfrage wurde gesendet. Nach Freigabe kannst du die neue Firma nutzen.',
     companyLinkInvalidCodeBody:
       'Der Firmen-Code wurde nicht erkannt. Bitte frage deinen Arbeitgeber nach einem gültigen Code und versuche es erneut.',
     companyLinkCodeExpiredBody:
@@ -336,6 +338,10 @@ export const deTranslations = {
       'Wenn du bereits ein Mitarbeiterkonto hast, gib deinen Firmen-Code ein, um Zugriff anzufragen.',
     companyJoinCodePlaceholder: 'Firmen-Code',
     companyJoinRequestButton: 'Firmenzugriff anfragen',
+    companySwitchSectionTitle: 'Firma wechseln',
+    companySwitchSectionHint:
+      'Gib einen anderen Firmen-Code ein, um den Wechsel deines Kontos zu einer anderen Firma anzufragen.',
+    companySwitchRequestButton: 'Firmenwechsel anfragen',
     companyJoinPendingHint: 'Für dein Konto ist bereits eine Firmenzugriff-Anfrage offen.',
     securityResetLinkSent: 'Link zum Zurücksetzen des Passworts wurde an {email} gesendet.',
     securitySessionsSignedOutOthers: 'Du wurdest von anderen aktiven Sitzungen abgemeldet.',

@@ -141,6 +141,8 @@ export default function LoginScreen() {
             const payload =
               linkData && typeof linkData === 'object' ? (linkData as Record<string, unknown>) : {};
             const status = typeof payload.status === 'string' ? payload.status : null;
+            const requestedAction =
+              typeof payload.requestedAction === 'string' ? payload.requestedAction : 'join';
             const ok = payload.ok === true;
 
             if (status === 'invalid_code') {
@@ -152,7 +154,12 @@ export default function LoginScreen() {
             } else if (status === 'rate_limited') {
               Alert.alert(t('companyLinkTitle'), t('companyLinkRateLimitedBody'));
             } else if (ok) {
-              Alert.alert(t('companyLinkTitle'), t('companyLinkRequestedBody'));
+              Alert.alert(
+                t('companyLinkTitle'),
+                requestedAction === 'switch'
+                  ? t('companyLinkSwitchRequestedBody')
+                  : t('companyLinkRequestedBody')
+              );
               await supabase.auth.updateUser({
                 data: {
                   ...(authedUser.user_metadata ?? {}),

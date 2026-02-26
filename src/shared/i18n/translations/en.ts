@@ -320,6 +320,8 @@ export const enTranslations = {
     companyLinkTitle: 'Company access',
     companyLinkRequestedBody:
       'Your company access request was sent. You will see shifts after your company approves your account.',
+    companyLinkSwitchRequestedBody:
+      'Your company switch request was sent. You can use the new company after approval.',
     companyLinkInvalidCodeBody:
       'The company code was not recognized. Ask your employer for a valid company code and try again.',
     companyLinkCodeExpiredBody:
@@ -334,6 +336,10 @@ export const enTranslations = {
       'If you already have an employee account, enter your company code to request access.',
     companyJoinCodePlaceholder: 'Company code',
     companyJoinRequestButton: 'Request company access',
+    companySwitchSectionTitle: 'Switch company',
+    companySwitchSectionHint:
+      'Enter another company code to request switching your account to a different company.',
+    companySwitchRequestButton: 'Request company switch',
     companyJoinPendingHint: 'A company access request is already pending for your account.',
     securityResetLinkSent: 'Password reset link sent to {email}.',
     securitySessionsSignedOutOthers: 'Signed out from other active sessions.',

@@ -42,12 +42,16 @@ create table if not exists public.employee_company_links (
   unique (user_id, company_id)
 );
 
+create unique index if not exists employee_company_links_user_active_unique
+  on public.employee_company_links (user_id)
+  where status = 'active';
+
 comment on table public.employee_company_links is
   'Tracks company association requests from self-signup users.';
 
 create table if not exists public.company_link_audit_logs (
   id uuid primary key default gen_random_uuid(),
-  company_id uuid not null references public.companies (id) on delete cascade,
+  company_id uuid references public.companies (id) on delete set null,
   actor_user_id uuid references auth.users (id) on delete set null,
   link_id uuid references public.employee_company_links (id) on delete set null,
   code_id uuid references public.company_join_codes (id) on delete set null,
@@ -55,6 +59,9 @@ create table if not exists public.company_link_audit_logs (
   metadata jsonb,
   created_at timestamptz not null default now()
 );
+
+alter table public.company_link_audit_logs
+  alter column company_id drop not null;
 
 comment on table public.company_link_audit_logs is
   'Audit trail for employee-company linking lifecycle events.';
@@ -86,6 +93,8 @@ declare
   normalized_code text := upper(trim(join_code));
   code_record public.company_join_codes%rowtype;
   target_company_id uuid;
+  current_active_company_id uuid;
+  requested_action text := 'join';
   resolved_email text;
   recent_attempt_count integer := 0;
   existing_link_id uuid;
@@ -110,23 +119,13 @@ begin
 
   if recent_attempt_count >= 20 then
     insert into public.company_link_audit_logs (company_id, actor_user_id, action, metadata)
-    values (
-      coalesce((select company_id from public.employee_company_links where user_id = caller_id order by updated_at desc limit 1), null),
-      caller_id,
-      'request_rate_limited',
-      jsonb_build_object('code', normalized_code)
-    );
+    values (null, caller_id, 'request_rate_limited', jsonb_build_object('code', normalized_code));
     return jsonb_build_object('ok', false, 'status', 'rate_limited');
   end if;
 
   if normalized_code is null or normalized_code = '' then
     insert into public.company_link_audit_logs (company_id, actor_user_id, action, metadata)
-    values (
-      coalesce((select company_id from public.employee_company_links where user_id = caller_id order by updated_at desc limit 1), null),
-      caller_id,
-      'request_invalid_code',
-      jsonb_build_object('reason', 'empty')
-    );
+    values (null, caller_id, 'request_invalid_code', jsonb_build_object('reason', 'empty'));
     return jsonb_build_object('ok', false, 'status', 'invalid_code');
   end if;
 
@@ -167,6 +166,18 @@ begin
       jsonb_build_object('code', normalized_code)
     );
     return jsonb_build_object('ok', false, 'status', 'code_exhausted');
+  end if;
+
+  select company_id
+  into current_active_company_id
+  from public.employee_company_links
+  where user_id = caller_id
+    and status = 'active'
+  order by updated_at desc
+  limit 1;
+
+  if current_active_company_id is not null and current_active_company_id <> target_company_id then
+    requested_action := 'switch';
   end if;
 
   select id
@@ -231,14 +242,18 @@ begin
     jsonb_build_object(
       'code', normalized_code,
       'status', resolved_status,
-      'hadExistingLink', existing_link_id is not null
+      'hadExistingLink', existing_link_id is not null,
+      'requestedAction', requested_action,
+      'currentActiveCompanyId', current_active_company_id
     )
   );
 
   return jsonb_build_object(
     'ok', true,
     'status', resolved_status,
-    'companyId', target_company_id
+    'companyId', target_company_id,
+    'requestedAction', requested_action,
+    'previousCompanyId', current_active_company_id
   );
 end;
 $$;
@@ -255,6 +270,7 @@ set search_path = public
 as $$
 declare
   link_record public.employee_company_links%rowtype;
+  old_active_company_ids uuid[] := '{}'::uuid[];
   user_col text;
   user_col_type text;
   company_col text;
@@ -301,6 +317,19 @@ begin
       'userId', link_record.user_id
     );
   end if;
+
+  select coalesce(array_agg(company_id), '{}'::uuid[])
+  into old_active_company_ids
+  from public.employee_company_links
+  where user_id = link_record.user_id
+    and status = 'active'
+    and company_id <> link_record.company_id;
+
+  update public.employee_company_links
+  set status = 'rejected', updated_at = now()
+  where user_id = link_record.user_id
+    and status = 'active'
+    and company_id <> link_record.company_id;
 
   select column_name, data_type
   into user_col, user_col_type
@@ -451,14 +480,18 @@ begin
     auth.uid(),
     link_record.id,
     'approved',
-    jsonb_build_object('userId', link_record.user_id)
+    jsonb_build_object(
+      'userId', link_record.user_id,
+      'previousActiveCompanyIds', old_active_company_ids
+    )
   );
 
   return jsonb_build_object(
     'ok', true,
     'status', 'approved',
     'companyId', link_record.company_id,
-    'userId', link_record.user_id
+    'userId', link_record.user_id,
+    'previousCompanyIds', old_active_company_ids
   );
 end;
 $$;

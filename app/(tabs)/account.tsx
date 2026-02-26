@@ -314,7 +314,8 @@ export default function AccountScreen() {
   const requestedCompanyCode = getStringField(metadataRecord, 'requested_company_code');
   const [joinCode, setJoinCode] = useState(requestedCompanyCode ?? '');
   const [linkingCompany, setLinkingCompany] = useState(false);
-  const canRequestCompanyAccess = !linkedCompanyId;
+  const canRequestCompanyAccess = Boolean(user?.id);
+  const isSwitchFlow = Boolean(linkedCompanyId);
   const handleSignOut = () => {
     signOut();
   };
@@ -428,6 +429,8 @@ export default function AccountScreen() {
 
       const payload = data && typeof data === 'object' ? (data as Record<string, unknown>) : {};
       const status = typeof payload.status === 'string' ? payload.status : null;
+      const requestedAction =
+        typeof payload.requestedAction === 'string' ? payload.requestedAction : 'join';
       const ok = payload.ok === true;
 
       if (status === 'invalid_code') {
@@ -448,7 +451,12 @@ export default function AccountScreen() {
       }
 
       if (ok) {
-        Alert.alert(t('companyLinkTitle'), t('companyLinkRequestedBody'));
+        Alert.alert(
+          t('companyLinkTitle'),
+          requestedAction === 'switch'
+            ? t('companyLinkSwitchRequestedBody')
+            : t('companyLinkRequestedBody')
+        );
       }
     } catch (error) {
       Alert.alert(t('companyLinkTitle'), error instanceof Error ? error.message : t('authUnableSignIn'));
@@ -748,10 +756,10 @@ export default function AccountScreen() {
                 ]}
               >
                 <Text style={[styles.sectionHeading, { color: theme.textPrimary }]}>
-                  {t('companyJoinSectionTitle')}
+                  {isSwitchFlow ? t('companySwitchSectionTitle') : t('companyJoinSectionTitle')}
                 </Text>
                 <Text style={[styles.sectionHint, { color: theme.textSecondary }]}>
-                  {t('companyJoinSectionHint')}
+                  {isSwitchFlow ? t('companySwitchSectionHint') : t('companyJoinSectionHint')}
                 </Text>
                 <View
                   style={[
@@ -776,7 +784,7 @@ export default function AccountScreen() {
                   </Text>
                 ) : null}
                 <PrimaryButton
-                  title={t('companyJoinRequestButton')}
+                  title={isSwitchFlow ? t('companySwitchRequestButton') : t('companyJoinRequestButton')}
                   onPress={() => void handleRequestCompanyAccess()}
                   loading={linkingCompany}
                 />
