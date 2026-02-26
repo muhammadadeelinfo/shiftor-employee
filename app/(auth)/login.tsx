@@ -131,12 +131,14 @@ export default function LoginScreen() {
     if (mode === 'signup') {
       setEmail('');
       setEmailError(null);
-      return;
     }
-    if (mode === 'signin' && rememberMe && rememberedEmail && !email.trim()) {
-      setEmail(rememberedEmail);
+  }, [mode]);
+
+  useEffect(() => {
+    if (mode === 'signin' && rememberMe && rememberedEmail) {
+      setEmail((current) => (current.trim() ? current : rememberedEmail));
     }
-  }, [mode, rememberMe, rememberedEmail, email]);
+  }, [mode, rememberMe, rememberedEmail]);
 
   const handleAuthenticate = async () => {
     const trimmedEmail = email.trim();

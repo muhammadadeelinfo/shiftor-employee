@@ -12,7 +12,7 @@ import {
   useWindowDimensions,
   View,
 } from 'react-native';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { PrimaryButton } from '@shared/components/PrimaryButton';
 import { useTheme } from '@shared/themeContext';
 import { useAuth } from '@hooks/useSupabaseAuth';
@@ -26,6 +26,7 @@ import { supabase } from '@lib/supabaseClient';
 import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
 import { layoutTokens } from '@shared/theme/layout';
 import { useRouter } from 'expo-router';
+import { openAddressInMaps } from '@shared/utils/maps';
 import {
   shouldStackForCompactWidth,
 } from '@shared/utils/responsiveLayout';
@@ -35,6 +36,7 @@ import {
   SUPPORT_FALLBACK_URL,
 } from '@shared/utils/support';
 import Constants from 'expo-constants';
+import { formatAddress } from '@shared/utils/address';
 
 const normalizeContactString = (value?: unknown) =>
   typeof value === 'string' && value.trim() ? value.trim() : undefined;
@@ -226,6 +228,19 @@ const getStringField = (source?: Record<string, unknown>, key?: string) => {
   return typeof value === 'string' && value.trim() ? value.trim() : undefined;
 };
 
+const formatAddressParts = (parts: {
+  street?: string;
+  houseNumber?: string;
+  postalCode?: string;
+  city?: string;
+  state?: string;
+  country?: string;
+}) => {
+  const streetLine = [parts.street, parts.houseNumber].filter(Boolean).join(' ').trim();
+  const cityLine = [parts.postalCode, parts.city].filter(Boolean).join(' ').trim();
+  return [streetLine, cityLine, parts.state, parts.country].filter(Boolean).join(', ');
+};
+
 const formatMetadataAddress = (metadata?: Record<string, unknown>) => {
   if (!metadata) return undefined;
   const addressCandidate = metadata.address;
@@ -233,36 +248,33 @@ const formatMetadataAddress = (metadata?: Record<string, unknown>) => {
     return addressCandidate.trim();
   }
   if (addressCandidate && typeof addressCandidate === 'object') {
-    const addressParts = [
-      'line1',
-      'line2',
-      'street',
-      'addressLine1',
-      'addressLine2',
-      'city',
-      'state',
-      'postal_code',
-      'postalCode',
-      'country',
-    ]
-      .map((key) => getStringField(addressCandidate as Record<string, unknown>, key))
-      .filter((part): part is string => Boolean(part));
-    if (addressParts.length) {
-      return addressParts.join(', ');
-    }
+    const structured = formatAddressParts({
+      street:
+        getStringField(addressCandidate as Record<string, unknown>, 'street') ??
+        getStringField(addressCandidate as Record<string, unknown>, 'line1') ??
+        getStringField(addressCandidate as Record<string, unknown>, 'addressLine1'),
+      houseNumber:
+        getStringField(addressCandidate as Record<string, unknown>, 'house_number') ??
+        getStringField(addressCandidate as Record<string, unknown>, 'houseNumber'),
+      postalCode:
+        getStringField(addressCandidate as Record<string, unknown>, 'postal_code') ??
+        getStringField(addressCandidate as Record<string, unknown>, 'postalCode'),
+      city: getStringField(addressCandidate as Record<string, unknown>, 'city'),
+      state: getStringField(addressCandidate as Record<string, unknown>, 'state'),
+      country: getStringField(addressCandidate as Record<string, unknown>, 'country'),
+    });
+    if (structured) return structured;
   }
-  const fallbackParts = [
-    'street',
-    'city',
-    'state',
-    'postal_code',
-    'postalCode',
-    'country',
-    'location',
-  ]
-    .map((key) => getStringField(metadata, key))
-    .filter((part): part is string => Boolean(part));
-  return fallbackParts.length ? fallbackParts.join(', ') : undefined;
+  const fallbackStructured = formatAddressParts({
+    street: getStringField(metadata, 'street'),
+    houseNumber: getStringField(metadata, 'house_number') ?? getStringField(metadata, 'houseNumber'),
+    postalCode: getStringField(metadata, 'postal_code') ?? getStringField(metadata, 'postalCode'),
+    city: getStringField(metadata, 'city'),
+    state: getStringField(metadata, 'state'),
+    country: getStringField(metadata, 'country'),
+  });
+  if (fallbackStructured) return fallbackStructured;
+  return getStringField(metadata, 'location');
 };
 
 const getPhoneNumber = (metadata?: Record<string, unknown>) =>
@@ -312,19 +324,17 @@ const getProfileAddress = (profile?: EmployeeProfile | null) => {
     .find(Boolean);
   if (direct) return direct;
 
-  const composed = [
-    'line1',
-    'line2',
-    'street',
-    'city',
-    'state',
-    'postal_code',
-    'postalCode',
-    'country',
-  ]
-    .map((key) => getStringField(profile, key))
-    .filter((part): part is string => Boolean(part));
-  return composed.length ? composed.join(', ') : undefined;
+  return formatAddressParts({
+    street:
+      getStringField(profile, 'street') ??
+      getStringField(profile, 'line1') ??
+      getStringField(profile, 'addressLine1'),
+    houseNumber: getStringField(profile, 'house_number') ?? getStringField(profile, 'houseNumber'),
+    postalCode: getStringField(profile, 'postal_code') ?? getStringField(profile, 'postalCode'),
+    city: getStringField(profile, 'city'),
+    state: getStringField(profile, 'state'),
+    country: getStringField(profile, 'country'),
+  });
 };
 
 const getLinkedCompanyId = (
@@ -441,6 +451,7 @@ const shiftStatus = (metadata?: Record<string, unknown> | null) => {
 
 export default function AccountScreen() {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const { user, signOut } = useAuth();
   const { unreadCount } = useNotifications();
   const { theme } = useTheme();
@@ -510,6 +521,7 @@ export default function AccountScreen() {
     getCompanyAddress(companySummary ?? undefined) ??
     getEmployeeCompanyAddress(employeeRecord ?? undefined) ??
     t('notProvided');
+  const currentCompanyAddressParts = formatAddress(currentCompanyAddress);
   const currentCompanyInitials = currentCompanyName
     .split(' ')
     .filter(Boolean)
@@ -641,44 +653,56 @@ export default function AccountScreen() {
       setLinkingCompany(true);
       const fullName = getStringField(metadataRecord, 'full_name') ?? profileName(user);
       const data = await requestCompanyLink(normalizedJoinCode, fullName);
+      const refreshAfterAlert = () => {
+        setJoinCode('');
+        void queryClient.invalidateQueries({ queryKey: ['employeeProfile'] });
+        void queryClient.invalidateQueries({ queryKey: ['companySummary'] });
+      };
 
       const payload = data && typeof data === 'object' ? (data as Record<string, unknown>) : {};
       const status = typeof payload.status === 'string' ? payload.status : null;
       const requestedAction =
         typeof payload.requestedAction === 'string' ? payload.requestedAction : 'join';
       const ok = payload.ok === true;
+      const showLinkAlert = (message: string) =>
+        Alert.alert(t('companyLinkTitle'), message, [
+          { text: 'OK', onPress: refreshAfterAlert },
+        ]);
 
       if (status === 'invalid_code') {
-        Alert.alert(t('companyLinkTitle'), t('companyLinkInvalidCodeBody'));
+        showLinkAlert(t('companyLinkInvalidCodeBody'));
         return;
       }
       if (status === 'active') {
-        Alert.alert(t('companyLinkTitle'), t('companyLinkAlreadyActiveBody'));
+        showLinkAlert(t('companyLinkAlreadyActiveBody'));
         return;
       }
       if (status === 'code_expired') {
-        Alert.alert(t('companyLinkTitle'), t('companyLinkCodeExpiredBody'));
+        showLinkAlert(t('companyLinkCodeExpiredBody'));
         return;
       }
       if (status === 'code_exhausted') {
-        Alert.alert(t('companyLinkTitle'), t('companyLinkCodeExhaustedBody'));
+        showLinkAlert(t('companyLinkCodeExhaustedBody'));
         return;
       }
       if (status === 'rate_limited') {
-        Alert.alert(t('companyLinkTitle'), t('companyLinkRateLimitedBody'));
+        showLinkAlert(t('companyLinkRateLimitedBody'));
         return;
       }
 
       if (ok) {
-        Alert.alert(
-          t('companyLinkTitle'),
+        showLinkAlert(
           requestedAction === 'switch'
             ? t('companyLinkSwitchRequestedBody')
             : t('companyLinkRequestedBody')
         );
       }
     } catch (error) {
-      Alert.alert(t('companyLinkTitle'), getReadableErrorMessage(error, t('authUnableSignIn')));
+      Alert.alert(
+        t('companyLinkTitle'),
+        getReadableErrorMessage(error, t('authUnableSignIn')),
+        [{ text: 'OK', onPress: () => setJoinCode('') }]
+      );
     } finally {
       setLinkingCompany(false);
     }
@@ -699,7 +723,14 @@ export default function AccountScreen() {
     { paddingBottom: 28 + insets.bottom + tabBarHeight },
   ];
   const noValueLabel = t('notProvided');
-  const contactFields = [
+  const addressParts = formatAddress(contactAddress);
+  const contactFields: Array<{
+    label: string;
+    value: string;
+    icon: 'mail-outline' | 'call-outline' | 'location-outline';
+    mapAddress?: string;
+    valueLines?: string[];
+  }> = [
     { label: t('emailLabel'), value: user?.email ?? noValueLabel, icon: 'mail-outline' as const },
     { label: t('phoneLabel'), value: contactPhone ?? noValueLabel, icon: 'call-outline' as const },
     {
@@ -707,6 +738,7 @@ export default function AccountScreen() {
       value: contactAddress ?? noValueLabel,
       icon: 'location-outline' as const,
       mapAddress: contactAddress,
+      valueLines: addressParts ? [addressParts.label, addressParts.meta] : undefined,
     },
   ];
   const heroGradientColors: [string, string, ...string[]] = [
@@ -861,7 +893,20 @@ export default function AccountScreen() {
                     </View>
                     <View style={styles.contactContent}>
                       <Text style={[styles.contactLabel, { color: theme.textSecondary }]}>{field.label}</Text>
-                      <Text style={[styles.contactValue, { color: theme.textPrimary }]}>{field.value}</Text>
+                      {field.valueLines?.length ? (
+                        <View>
+                          <Text style={[styles.contactValue, { color: theme.textPrimary }]}>
+                            {field.valueLines[0]}
+                          </Text>
+                          {field.valueLines[1] ? (
+                            <Text style={[styles.contactValueSecondary, { color: theme.textSecondary }]}>
+                              {field.valueLines[1]}
+                            </Text>
+                          ) : null}
+                        </View>
+                      ) : (
+                        <Text style={[styles.contactValue, { color: theme.textPrimary }]}>{field.value}</Text>
+                      )}
                     </View>
                     {field.mapAddress ? (
                       <TouchableOpacity
@@ -881,6 +926,20 @@ export default function AccountScreen() {
                     ) : null}
                   </View>
                 ))}
+              </View>
+              <View style={styles.toolsList}>
+                <TouchableOpacity
+                  style={[styles.toolsRow, { borderColor: theme.borderSoft }]}
+                  onPress={() => router.push('/profile-edit')}
+                >
+                  <View style={[styles.toolsIconWrap, { backgroundColor: theme.surfaceMuted }]}>
+                    <Ionicons name="create-outline" size={16} color={theme.primary} />
+                  </View>
+                  <Text style={[styles.toolsLabel, { color: theme.textPrimary }]}>
+                    {t('profileEditButton')}
+                  </Text>
+                  <Ionicons name="chevron-forward" size={16} color={theme.textSecondary} />
+                </TouchableOpacity>
               </View>
             </View>
             <View
@@ -1015,9 +1074,22 @@ export default function AccountScreen() {
                         <Text style={[styles.companyProfileLabel, { color: theme.textSecondary }]}>
                           {t('companyCurrentAddressLabel')}
                         </Text>
-                        <Text style={[styles.companyAddressValue, { color: theme.textPrimary }]}>
-                          {currentCompanyAddress}
-                        </Text>
+                        {currentCompanyAddressParts ? (
+                          <View>
+                            <Text style={[styles.companyAddressValue, { color: theme.textPrimary }]}>
+                              {currentCompanyAddressParts.label}
+                            </Text>
+                            {currentCompanyAddressParts.meta ? (
+                              <Text style={[styles.companyAddressValueSecondary, { color: theme.textSecondary }]}>
+                                {currentCompanyAddressParts.meta}
+                              </Text>
+                            ) : null}
+                          </View>
+                        ) : (
+                          <Text style={[styles.companyAddressValue, { color: theme.textPrimary }]}>
+                            {currentCompanyAddress}
+                          </Text>
+                        )}
                       </View>
                     </View>
                   </View>
@@ -1545,6 +1617,11 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     marginTop: 2,
   },
+  contactValueSecondary: {
+    fontSize: 13,
+    fontWeight: '500',
+    marginTop: 2,
+  },
   contactMapButton: {
     width: 28,
     height: 28,
@@ -1636,6 +1713,13 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '500',
     lineHeight: 21,
+    textAlign: 'left',
+  },
+  companyAddressValueSecondary: {
+    fontSize: 13,
+    fontWeight: '500',
+    lineHeight: 19,
+    marginTop: 2,
     textAlign: 'left',
   },
   companyJoinInputWrap: {
