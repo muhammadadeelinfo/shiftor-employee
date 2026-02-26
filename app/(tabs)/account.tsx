@@ -371,27 +371,21 @@ export default function AccountScreen() {
       Alert.alert(title, `${t('unableOpenLinkDevice')}\n${SUPPORT_EMAIL}`);
     }
   };
-  const handleHelpCenter = async () => {
-    await openExternalUrl(
-      t('supportHelpCenter'),
-      buildSupportMailto('Help request'),
-      SUPPORT_FALLBACK_URL
-    );
-  };
-  const baseSiteUrl =
-    ((Constants.expoConfig?.extra?.apiBaseUrl as string | undefined)?.trim() || 'https://shiftorapp.com').replace(
-      /\/+$/,
-      ''
-    );
+  const baseSiteUrl = SUPPORT_FALLBACK_URL.replace(/\/+$/, '');
   const privacyPolicyUrl =
-    ((Constants.expoConfig?.extra?.legalPrivacyUrl as string | undefined)?.trim() || `${baseSiteUrl}/privacy`);
+    ((Constants.expoConfig?.extra?.legalPrivacyUrl as string | undefined)?.trim() || `${baseSiteUrl}/privacy#mobile`);
   const termsUrl =
-    ((Constants.expoConfig?.extra?.legalTermsUrl as string | undefined)?.trim() || `${baseSiteUrl}/terms`);
+    ((Constants.expoConfig?.extra?.legalTermsUrl as string | undefined)?.trim() || `${baseSiteUrl}/terms#mobile`);
+  const supportPageUrl =
+    ((Constants.expoConfig?.extra?.legalSupportUrl as string | undefined)?.trim() || `${baseSiteUrl}/support#mobile`);
   const handlePrivacyPolicy = async () => {
-    await openExternalUrl(t('aboutPrivacyPolicy'), privacyPolicyUrl);
+    await openExternalUrl(t('aboutPrivacyPolicy'), privacyPolicyUrl, SUPPORT_FALLBACK_URL);
   };
   const handleTerms = async () => {
-    await openExternalUrl(t('aboutTerms'), termsUrl);
+    await openExternalUrl(t('aboutTerms'), termsUrl, SUPPORT_FALLBACK_URL);
+  };
+  const handleHelpCenter = async () => {
+    await openExternalUrl(t('supportHelpCenter'), supportPageUrl, SUPPORT_FALLBACK_URL);
   };
   const handleDeleteAccount = async () => {
     const email = user?.email?.trim() || '';

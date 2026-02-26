@@ -17,6 +17,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
       'android.permission.RECORD_AUDIO',
       'android.permission.READ_EXTERNAL_STORAGE',
       'android.permission.WRITE_EXTERNAL_STORAGE',
+      'android.permission.SYSTEM_ALERT_WINDOW',
     ],
   },
   extra: {
@@ -28,6 +29,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     authRedirectUrl: process.env.AUTH_REDIRECT_URL ?? '',
     legalPrivacyUrl: process.env.LEGAL_PRIVACY_URL ?? '',
     legalTermsUrl: process.env.LEGAL_TERMS_URL ?? '',
+    legalSupportUrl: process.env.LEGAL_SUPPORT_URL ?? '',
     apiBaseUrl: process.env.API_BASE_URL ?? '',
     enableLocationInDev: process.env.ENABLE_LOCATION_IN_DEV === 'true',
     eas: {
