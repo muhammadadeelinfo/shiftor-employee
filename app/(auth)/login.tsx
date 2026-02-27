@@ -1,7 +1,10 @@
 import {
   Alert,
+  KeyboardAvoidingView,
   Linking,
+  Platform,
   Pressable,
+  ScrollView,
   StyleSheet,
   Switch,
   Text,
@@ -103,6 +106,20 @@ export default function LoginScreen() {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const confirmPasswordInputRef = useRef<TextInput>(null);
+  const signupPasswordHasMinLength = password.length >= MIN_PASSWORD_LENGTH;
+  const signupPasswordsMatch = Boolean(confirmPassword) && password === confirmPassword;
+  const signupPasswordRules = [
+    {
+      key: 'min-length',
+      done: signupPasswordHasMinLength,
+      label: t('authPasswordRuleMinLength'),
+    },
+    {
+      key: 'match',
+      done: signupPasswordsMatch,
+      label: t('authPasswordRuleMatch'),
+    },
+  ];
 
   useEffect(() => {
     (async () => {
@@ -306,6 +323,26 @@ export default function LoginScreen() {
       Alert.alert(t('supportHelpCenter'), `${t('unableOpenLinkDevice')}\n${SUPPORT_EMAIL}`);
     }
   };
+  const handleForgotPassword = async () => {
+    const trimmedEmail = email.trim();
+    if (!trimmedEmail) {
+      Alert.alert(t('securityResetPassword'), t('loginEnterEmailForReset'));
+      return;
+    }
+    if (!supabase) {
+      Alert.alert(t('authConfigurationMissingTitle'), t('authConfigurationMissingBody'));
+      return;
+    }
+    const authRedirectUrl = (Constants.expoConfig?.extra?.authRedirectUrl as string | undefined)?.trim();
+    const { error } = await supabase.auth.resetPasswordForEmail(trimmedEmail, {
+      redirectTo: authRedirectUrl || undefined,
+    });
+    if (error) {
+      Alert.alert(t('securityResetPassword'), error.message);
+      return;
+    }
+    Alert.alert(t('securityResetPassword'), t('securityResetLinkSent', { email: trimmedEmail }));
+  };
 
   const baseSiteUrl =
     ((Constants.expoConfig?.extra?.apiBaseUrl as string | undefined)?.trim() || SUPPORT_BASE_URL).replace(
@@ -334,6 +371,8 @@ export default function LoginScreen() {
   };
 
   const { width } = useWindowDimensions();
+  const isSigninMode = mode === 'signin';
+  const disablePrimaryAction = loading || !email.trim() || !password || (!isSigninMode && !confirmPassword);
 
   return (
     <LinearGradient
@@ -344,6 +383,16 @@ export default function LoginScreen() {
       <View style={styles.accentCircleLarge} />
       <View style={styles.accentCircleSmall} />
       <SafeAreaView style={styles.safeArea}>
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+          style={styles.keyboardContainer}
+          keyboardVerticalOffset={Platform.OS === 'ios' ? 12 : 0}
+        >
+          <ScrollView
+            contentContainerStyle={styles.scrollContent}
+            keyboardShouldPersistTaps="handled"
+            showsVerticalScrollIndicator={false}
+          >
         <View style={[styles.card, { width: Math.min(width - 32, 420) }]}>
           <Text style={styles.title}>
             <Text style={styles.titleAccent}>{titleFirstWord ?? loginTitle}</Text>
@@ -392,6 +441,7 @@ export default function LoginScreen() {
               returnKeyType="next"
               onSubmitEditing={() => passwordInputRef.current?.focus()}
               editable={!loading}
+              importantForAutofill="yes"
             />
             {email ? (
               <Pressable
@@ -414,7 +464,7 @@ export default function LoginScreen() {
               autoCorrect={false}
               autoComplete={mode === 'signup' ? 'new-password' : 'current-password'}
               placeholder={t('loginPasswordPlaceholder')}
-              placeholderTextColor="#94a3b8"
+              placeholderTextColor="#a4b3cf"
               value={password}
               onChangeText={(value) => {
                 setPassword(value);
@@ -448,56 +498,90 @@ export default function LoginScreen() {
           </View>
           {passwordError ? <Text style={styles.errorText}>{passwordError}</Text> : null}
           {mode === 'signup' ? (
-            <View style={styles.passwordField}>
-              <TextInput
-                style={styles.passwordInput}
-                secureTextEntry={!showConfirmPassword}
-                autoCapitalize="none"
-                autoCorrect={false}
-                autoComplete="new-password"
-                placeholder={t('signupConfirmPasswordPlaceholder')}
-                placeholderTextColor="#94a3b8"
-                value={confirmPassword}
-                onChangeText={setConfirmPassword}
-                textContentType="newPassword"
-                ref={confirmPasswordInputRef}
-                returnKeyType="done"
-                onSubmitEditing={handleSignup}
-                editable={!loading}
-              />
-              <Pressable
-                onPress={() => setShowConfirmPassword((prev) => !prev)}
-                accessibilityRole="button"
-                accessibilityLabel={
-                  showConfirmPassword ? t('loginHidePassword') : t('loginShowPassword')
-                }
-                style={styles.passwordToggle}
-                disabled={loading}
-              >
-                <Ionicons
-                  name={showConfirmPassword ? 'eye-off-outline' : 'eye-outline'}
-                  size={20}
-                  color="#cbd5f5"
+            <>
+              <View style={styles.passwordField}>
+                <TextInput
+                  style={styles.passwordInput}
+                  secureTextEntry={!showConfirmPassword}
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  autoComplete="new-password"
+                  placeholder={t('signupConfirmPasswordPlaceholder')}
+                  placeholderTextColor="#a4b3cf"
+                  value={confirmPassword}
+                  onChangeText={setConfirmPassword}
+                  textContentType="newPassword"
+                  ref={confirmPasswordInputRef}
+                  returnKeyType="done"
+                  onSubmitEditing={handleSignup}
+                  editable={!loading}
+                  importantForAutofill="yes"
                 />
-              </Pressable>
-            </View>
+                <Pressable
+                  onPress={() => setShowConfirmPassword((prev) => !prev)}
+                  accessibilityRole="button"
+                  accessibilityLabel={
+                    showConfirmPassword ? t('loginHidePassword') : t('loginShowPassword')
+                  }
+                  style={styles.passwordToggle}
+                  disabled={loading}
+                >
+                  <Ionicons
+                    name={showConfirmPassword ? 'eye-off-outline' : 'eye-outline'}
+                    size={20}
+                    color="#cbd5f5"
+                  />
+                </Pressable>
+              </View>
+              <View style={styles.passwordRulesWrap}>
+                <Text style={styles.passwordRulesTitle}>{t('authPasswordRulesTitle')}</Text>
+                {signupPasswordRules.map((rule) => (
+                  <View key={rule.key} style={styles.passwordRuleRow}>
+                    <Ionicons
+                      name={rule.done ? 'checkmark-circle' : 'ellipse'}
+                      size={14}
+                      color={rule.done ? '#22c55e' : '#475569'}
+                    />
+                    <Text
+                      style={[
+                        styles.passwordRuleText,
+                        { color: rule.done ? '#86efac' : '#9aa7bf' },
+                      ]}
+                    >
+                      {rule.label}
+                    </Text>
+                  </View>
+                ))}
+              </View>
+            </>
           ) : (
             <View style={styles.rememberRow}>
               <Text style={styles.rememberLabel}>{t('keepSignedIn')}</Text>
-              <Switch
-                value={rememberMe}
-                onValueChange={setRememberMe}
-                disabled={loading}
-                trackColor={{ false: '#334155', true: '#2563eb' }}
-                thumbColor={rememberMe ? '#f8fafc' : '#cbd5f5'}
-                ios_backgroundColor="#334155"
-              />
+              <View style={styles.signinUtilityRight}>
+                <TouchableOpacity
+                  onPress={() => void handleForgotPassword()}
+                  disabled={loading}
+                  activeOpacity={0.75}
+                  style={styles.forgotPasswordBtn}
+                >
+                  <Text style={styles.forgotPasswordText}>{t('loginForgotPassword')}</Text>
+                </TouchableOpacity>
+                <Switch
+                  value={rememberMe}
+                  onValueChange={setRememberMe}
+                  disabled={loading}
+                  trackColor={{ false: '#334155', true: '#2563eb' }}
+                  thumbColor={rememberMe ? '#f8fafc' : '#cbd5f5'}
+                  ios_backgroundColor="#334155"
+                />
+              </View>
             </View>
           )}
           <PrimaryButton
             title={mode === 'signin' ? t('loginSignInButton') : t('signupCreateButton')}
             onPress={mode === 'signin' ? handleAuthenticate : handleSignup}
             loading={loading}
+            disabled={disablePrimaryAction}
           />
           <>
             <TouchableOpacity
@@ -537,6 +621,8 @@ export default function LoginScreen() {
             </View>
           </>
         </View>
+          </ScrollView>
+        </KeyboardAvoidingView>
       </SafeAreaView>
     </LinearGradient>
   );
@@ -552,6 +638,16 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     padding: 16,
+  },
+  keyboardContainer: {
+    width: '100%',
+    flex: 1,
+  },
+  scrollContent: {
+    flexGrow: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingBottom: 24,
   },
   card: {
     backgroundColor: '#0b1224',
@@ -591,8 +687,10 @@ const styles = StyleSheet.create({
   segmentButton: {
     flex: 1,
     borderRadius: 999,
+    minHeight: 44,
     paddingVertical: 8,
     alignItems: 'center',
+    justifyContent: 'center',
   },
   segmentButtonActive: {
     backgroundColor: '#2563eb',
@@ -624,7 +722,10 @@ const styles = StyleSheet.create({
     color: '#e2e8f0',
   },
   passwordToggle: {
-    padding: 8,
+    minWidth: 44,
+    minHeight: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   emailField: {
     flexDirection: 'row',
@@ -642,13 +743,31 @@ const styles = StyleSheet.create({
     color: '#e2e8f0',
   },
   clearButton: {
-    padding: 8,
+    minWidth: 44,
+    minHeight: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   rememberRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 16,
+  },
+  signinUtilityRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  forgotPasswordBtn: {
+    minHeight: 34,
+    justifyContent: 'center',
+    paddingHorizontal: 8,
+  },
+  forgotPasswordText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#7dd3fc',
   },
   rememberLabel: {
     fontSize: 14,
@@ -684,6 +803,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     marginTop: 16,
+    minHeight: 44,
   },
   supportText: {
     color: '#60a5fa',
@@ -701,15 +821,37 @@ const styles = StyleSheet.create({
   },
   footerLinkChip: {
     borderWidth: 1,
-    borderColor: 'rgba(125, 211, 252, 0.3)',
+    borderColor: 'rgba(125, 211, 252, 0.18)',
     borderRadius: 999,
     paddingHorizontal: 10,
-    paddingVertical: 6,
-    backgroundColor: 'rgba(15, 23, 42, 0.45)',
+    paddingVertical: 5,
+    minHeight: 34,
+    backgroundColor: 'rgba(15, 23, 42, 0.28)',
   },
   footerLink: {
-    fontSize: 12,
-    color: '#7dd3fc',
+    fontSize: 11,
+    color: '#5ab7ee',
     fontWeight: '600',
+  },
+  passwordRulesWrap: {
+    marginTop: -4,
+    marginBottom: 12,
+    paddingHorizontal: 2,
+  },
+  passwordRulesTitle: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#8ea0bf',
+    marginBottom: 4,
+  },
+  passwordRuleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginTop: 4,
+  },
+  passwordRuleText: {
+    fontSize: 12,
+    fontWeight: '500',
   },
 });
