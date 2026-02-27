@@ -30,6 +30,7 @@ import {
 const REMEMBER_KEY = 'employee-portal-remember-me';
 const EMAIL_KEY = 'employee-portal-remembered-email';
 const MIN_PASSWORD_LENGTH = 8;
+const SUPPORT_BASE_URL = 'https://shiftorapp.com';
 
 const getStringMetadataField = (user: User, field: string): string | null => {
   const metadata = user.user_metadata;
@@ -306,6 +307,32 @@ export default function LoginScreen() {
     }
   };
 
+  const baseSiteUrl =
+    ((Constants.expoConfig?.extra?.apiBaseUrl as string | undefined)?.trim() || SUPPORT_BASE_URL).replace(
+      /\/+$/,
+      ''
+    );
+  const privacyPolicyUrl =
+    ((Constants.expoConfig?.extra?.legalPrivacyUrl as string | undefined)?.trim() ||
+      `${baseSiteUrl}/privacy#mobile`);
+  const termsUrl =
+    ((Constants.expoConfig?.extra?.legalTermsUrl as string | undefined)?.trim() || `${baseSiteUrl}/terms#mobile`);
+  const helpCenterUrl =
+    ((Constants.expoConfig?.extra?.legalSupportUrl as string | undefined)?.trim() ||
+      `${baseSiteUrl}/support#mobile`);
+  const openExternalUrl = async (title: string, url: string) => {
+    try {
+      const supported = await Linking.canOpenURL(url);
+      if (supported) {
+        await Linking.openURL(url);
+        return;
+      }
+      Alert.alert(title, `${t('unableOpenLinkDevice')}\n${SUPPORT_EMAIL}`);
+    } catch {
+      Alert.alert(title, `${t('unableOpenLinkDevice')}\n${SUPPORT_EMAIL}`);
+    }
+  };
+
   const { width } = useWindowDimensions();
 
   return (
@@ -482,6 +509,32 @@ export default function LoginScreen() {
               <Ionicons name="help-circle-outline" size={18} color="#60a5fa" />
               <Text style={styles.supportText}>{t('loginSupportText')}</Text>
             </TouchableOpacity>
+            <View style={styles.footerRow}>
+              <TouchableOpacity
+                activeOpacity={0.75}
+                style={styles.footerLinkChip}
+                onPress={() => void openExternalUrl(t('aboutPrivacyPolicy'), privacyPolicyUrl)}
+                disabled={loading}
+              >
+                <Text style={styles.footerLink}>{t('aboutPrivacyPolicy')}</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                activeOpacity={0.75}
+                style={styles.footerLinkChip}
+                onPress={() => void openExternalUrl(t('aboutTerms'), termsUrl)}
+                disabled={loading}
+              >
+                <Text style={styles.footerLink}>{t('aboutTerms')}</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                activeOpacity={0.75}
+                style={styles.footerLinkChip}
+                onPress={() => void openExternalUrl(t('supportHelpCenter'), helpCenterUrl)}
+                disabled={loading}
+              >
+                <Text style={styles.footerLink}>{t('supportHelpCenter')}</Text>
+              </TouchableOpacity>
+            </View>
           </>
         </View>
       </SafeAreaView>
@@ -637,5 +690,26 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '600',
     marginLeft: 6,
+  },
+  footerRow: {
+    marginTop: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    flexWrap: 'wrap',
+  },
+  footerLinkChip: {
+    borderWidth: 1,
+    borderColor: 'rgba(125, 211, 252, 0.3)',
+    borderRadius: 999,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    backgroundColor: 'rgba(15, 23, 42, 0.45)',
+  },
+  footerLink: {
+    fontSize: 12,
+    color: '#7dd3fc',
+    fontWeight: '600',
   },
 });

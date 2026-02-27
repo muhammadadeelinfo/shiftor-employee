@@ -238,11 +238,11 @@ function LayoutContentInner() {
   useEffect(() => {
     if (loading) return;
 
-    const authFreePaths = ['/welcome', '/login', '/signup', '/guest', '/startup'];
+    const authFreePaths = ['/login', '/signup', '/guest', '/startup', '/welcome'];
     const isAuthFree = pathname ? authFreePaths.some((path) => pathname.startsWith(path)) : false;
 
     if (!user && !isAuthFree) {
-      router.replace('/welcome');
+      router.replace('/login');
     }
   }, [loading, pathname, router, user]);
 

@@ -7,7 +7,7 @@ import { useWindowDimensions } from 'react-native';
 
 const iconConfig: Record<
   string,
-  { active: string; inactive: string; labelKey: 'shiftsTabTitle' | 'tabCalendar' | 'tabQrClockIn' | 'tabAccount' }
+  { active: string; inactive: string; labelKey: string }
 > = {
   'my-shifts': {
     active: 'list',
@@ -23,6 +23,11 @@ const iconConfig: Record<
     active: 'qr-code',
     inactive: 'qr-code-outline',
     labelKey: 'tabQrClockIn',
+  },
+  jobs: {
+    active: 'briefcase',
+    inactive: 'briefcase-outline',
+    labelKey: 'startupJobsTitle',
   },
   account: {
     active: 'person-circle',
@@ -85,6 +90,7 @@ function ThemeAwareTabs({ insets }: { insets: ReturnType<typeof useSafeAreaInset
       <Tabs.Screen name="my-shifts" />
       <Tabs.Screen name="calendar" />
       <Tabs.Screen name="qr-clock-in" />
+      <Tabs.Screen name="jobs" />
       <Tabs.Screen name="account" />
       <Tabs.Screen name="calendar-settings" options={{ href: null }} />
     </Tabs>
