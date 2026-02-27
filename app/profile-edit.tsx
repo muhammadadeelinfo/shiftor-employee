@@ -21,6 +21,8 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { useRouter } from 'expo-router';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import * as ImagePicker from 'expo-image-picker';
+import * as ImageManipulator from 'expo-image-manipulator';
+import Constants from 'expo-constants';
 import { supabase, supabaseStorageBucket } from '@lib/supabaseClient';
 import { useAuth } from '@hooks/useSupabaseAuth';
 import { useTheme } from '@shared/themeContext';
@@ -34,6 +36,11 @@ type AddressSuggestion = { value: string; label: string; meta: string };
 type ParsedMobile = { dialCode: string; localNumber: string };
 type DialCodeOption = { country: string; code: string };
 const getProfilePhotoCacheKey = (userId: string) => `employee-profile-photo:${userId}`;
+const getCanonicalPublicStorageUrl = (baseUrl: string, bucket: string, path: string) =>
+  `${baseUrl.replace(/\/+$/, '')}/storage/v1/object/public/${encodeURIComponent(bucket)}/${path
+    .split('/')
+    .map((part) => encodeURIComponent(part))
+    .join('/')}`;
 
 const DIAL_CODE_OPTIONS: DialCodeOption[] = [
   { country: 'Germany', code: '+49' },
@@ -188,6 +195,27 @@ const updateEmployeeProfileRecord = async (
   }
 ) => {
   if (!supabase) return;
+
+  const rpcParams = {
+    first_name: updates.firstName || null,
+    last_name: updates.lastName || null,
+    full_name: updates.fullName || null,
+    mobile_number: updates.phone || null,
+    address_text: updates.address || null,
+    birth_date: updates.dob || null,
+    profile_photo_url: updates.photoUrl || null,
+    profile_photo_path: updates.photoPath || null,
+  };
+  const { error: rpcError } = await supabase.rpc('update_employee_self_profile', rpcParams);
+  if (!rpcError) {
+    return;
+  }
+  if (!isMissingColumnError(rpcError) && !/function .* does not exist/i.test(String((rpcError as { message?: unknown })?.message ?? ''))) {
+    if (isPermissionDeniedError(rpcError)) {
+      return;
+    }
+    throw rpcError;
+  }
 
   const firstNameColumn = pickUpdateColumn(employeeRecord, ['firstName', 'first_name', 'name']);
   const lastNameColumn = pickUpdateColumn(employeeRecord, ['lastName', 'last_name']);
@@ -411,6 +439,12 @@ export default function ProfileEditScreen() {
     getStringField(employeeRecord ?? undefined, 'birthDate') ??
     getStringField(metadataRecord, 'dob') ??
     '';
+  const supabaseBaseUrl = (Constants.expoConfig?.extra?.supabaseUrl as string | undefined)?.trim();
+  const deterministicPhotoPath = user?.id ? `employees/${user.id}/avatar/latest.jpg` : null;
+  const deterministicPhotoUrl =
+    supabaseBaseUrl && deterministicPhotoPath
+      ? getCanonicalPublicStorageUrl(supabaseBaseUrl, supabaseStorageBucket, deterministicPhotoPath)
+      : null;
   const currentPhotoUrl =
     getStringField(employeeRecord ?? undefined, 'photoUrl') ??
     getStringField(employeeRecord ?? undefined, 'photo_url') ??
@@ -419,6 +453,7 @@ export default function ProfileEditScreen() {
     getStringField(metadataRecord, 'photoUrl') ??
     getStringField(metadataRecord, 'photo_url') ??
     getStringField(metadataRecord, 'avatar_url') ??
+    deterministicPhotoUrl ??
     null;
   const currentPhotoPath =
     getStringField(employeeRecord ?? undefined, 'photoPath') ??
@@ -428,6 +463,7 @@ export default function ProfileEditScreen() {
     getStringField(metadataRecord, 'photoPath') ??
     getStringField(metadataRecord, 'photo_path') ??
     getStringField(metadataRecord, 'avatar_path') ??
+    deterministicPhotoPath ??
     null;
 
   const [firstName, setFirstName] = useState(currentFirstName);
@@ -559,6 +595,7 @@ export default function ProfileEditScreen() {
         photoPath: finalPhotoPath,
         photo_path: finalPhotoPath,
         avatar_path: finalPhotoPath,
+        photo_updated_at: Date.now(),
       };
       const { error: metadataError } = await supabase.auth.updateUser({ data: metadataPatch });
       if (metadataError) throw metadataError;
@@ -599,6 +636,9 @@ export default function ProfileEditScreen() {
         queryClient.setQueryData(['profilePhotoCache', user.id], null);
         await queryClient.invalidateQueries({ queryKey: ['profilePhotoCache', user.id] });
       }
+      setPhotoUri(finalPhotoUrl ?? null);
+      setPhotoPath(finalPhotoPath ?? null);
+      setPhotoDirty(false);
 
       queryClient.setQueriesData({ queryKey: ['employeeProfile'] }, (existing: unknown) => {
         if (!existing || typeof existing !== 'object') return existing;
@@ -677,26 +717,26 @@ export default function ProfileEditScreen() {
     if (!supabase || !user?.id) {
       throw new Error(t('authClientUnavailable'));
     }
-    const companyId =
-      getStringField(employeeRecord ?? undefined, 'companyId') ??
-      getStringField(employeeRecord ?? undefined, 'company_id') ??
-      getStringField(metadataRecord, 'companyId') ??
-      getStringField(metadataRecord, 'company_id');
-    const extension = getImageExtension(uri);
-    const path = companyId
-      ? `companies/${companyId}/employees/${user.id}/avatar/${Date.now()}.${extension}`
-      : `employees/${user.id}/avatar/${Date.now()}.${extension}`;
-    const response = await fetch(uri);
-    const blob = await response.blob();
-    const { error: uploadError } = await supabase.storage.from(supabaseStorageBucket).upload(path, blob, {
+    const manipulated = await ImageManipulator.manipulateAsync(
+      uri,
+      [],
+      { compress: 0.88, format: ImageManipulator.SaveFormat.JPEG }
+    );
+    const path = `employees/${user.id}/avatar/latest.jpg`;
+    const response = await fetch(manipulated.uri);
+    const buffer = await response.arrayBuffer();
+    const { error: uploadError } = await supabase.storage.from(supabaseStorageBucket).upload(path, buffer, {
       upsert: true,
-      contentType: blob.type || `image/${extension}`,
+      contentType: 'image/jpeg',
     });
     if (uploadError) {
       throw uploadError;
     }
-    const { data } = supabase.storage.from(supabaseStorageBucket).getPublicUrl(path);
-    return { publicUrl: data.publicUrl, path };
+    const supabaseBaseUrl = (Constants.expoConfig?.extra?.supabaseUrl as string | undefined)?.trim();
+    const canonicalPublicUrl = supabaseBaseUrl
+      ? getCanonicalPublicStorageUrl(supabaseBaseUrl, supabaseStorageBucket, path)
+      : supabase.storage.from(supabaseStorageBucket).getPublicUrl(path).data.publicUrl;
+    return { publicUrl: canonicalPublicUrl, path };
   };
 
   const pickProfilePhoto = async () => {

@@ -23,7 +23,10 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   extra: {
     supabaseUrl: process.env.SUPABASE_URL ?? '',
     supabaseAnonKey: process.env.SUPABASE_ANON_KEY ?? '',
-    supabaseStorageBucket: process.env.SUPABASE_STORAGE_BUCKET ?? 'company-assets',
+    supabaseStorageBucket:
+      process.env.SUPABASE_STORAGE_BUCKET ??
+      process.env.NEXT_PUBLIC_SUPABASE_STORAGE_BUCKET ??
+      'company-assets',
     sentryDsn: process.env.SENTRY_DSN ?? '',
     expoStage: process.env.EXPO_STAGE ?? 'production',
     easProjectId: process.env.EAS_PROJECT_ID ?? '',

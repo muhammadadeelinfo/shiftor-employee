@@ -1,106 +1,67 @@
--- Shiftor Employee profile photo storage policies
--- Run this in Supabase SQL editor for the target project.
+-- Shiftor Employee: profile photo storage reset (strong, deterministic)
+-- Run this whole file in Supabase SQL Editor.
 
--- Ensure the bucket exists.
+-- 1) Ensure bucket exists and is PUBLIC so canonical public URLs work on all devices.
 insert into storage.buckets (id, name, public)
-values ('company-assets', 'company-assets', false)
-on conflict (id) do nothing;
+values ('company-assets', 'company-assets', true)
+on conflict (id) do update
+set name = excluded.name,
+    public = true;
 
--- Employees can access only their own profile photo paths:
--- 1) employees/<auth.uid()>/avatar/<file>
--- 2) companies/<company-id>/employees/<auth.uid()>/avatar/<file>
-
+-- 2) Remove previous profile-photo related policies (safe even if they do not exist).
 drop policy if exists "Employees can read own profile photos" on storage.objects;
-create policy "Employees can read own profile photos"
-on storage.objects for select
-to authenticated
-using (
-  bucket_id = 'company-assets'
-  and (
-    (
-      (storage.foldername(name))[1] = 'employees'
-      and (storage.foldername(name))[2] = auth.uid()::text
-    )
-    or
-    (
-      (storage.foldername(name))[1] = 'companies'
-      and (storage.foldername(name))[3] = 'employees'
-      and (storage.foldername(name))[4] = auth.uid()::text
-    )
-  )
-);
-
+drop policy if exists "Authenticated can read company-assets" on storage.objects;
 drop policy if exists "Employees can upload own profile photos" on storage.objects;
-create policy "Employees can upload own profile photos"
-on storage.objects for insert
-to authenticated
-with check (
-  bucket_id = 'company-assets'
-  and (
-    (
-      (storage.foldername(name))[1] = 'employees'
-      and (storage.foldername(name))[2] = auth.uid()::text
-    )
-    or
-    (
-      (storage.foldername(name))[1] = 'companies'
-      and (storage.foldername(name))[3] = 'employees'
-      and (storage.foldername(name))[4] = auth.uid()::text
-    )
-  )
-);
-
 drop policy if exists "Employees can update own profile photos" on storage.objects;
-create policy "Employees can update own profile photos"
-on storage.objects for update
-to authenticated
-using (
-  bucket_id = 'company-assets'
-  and (
-    (
-      (storage.foldername(name))[1] = 'employees'
-      and (storage.foldername(name))[2] = auth.uid()::text
-    )
-    or
-    (
-      (storage.foldername(name))[1] = 'companies'
-      and (storage.foldername(name))[3] = 'employees'
-      and (storage.foldername(name))[4] = auth.uid()::text
-    )
-  )
-)
-with check (
-  bucket_id = 'company-assets'
-  and (
-    (
-      (storage.foldername(name))[1] = 'employees'
-      and (storage.foldername(name))[2] = auth.uid()::text
-    )
-    or
-    (
-      (storage.foldername(name))[1] = 'companies'
-      and (storage.foldername(name))[3] = 'employees'
-      and (storage.foldername(name))[4] = auth.uid()::text
-    )
-  )
-);
-
 drop policy if exists "Employees can delete own profile photos" on storage.objects;
-create policy "Employees can delete own profile photos"
-on storage.objects for delete
+
+drop policy if exists "Company assets public read" on storage.objects;
+drop policy if exists "Company assets auth upload" on storage.objects;
+drop policy if exists "Company assets auth update" on storage.objects;
+drop policy if exists "Company assets auth delete" on storage.objects;
+
+-- 3) Read policy for public URLs + signed URLs.
+create policy "Company assets public read"
+on storage.objects
+for select
+to anon, authenticated
+using (bucket_id = 'company-assets');
+
+-- 4) Authenticated users can upload/update/delete in company-assets.
+-- Keep write scope simple and reliable; app writes deterministic employee path:
+-- employees/<auth.uid()>/avatar/latest.jpg
+create policy "Company assets auth upload"
+on storage.objects
+for insert
 to authenticated
-using (
-  bucket_id = 'company-assets'
-  and (
-    (
-      (storage.foldername(name))[1] = 'employees'
-      and (storage.foldername(name))[2] = auth.uid()::text
-    )
-    or
-    (
-      (storage.foldername(name))[1] = 'companies'
-      and (storage.foldername(name))[3] = 'employees'
-      and (storage.foldername(name))[4] = auth.uid()::text
-    )
+with check (bucket_id = 'company-assets');
+
+create policy "Company assets auth update"
+on storage.objects
+for update
+to authenticated
+using (bucket_id = 'company-assets')
+with check (bucket_id = 'company-assets');
+
+create policy "Company assets auth delete"
+on storage.objects
+for delete
+to authenticated
+using (bucket_id = 'company-assets');
+
+-- 5) Quick verification rows (should return 1 bucket row + 4 policy rows).
+select id, name, public
+from storage.buckets
+where id = 'company-assets';
+
+select policyname, roles, cmd
+from pg_policies
+where schemaname = 'storage'
+  and tablename = 'objects'
+  and policyname in (
+    'Company assets public read',
+    'Company assets auth upload',
+    'Company assets auth update',
+    'Company assets auth delete'
   )
-);
+order by policyname;

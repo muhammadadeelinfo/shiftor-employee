@@ -51,6 +51,33 @@ const capitalizeFirstLetter = (value: string) => {
 type EmployeeProfile = Record<string, unknown>;
 type CompanySummary = Record<string, unknown>;
 const getProfilePhotoCacheKey = (userId: string) => `employee-profile-photo:${userId}`;
+const getCanonicalPublicStorageUrl = (baseUrl: string, bucket: string, path: string) =>
+  `${baseUrl.replace(/\/+$/, '')}/storage/v1/object/public/${encodeURIComponent(bucket)}/${path
+    .split('/')
+    .map((part) => encodeURIComponent(part))
+    .join('/')}`;
+const deriveStoragePathFromUrl = (url: string | null | undefined, bucket: string) => {
+  if (!url) return null;
+  try {
+    const parsed = new URL(url);
+    const markerPublic = `/storage/v1/object/public/${bucket}/`;
+    const markerSign = `/storage/v1/object/sign/${bucket}/`;
+    const markerRender = `/storage/v1/render/image/public/${bucket}/`;
+    const path = parsed.pathname;
+    if (path.includes(markerPublic)) {
+      return decodeURIComponent(path.split(markerPublic)[1] || '').trim() || null;
+    }
+    if (path.includes(markerSign)) {
+      return decodeURIComponent(path.split(markerSign)[1] || '').trim() || null;
+    }
+    if (path.includes(markerRender)) {
+      return decodeURIComponent(path.split(markerRender)[1] || '').trim() || null;
+    }
+    return null;
+  } catch {
+    return null;
+  }
+};
 
 const isMissingColumnError = (error: unknown) =>
   typeof error === 'object' &&
@@ -799,6 +826,15 @@ export default function AccountScreen() {
     getStringField(mergedMetadataRecord, 'photoPath') ??
     getStringField(mergedMetadataRecord, 'photo_path') ??
     getStringField(mergedMetadataRecord, 'avatar_path');
+  const profilePhotoUpdatedAt =
+    getStringField(employeeRecord ?? undefined, 'photo_updated_at') ??
+    getStringField(mergedMetadataRecord, 'photo_updated_at');
+  const deterministicProfilePhotoPath = user?.id ? `employees/${user.id}/avatar/latest.jpg` : null;
+  const supabaseBaseUrl = (Constants.expoConfig?.extra?.supabaseUrl as string | undefined)?.trim();
+  const deterministicProfilePhotoPublicUrl =
+    supabaseBaseUrl && deterministicProfilePhotoPath
+      ? getCanonicalPublicStorageUrl(supabaseBaseUrl, supabaseStorageBucket, deterministicProfilePhotoPath)
+      : null;
   const { data: cachedProfilePhoto } = useQuery({
     queryKey: ['profilePhotoCache', user?.id],
     queryFn: async () => {
@@ -817,7 +853,13 @@ export default function AccountScreen() {
     refetchOnMount: 'always',
     refetchOnWindowFocus: true,
   });
-  const effectiveProfilePhotoPath = profilePhotoPath ?? cachedProfilePhoto?.path ?? null;
+  const effectiveProfilePhotoPath =
+    profilePhotoPath ??
+    deterministicProfilePhotoPath ??
+    cachedProfilePhoto?.path ??
+    deriveStoragePathFromUrl(profilePhotoUrl, supabaseStorageBucket) ??
+    deriveStoragePathFromUrl(cachedProfilePhoto?.url ?? null, supabaseStorageBucket) ??
+    null;
   const profilePhotoPublicUrlFromPath = useMemo(() => {
     if (!supabase || !effectiveProfilePhotoPath) return null;
     const { data } = supabase.storage.from(supabaseStorageBucket).getPublicUrl(effectiveProfilePhotoPath);
@@ -836,22 +878,37 @@ export default function AccountScreen() {
     enabled: Boolean(supabase && effectiveProfilePhotoPath),
     staleTime: 30 * 60_000,
   });
+  const appendVersionQuery = (url: string | null) => {
+    if (!url || !profilePhotoUpdatedAt) return url;
+    const separator = url.includes('?') ? '&' : '?';
+    return `${url}${separator}v=${encodeURIComponent(profilePhotoUpdatedAt)}`;
+  };
   const profilePhotoCandidates = useMemo(
     () =>
       [
-        profilePhotoSignedUrl,
-        profilePhotoUrl,
-        profilePhotoPublicUrlFromPath,
-        cachedProfilePhoto?.url ?? null,
+        appendVersionQuery(deterministicProfilePhotoPublicUrl),
+        appendVersionQuery(profilePhotoSignedUrl),
+        appendVersionQuery(profilePhotoUrl),
+        appendVersionQuery(profilePhotoPublicUrlFromPath),
+        appendVersionQuery(cachedProfilePhoto?.url ?? null),
         cachedProfilePhoto?.localUri ?? null,
       ].filter((value, index, arr): value is string => Boolean(value) && arr.indexOf(value) === index),
-    [profilePhotoSignedUrl, profilePhotoUrl, profilePhotoPublicUrlFromPath, cachedProfilePhoto?.url, cachedProfilePhoto?.localUri]
+    [
+      profilePhotoSignedUrl,
+      profilePhotoUrl,
+      profilePhotoPublicUrlFromPath,
+      deterministicProfilePhotoPublicUrl,
+      cachedProfilePhoto?.url,
+      cachedProfilePhoto?.localUri,
+      profilePhotoUpdatedAt,
+    ]
   );
   const [avatarSourceIndex, setAvatarSourceIndex] = useState(0);
   useEffect(() => {
     setAvatarSourceIndex(0);
   }, [profilePhotoCandidates.join('|')]);
-  const resolvedProfilePhotoUrl = profilePhotoCandidates[avatarSourceIndex] ?? null;
+  const resolvedProfilePhotoUrl =
+    avatarSourceIndex >= 0 ? profilePhotoCandidates[avatarSourceIndex] ?? null : null;
 
   return (
     <SafeAreaView style={[styles.safeArea, { backgroundColor: theme.background }]} edges={['left', 'right']}>
@@ -905,7 +962,7 @@ export default function AccountScreen() {
                           onError={() => {
                             setAvatarSourceIndex((current) => {
                               const next = current + 1;
-                              return next < profilePhotoCandidates.length ? next : current;
+                              return next < profilePhotoCandidates.length ? next : -1;
                             });
                           }}
                         />
