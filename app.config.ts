@@ -28,6 +28,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
       process.env.NEXT_PUBLIC_SUPABASE_STORAGE_BUCKET ??
       'company-assets',
     sentryDsn: process.env.SENTRY_DSN ?? '',
+    sentryEnabled: process.env.SENTRY_ENABLED === 'true',
     expoStage: process.env.EXPO_STAGE ?? 'production',
     easProjectId: process.env.EAS_PROJECT_ID ?? '',
     authRedirectUrl: process.env.AUTH_REDIRECT_URL ?? '',

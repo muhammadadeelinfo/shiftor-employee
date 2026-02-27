@@ -45,4 +45,5 @@ Final answers must match actual production behavior and legal policy.
 - Confirm legal privacy policy URL is live and matches behavior.
 - Confirm exact final data categories with your backend/auth implementation.
 - Confirm whether push notification tokens are collected and documented.
-
+- If `SENTRY_ENABLED=true`, confirm App Privacy "Diagnostics" answers include crash data collection.
+- Confirm monitoring payloads avoid sensitive PII (email/phone/address/auth tokens).

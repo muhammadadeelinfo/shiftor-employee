@@ -1,6 +1,7 @@
 import React, { Component, type ErrorInfo, type ReactNode } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { LanguageContext } from '@shared/context/LanguageContext';
+import { captureAppException } from '@lib/monitoring';
 
 type AppErrorBoundaryProps = {
   children: ReactNode;
@@ -23,6 +24,10 @@ export class AppErrorBoundary extends Component<AppErrorBoundaryProps, AppErrorB
 
   componentDidCatch(error: Error, errorInfo: ErrorInfo) {
     console.error('Unhandled render error in app boundary', error, errorInfo);
+    captureAppException(error, {
+      componentStack: errorInfo.componentStack,
+      source: 'AppErrorBoundary',
+    });
   }
 
   private handleRetry = () => {
