@@ -23,6 +23,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   extra: {
     supabaseUrl: process.env.SUPABASE_URL ?? '',
     supabaseAnonKey: process.env.SUPABASE_ANON_KEY ?? '',
+    supabaseStorageBucket: process.env.SUPABASE_STORAGE_BUCKET ?? 'company-assets',
     sentryDsn: process.env.SENTRY_DSN ?? '',
     expoStage: process.env.EXPO_STAGE ?? 'production',
     easProjectId: process.env.EAS_PROJECT_ID ?? '',
@@ -57,6 +58,14 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
             process.env.IOS_CALENDAR_USAGE_DESCRIPTION ??
             'Calendar access lets you import shifts and sync your schedule.',
           remindersPermission: false,
+        },
+      ],
+      [
+        'expo-image-picker',
+        {
+          photosPermission:
+            process.env.IOS_PHOTOS_USAGE_DESCRIPTION ??
+            'Photo library access lets you upload a profile picture.',
         },
       ],
     ];
@@ -98,6 +107,9 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
       NSUserNotificationsUsageDescription:
         process.env.IOS_NOTIFICATIONS_USAGE_DESCRIPTION ??
         'Notifications keep you updated about shifts and schedule changes.',
+      NSPhotoLibraryUsageDescription:
+        process.env.IOS_PHOTOS_USAGE_DESCRIPTION ??
+        'Photo library access lets you upload a profile picture.',
       NSAppTransportSecurity: {
         NSAllowsArbitraryLoads: false,
         NSExceptionDomains: {

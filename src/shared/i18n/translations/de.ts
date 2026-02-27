@@ -103,6 +103,11 @@ export const deTranslations = {
     profileEditMobilePlaceholder: 'Handynummer',
     profileEditDialCodeTitle: 'Ländervorwahl auswählen',
     profileEditDialCodeSearchPlaceholder: 'Land oder Vorwahl suchen',
+    profileEditPhotoChange: 'Foto ändern',
+    profileEditPhotoRemove: 'Foto entfernen',
+    profileEditPhotoHint: 'JPG/PNG empfohlen, quadratisches Bild ist am besten.',
+    profileEditPhotoPermissionDenied:
+      'Bitte erlaube den Zugriff auf die Fotobibliothek, um ein Profilbild auszuwählen.',
     profileEditAddressPlaceholder: 'Adresse',
     profileEditAddressStreetPlaceholder: 'Straße',
     profileEditAddressHouseNumberPlaceholder: 'Hausnummer',

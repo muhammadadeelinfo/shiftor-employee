@@ -12,6 +12,7 @@ import {
   useWindowDimensions,
   View,
 } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { PrimaryButton } from '@shared/components/PrimaryButton';
 import { useTheme } from '@shared/themeContext';
@@ -22,7 +23,7 @@ import { languageDefinitions } from '@shared/utils/languageUtils';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { LinearGradient } from 'expo-linear-gradient';
-import { supabase } from '@lib/supabaseClient';
+import { supabase, supabaseStorageBucket } from '@lib/supabaseClient';
 import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
 import { layoutTokens } from '@shared/theme/layout';
 import { useRouter } from 'expo-router';
@@ -49,6 +50,7 @@ const capitalizeFirstLetter = (value: string) => {
 
 type EmployeeProfile = Record<string, unknown>;
 type CompanySummary = Record<string, unknown>;
+const getProfilePhotoCacheKey = (userId: string) => `employee-profile-photo:${userId}`;
 
 const isMissingColumnError = (error: unknown) =>
   typeof error === 'object' &&
@@ -466,6 +468,24 @@ export default function AccountScreen() {
   const metadata = user?.user_metadata;
   const metadataRecord =
     metadata && typeof metadata === 'object' ? (metadata as Record<string, unknown>) : undefined;
+  const { data: freshAuthMetadata } = useQuery({
+    queryKey: ['authUserMetadata', user?.id],
+    queryFn: async () => {
+      if (!supabase || !user?.id) return null;
+      const { data, error } = await supabase.auth.getUser();
+      if (error) return null;
+      const fresh = data.user?.user_metadata;
+      return fresh && typeof fresh === 'object' ? (fresh as Record<string, unknown>) : null;
+    },
+    enabled: Boolean(user?.id && supabase),
+    staleTime: 0,
+    refetchOnMount: 'always',
+    refetchOnWindowFocus: true,
+  });
+  const mergedMetadataRecord = {
+    ...(metadataRecord ?? {}),
+    ...(freshAuthMetadata ?? {}),
+  } as Record<string, unknown>;
   const {
     data: employeeRecord,
   } = useQuery({
@@ -473,13 +493,13 @@ export default function AccountScreen() {
       'employeeProfile',
       employeeId,
       user?.email,
-      metadataRecord?.employee_id,
-      metadataRecord?.employeeId,
-      metadataRecord?.profile_id,
-      metadataRecord?.profileId,
+      mergedMetadataRecord?.employee_id,
+      mergedMetadataRecord?.employeeId,
+      mergedMetadataRecord?.profile_id,
+      mergedMetadataRecord?.profileId,
     ],
     queryFn: () =>
-      employeeId ? fetchEmployeeProfile(employeeId, user?.email, metadataRecord) : null,
+      employeeId ? fetchEmployeeProfile(employeeId, user?.email, mergedMetadataRecord) : null,
     enabled: !!employeeId,
     staleTime: 60_000,
   });
@@ -491,14 +511,14 @@ export default function AccountScreen() {
     getMetadataPhoneDeep(metadata);
   const contactAddress =
     normalizeContactString(getProfileAddress(employeeRecord)) ?? getMetadataAddressDeep(metadata);
-  const linkedCompanyId = getLinkedCompanyId(employeeRecord, metadataRecord);
+  const linkedCompanyId = getLinkedCompanyId(employeeRecord, mergedMetadataRecord);
   const { data: companySummary } = useQuery({
     queryKey: ['companySummary', linkedCompanyId],
     queryFn: () => (linkedCompanyId ? fetchCompanySummary(linkedCompanyId) : null),
     enabled: Boolean(linkedCompanyId),
     staleTime: 60_000,
   });
-  const requestedCompanyCode = getStringField(metadataRecord, 'requested_company_code');
+  const requestedCompanyCode = getStringField(mergedMetadataRecord, 'requested_company_code');
   const [joinCode, setJoinCode] = useState(requestedCompanyCode ?? '');
   const joinCodeInputRef = useRef<TextInput | null>(null);
   const [linkingCompany, setLinkingCompany] = useState(false);
@@ -651,7 +671,7 @@ export default function AccountScreen() {
 
     try {
       setLinkingCompany(true);
-      const fullName = getStringField(metadataRecord, 'full_name') ?? profileName(user);
+      const fullName = getStringField(mergedMetadataRecord, 'full_name') ?? profileName(user);
       const data = await requestCompanyLink(normalizedJoinCode, fullName);
       const refreshAfterAlert = () => {
         setJoinCode('');
@@ -763,6 +783,75 @@ export default function AccountScreen() {
     .slice(0, 2)
     .join('')
     .toUpperCase();
+  const profilePhotoUrl =
+    getStringField(employeeRecord ?? undefined, 'photoUrl') ??
+    getStringField(employeeRecord ?? undefined, 'photo_url') ??
+    getStringField(employeeRecord ?? undefined, 'avatarUrl') ??
+    getStringField(employeeRecord ?? undefined, 'avatar_url') ??
+    getStringField(mergedMetadataRecord, 'photoUrl') ??
+    getStringField(mergedMetadataRecord, 'photo_url') ??
+    getStringField(mergedMetadataRecord, 'avatar_url');
+  const profilePhotoPath =
+    getStringField(employeeRecord ?? undefined, 'photoPath') ??
+    getStringField(employeeRecord ?? undefined, 'photo_path') ??
+    getStringField(employeeRecord ?? undefined, 'avatarPath') ??
+    getStringField(employeeRecord ?? undefined, 'avatar_path') ??
+    getStringField(mergedMetadataRecord, 'photoPath') ??
+    getStringField(mergedMetadataRecord, 'photo_path') ??
+    getStringField(mergedMetadataRecord, 'avatar_path');
+  const { data: cachedProfilePhoto } = useQuery({
+    queryKey: ['profilePhotoCache', user?.id],
+    queryFn: async () => {
+      if (!user?.id) return null;
+      const raw = await AsyncStorage.getItem(getProfilePhotoCacheKey(user.id));
+      if (!raw) return null;
+      try {
+        const parsed = JSON.parse(raw) as { url?: string | null; path?: string | null; localUri?: string | null };
+        return parsed;
+      } catch {
+        return null;
+      }
+    },
+    enabled: Boolean(user?.id),
+    staleTime: 0,
+    refetchOnMount: 'always',
+    refetchOnWindowFocus: true,
+  });
+  const effectiveProfilePhotoPath = profilePhotoPath ?? cachedProfilePhoto?.path ?? null;
+  const profilePhotoPublicUrlFromPath = useMemo(() => {
+    if (!supabase || !effectiveProfilePhotoPath) return null;
+    const { data } = supabase.storage.from(supabaseStorageBucket).getPublicUrl(effectiveProfilePhotoPath);
+    return data?.publicUrl ?? null;
+  }, [effectiveProfilePhotoPath]);
+  const { data: profilePhotoSignedUrl } = useQuery({
+    queryKey: ['profilePhotoSignedUrl', effectiveProfilePhotoPath],
+    queryFn: async () => {
+      if (!supabase || !effectiveProfilePhotoPath) return null;
+      const { data, error } = await supabase.storage
+        .from(supabaseStorageBucket)
+        .createSignedUrl(effectiveProfilePhotoPath, 60 * 60 * 24);
+      if (error) return null;
+      return data.signedUrl;
+    },
+    enabled: Boolean(supabase && effectiveProfilePhotoPath),
+    staleTime: 30 * 60_000,
+  });
+  const profilePhotoCandidates = useMemo(
+    () =>
+      [
+        profilePhotoSignedUrl,
+        profilePhotoUrl,
+        profilePhotoPublicUrlFromPath,
+        cachedProfilePhoto?.url ?? null,
+        cachedProfilePhoto?.localUri ?? null,
+      ].filter((value, index, arr): value is string => Boolean(value) && arr.indexOf(value) === index),
+    [profilePhotoSignedUrl, profilePhotoUrl, profilePhotoPublicUrlFromPath, cachedProfilePhoto?.url, cachedProfilePhoto?.localUri]
+  );
+  const [avatarSourceIndex, setAvatarSourceIndex] = useState(0);
+  useEffect(() => {
+    setAvatarSourceIndex(0);
+  }, [profilePhotoCandidates.join('|')]);
+  const resolvedProfilePhotoUrl = profilePhotoCandidates[avatarSourceIndex] ?? null;
 
   return (
     <SafeAreaView style={[styles.safeArea, { backgroundColor: theme.background }]} edges={['left', 'right']}>
@@ -808,7 +897,21 @@ export default function AccountScreen() {
                 <View style={[styles.heroHeader, shouldStackHeroHeader ? styles.heroHeaderCompact : null]}>
                   <View style={styles.heroIdentity}>
                     <View style={[styles.avatar, { backgroundColor: theme.primary }, isIOS && styles.avatarIOS]}>
-                      <Text style={styles.avatarText}>{initials}</Text>
+                      {resolvedProfilePhotoUrl ? (
+                        <Image
+                          source={{ uri: resolvedProfilePhotoUrl }}
+                          style={styles.avatarImage}
+                          resizeMode="cover"
+                          onError={() => {
+                            setAvatarSourceIndex((current) => {
+                              const next = current + 1;
+                              return next < profilePhotoCandidates.length ? next : current;
+                            });
+                          }}
+                        />
+                      ) : (
+                        <Text style={styles.avatarText}>{initials}</Text>
+                      )}
                     </View>
                     <View>
                       <Text
@@ -1384,6 +1487,11 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '700',
     letterSpacing: 0.5,
+  },
+  avatarImage: {
+    width: '100%',
+    height: '100%',
+    borderRadius: 20,
   },
   profileGreeting: {
     fontSize: 30,

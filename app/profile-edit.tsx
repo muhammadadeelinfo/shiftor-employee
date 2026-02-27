@@ -1,7 +1,9 @@
 import { useEffect, useState } from 'react';
 import {
+  ActivityIndicator,
   Alert,
   FlatList,
+  Image,
   Modal,
   Platform,
   Pressable,
@@ -12,11 +14,14 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as FileSystem from 'expo-file-system';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useRouter } from 'expo-router';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { supabase } from '@lib/supabaseClient';
+import * as ImagePicker from 'expo-image-picker';
+import { supabase, supabaseStorageBucket } from '@lib/supabaseClient';
 import { useAuth } from '@hooks/useSupabaseAuth';
 import { useTheme } from '@shared/themeContext';
 import { useLanguage } from '@shared/context/LanguageContext';
@@ -28,6 +33,7 @@ type EmployeeProfile = Record<string, unknown>;
 type AddressSuggestion = { value: string; label: string; meta: string };
 type ParsedMobile = { dialCode: string; localNumber: string };
 type DialCodeOption = { country: string; code: string };
+const getProfilePhotoCacheKey = (userId: string) => `employee-profile-photo:${userId}`;
 
 const DIAL_CODE_OPTIONS: DialCodeOption[] = [
   { country: 'Germany', code: '+49' },
@@ -177,6 +183,8 @@ const updateEmployeeProfileRecord = async (
     phone: string;
     address: string;
     dob: string;
+    photoUrl: string | null;
+    photoPath: string | null;
   }
 ) => {
   if (!supabase) return;
@@ -194,6 +202,8 @@ const updateEmployeeProfileRecord = async (
     'location',
   ]);
   const dobColumn = pickUpdateColumn(employeeRecord, ['dob', 'dateOfBirth', 'date_of_birth', 'birthDate']);
+  const photoColumn = pickUpdateColumn(employeeRecord, ['photoUrl', 'photo_url', 'avatarUrl', 'avatar_url']);
+  const photoPathColumn = pickUpdateColumn(employeeRecord, ['photoPath', 'photo_path', 'avatarPath', 'avatar_path']);
 
   const basePayload: Record<string, string | null> = {
     [firstNameColumn]: updates.firstName || null,
@@ -202,6 +212,8 @@ const updateEmployeeProfileRecord = async (
     [phoneColumn]: updates.phone || null,
     [addressColumn]: updates.address || null,
     [dobColumn]: updates.dob || null,
+    [photoColumn]: updates.photoUrl || null,
+    [photoPathColumn]: updates.photoPath || null,
   };
 
   const lookupCandidates: Array<{ column: string; value: string | undefined }> = [
@@ -399,6 +411,24 @@ export default function ProfileEditScreen() {
     getStringField(employeeRecord ?? undefined, 'birthDate') ??
     getStringField(metadataRecord, 'dob') ??
     '';
+  const currentPhotoUrl =
+    getStringField(employeeRecord ?? undefined, 'photoUrl') ??
+    getStringField(employeeRecord ?? undefined, 'photo_url') ??
+    getStringField(employeeRecord ?? undefined, 'avatarUrl') ??
+    getStringField(employeeRecord ?? undefined, 'avatar_url') ??
+    getStringField(metadataRecord, 'photoUrl') ??
+    getStringField(metadataRecord, 'photo_url') ??
+    getStringField(metadataRecord, 'avatar_url') ??
+    null;
+  const currentPhotoPath =
+    getStringField(employeeRecord ?? undefined, 'photoPath') ??
+    getStringField(employeeRecord ?? undefined, 'photo_path') ??
+    getStringField(employeeRecord ?? undefined, 'avatarPath') ??
+    getStringField(employeeRecord ?? undefined, 'avatar_path') ??
+    getStringField(metadataRecord, 'photoPath') ??
+    getStringField(metadataRecord, 'photo_path') ??
+    getStringField(metadataRecord, 'avatar_path') ??
+    null;
 
   const [firstName, setFirstName] = useState(currentFirstName);
   const [lastName, setLastName] = useState(currentLastName);
@@ -412,6 +442,10 @@ export default function ProfileEditScreen() {
   const [dobDraftDate, setDobDraftDate] = useState<Date>(parseDateOnly(currentDob) ?? new Date(2000, 0, 1));
   const [dialCodeModalVisible, setDialCodeModalVisible] = useState(false);
   const [dialCodeQuery, setDialCodeQuery] = useState('');
+  const [photoUri, setPhotoUri] = useState<string | null>(currentPhotoUrl);
+  const [photoPath, setPhotoPath] = useState<string | null>(currentPhotoPath);
+  const [photoDirty, setPhotoDirty] = useState(false);
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const [saving, setSaving] = useState(false);
   useEffect(() => {
     setFirstName(currentFirstName);
@@ -422,7 +456,18 @@ export default function ProfileEditScreen() {
     setAddress(currentAddress);
     setDob(currentDob);
     setDobDraftDate(parseDateOnly(currentDob) ?? new Date(2000, 0, 1));
-  }, [currentFirstName, currentLastName, currentPhone, currentAddress, currentDob]);
+    setPhotoUri(currentPhotoUrl);
+    setPhotoPath(currentPhotoPath);
+    setPhotoDirty(false);
+  }, [
+    currentFirstName,
+    currentLastName,
+    currentPhone,
+    currentAddress,
+    currentDob,
+    currentPhotoUrl,
+    currentPhotoPath,
+  ]);
 
   useEffect(() => {
     const query = address.trim();
@@ -480,9 +525,26 @@ export default function ProfileEditScreen() {
     const normalizedPhone = [normalizedDialCode, normalizedMobile].filter(Boolean).join(' ').trim();
     const normalizedAddress = address.trim();
     const normalizedDob = dob.trim();
+    let finalPhotoUrl: string | null = currentPhotoUrl;
+    let finalPhotoPath: string | null = currentPhotoPath;
 
     try {
       setSaving(true);
+      if (photoDirty) {
+        if (!photoUri) {
+          finalPhotoUrl = null;
+          finalPhotoPath = null;
+        } else if (photoUri.startsWith('http://') || photoUri.startsWith('https://')) {
+          finalPhotoUrl = photoUri;
+        } else {
+          setUploadingPhoto(true);
+          const uploaded = await uploadProfilePhoto(photoUri);
+          finalPhotoUrl = uploaded.publicUrl;
+          finalPhotoPath = uploaded.path;
+          setPhotoPath(uploaded.path);
+          setUploadingPhoto(false);
+        }
+      }
       const metadataPatch: Record<string, unknown> = {
         ...(user.user_metadata ?? {}),
         first_name: normalizedFirstName || null,
@@ -491,9 +553,17 @@ export default function ProfileEditScreen() {
         phone: normalizedPhone || null,
         address: normalizedAddress || null,
         dob: normalizedDob || null,
+        photoUrl: finalPhotoUrl,
+        photo_url: finalPhotoUrl,
+        avatar_url: finalPhotoUrl,
+        photoPath: finalPhotoPath,
+        photo_path: finalPhotoPath,
+        avatar_path: finalPhotoPath,
       };
       const { error: metadataError } = await supabase.auth.updateUser({ data: metadataPatch });
       if (metadataError) throw metadataError;
+      queryClient.setQueryData(['authUserMetadata', user.id], metadataPatch);
+      await queryClient.invalidateQueries({ queryKey: ['authUserMetadata', user.id] });
 
       try {
         await updateEmployeeProfileRecord(employeeRecord, user.id, user.email, {
@@ -503,13 +573,57 @@ export default function ProfileEditScreen() {
           phone: normalizedPhone,
           address: normalizedAddress,
           dob: normalizedDob,
+          photoUrl: finalPhotoUrl,
+          photoPath: finalPhotoPath,
         });
       } catch (profileError) {
         if (!isPermissionDeniedError(profileError)) {
           throw profileError;
         }
       }
+      const persistedLocalPhotoUri = photoUri
+        ? await persistProfilePhotoLocally(photoUri, user.id)
+        : null;
+      const photoCacheKey = getProfilePhotoCacheKey(user.id);
+      const photoCachePayload = {
+        url: finalPhotoUrl ?? null,
+        path: finalPhotoPath ?? null,
+        localUri: persistedLocalPhotoUri ?? null,
+      };
+      if (finalPhotoUrl || finalPhotoPath || persistedLocalPhotoUri) {
+        await AsyncStorage.setItem(photoCacheKey, JSON.stringify(photoCachePayload));
+        queryClient.setQueryData(['profilePhotoCache', user.id], photoCachePayload);
+        await queryClient.invalidateQueries({ queryKey: ['profilePhotoCache', user.id] });
+      } else {
+        await AsyncStorage.removeItem(photoCacheKey);
+        queryClient.setQueryData(['profilePhotoCache', user.id], null);
+        await queryClient.invalidateQueries({ queryKey: ['profilePhotoCache', user.id] });
+      }
 
+      queryClient.setQueriesData({ queryKey: ['employeeProfile'] }, (existing: unknown) => {
+        if (!existing || typeof existing !== 'object') return existing;
+        return {
+          ...(existing as Record<string, unknown>),
+          firstName: normalizedFirstName || null,
+          first_name: normalizedFirstName || null,
+          lastName: normalizedLastName || null,
+          last_name: normalizedLastName || null,
+          name: normalizedName || null,
+          full_name: normalizedName || null,
+          mobile: normalizedPhone || null,
+          phone: normalizedPhone || null,
+          address: normalizedAddress || null,
+          dob: normalizedDob || null,
+          date_of_birth: normalizedDob || null,
+          photoUrl: finalPhotoUrl,
+          photo_url: finalPhotoUrl,
+          avatar_url: finalPhotoUrl,
+          photoPath: finalPhotoPath,
+          photo_path: finalPhotoPath,
+          avatar_path: finalPhotoPath,
+        };
+      });
+      await queryClient.invalidateQueries({ queryKey: ['profilePhotoSignedUrl'] });
       await queryClient.invalidateQueries({ queryKey: ['employeeProfile'] });
       Alert.alert(t('profileEditTitle'), t('profileEditSaved'), [
         { text: 'OK', onPress: () => router.back() },
@@ -517,6 +631,7 @@ export default function ProfileEditScreen() {
     } catch (error) {
       Alert.alert(t('profileEditTitle'), getReadableErrorMessage(error, t('authUnableSignIn')));
     } finally {
+      setUploadingPhoto(false);
       setSaving(false);
     }
   };
@@ -535,6 +650,79 @@ export default function ProfileEditScreen() {
     if (!q) return true;
     return option.country.toLowerCase().includes(q) || option.code.includes(q);
   });
+  const profileInitials = `${firstName.trim().charAt(0)}${lastName.trim().charAt(0)}`.trim().toUpperCase() || 'ME';
+
+  const getImageExtension = (uri: string) => {
+    const match = uri.toLowerCase().match(/\.([a-z0-9]+)(?:\?|$)/);
+    return match?.[1] && match[1].length <= 5 ? match[1] : 'jpg';
+  };
+
+  const persistProfilePhotoLocally = async (uri: string, userId: string) => {
+    if (!uri || uri.startsWith('http://') || uri.startsWith('https://')) return uri;
+    const baseDir = FileSystem.documentDirectory;
+    if (!baseDir) return uri;
+    const extension = getImageExtension(uri);
+    const destination = `${baseDir}profile-photo-${userId}.${extension}`;
+    try {
+      await FileSystem.copyAsync({ from: uri, to: destination });
+      return destination;
+    } catch {
+      return uri;
+    }
+  };
+
+  const uploadProfilePhoto = async (
+    uri: string
+  ): Promise<{ publicUrl: string; path: string }> => {
+    if (!supabase || !user?.id) {
+      throw new Error(t('authClientUnavailable'));
+    }
+    const companyId =
+      getStringField(employeeRecord ?? undefined, 'companyId') ??
+      getStringField(employeeRecord ?? undefined, 'company_id') ??
+      getStringField(metadataRecord, 'companyId') ??
+      getStringField(metadataRecord, 'company_id');
+    const extension = getImageExtension(uri);
+    const path = companyId
+      ? `companies/${companyId}/employees/${user.id}/avatar/${Date.now()}.${extension}`
+      : `employees/${user.id}/avatar/${Date.now()}.${extension}`;
+    const response = await fetch(uri);
+    const blob = await response.blob();
+    const { error: uploadError } = await supabase.storage.from(supabaseStorageBucket).upload(path, blob, {
+      upsert: true,
+      contentType: blob.type || `image/${extension}`,
+    });
+    if (uploadError) {
+      throw uploadError;
+    }
+    const { data } = supabase.storage.from(supabaseStorageBucket).getPublicUrl(path);
+    return { publicUrl: data.publicUrl, path };
+  };
+
+  const pickProfilePhoto = async () => {
+    if (saving || uploadingPhoto) return;
+    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!permission.granted) {
+      Alert.alert(t('profileEditTitle'), t('profileEditPhotoPermissionDenied'));
+      return;
+    }
+    const result = await ImagePicker.launchImageLibraryAsync({
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.85,
+    });
+    if (result.canceled || !result.assets?.length) return;
+    const pickedUri = result.assets[0]?.uri;
+    if (!pickedUri) return;
+    setPhotoUri(pickedUri);
+    setPhotoDirty(true);
+  };
+
+  const removeProfilePhoto = () => {
+    setPhotoUri(null);
+    setPhotoPath(null);
+    setPhotoDirty(true);
+  };
 
   return (
     <SafeAreaView style={[styles.safeArea, { backgroundColor: theme.background }]} edges={['left', 'right']}>
@@ -551,6 +739,44 @@ export default function ProfileEditScreen() {
 
           <Text style={[styles.title, { color: theme.textPrimary }]}>{t('profileEditTitle')}</Text>
           <Text style={[styles.hint, { color: theme.textSecondary }]}>{t('profileEditHint')}</Text>
+          <View style={styles.photoRow}>
+            <View style={[styles.photoFrame, { borderColor: theme.borderSoft, backgroundColor: theme.surfaceMuted }]}>
+              {photoUri ? (
+                <Image source={{ uri: photoUri }} style={styles.photoImage} resizeMode="cover" />
+              ) : (
+                <Text style={[styles.photoFallbackText, { color: theme.textPrimary }]}>{profileInitials}</Text>
+              )}
+            </View>
+            <View style={styles.photoActions}>
+              <TouchableOpacity
+                style={[styles.photoButton, { borderColor: theme.borderSoft, backgroundColor: theme.surfaceMuted }]}
+                onPress={() => void pickProfilePhoto()}
+                disabled={saving || uploadingPhoto}
+              >
+                {uploadingPhoto ? (
+                  <ActivityIndicator color={theme.primary} />
+                ) : (
+                  <Ionicons name="image-outline" size={15} color={theme.primary} />
+                )}
+                <Text style={[styles.photoButtonText, { color: theme.textPrimary }]}>
+                  {t('profileEditPhotoChange')}
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.photoButton, { borderColor: theme.borderSoft, backgroundColor: theme.surfaceMuted }]}
+                onPress={removeProfilePhoto}
+                disabled={saving || uploadingPhoto || !photoUri}
+              >
+                <Ionicons name="trash-outline" size={15} color={theme.textSecondary} />
+                <Text style={[styles.photoButtonText, { color: theme.textSecondary }]}>
+                  {t('profileEditPhotoRemove')}
+                </Text>
+              </TouchableOpacity>
+              <Text style={[styles.photoHint, { color: theme.textSecondary }]}>
+                {t('profileEditPhotoHint')}
+              </Text>
+            </View>
+          </View>
 
           <Text style={[styles.fieldLabel, { color: theme.textSecondary }]}>{t('profileEditFirstNamePlaceholder')}</Text>
           <View style={[styles.inputWrap, { backgroundColor: theme.surfaceMuted, borderColor: theme.borderSoft }]}>
@@ -820,6 +1046,50 @@ const styles = StyleSheet.create({
   hint: {
     fontSize: 13,
     marginBottom: 14,
+  },
+  photoRow: {
+    flexDirection: 'row',
+    gap: 12,
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  photoFrame: {
+    width: 84,
+    height: 84,
+    borderRadius: 22,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    overflow: 'hidden',
+  },
+  photoImage: {
+    width: '100%',
+    height: '100%',
+  },
+  photoFallbackText: {
+    fontSize: 24,
+    fontWeight: '800',
+    letterSpacing: 0.5,
+  },
+  photoActions: {
+    flex: 1,
+    gap: 8,
+  },
+  photoButton: {
+    minHeight: 38,
+    borderWidth: 1,
+    borderRadius: 10,
+    paddingHorizontal: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  photoButtonText: {
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  photoHint: {
+    fontSize: 11,
   },
   fieldLabel: {
     fontSize: 12,
