@@ -107,6 +107,7 @@ export const enTranslations = {
     profileEditPhotoRemove: 'Remove photo',
     profileEditPhotoHint: 'JPG/PNG recommended, square image works best.',
     profileEditPhotoPermissionDenied: 'Please allow photo library access to select a profile picture.',
+    profileEditSaveFailed: 'We could not save your profile. Please try again.',
     profileEditAddressPlaceholder: 'Address',
     profileEditAddressStreetPlaceholder: 'Street',
     profileEditAddressHouseNumberPlaceholder: 'House number',
@@ -335,6 +336,8 @@ export const enTranslations = {
     authVerifyEmailBody: 'We sent a verification link to activate your account.',
     authFailedTitle: 'Authentication failed',
     authUnableSignIn: 'Unable to sign in',
+    authInvalidCredentialsBody: 'Email or password is incorrect.',
+    authGenericOperationFailed: 'Something went wrong. Please try again.',
     authClientUnavailable: 'Auth client is unavailable right now.',
     authPasswordMinLengthBody: 'Password must be at least 8 characters.',
     authPasswordMismatchBody: 'Passwords do not match.',
@@ -363,6 +366,8 @@ export const enTranslations = {
       'This company code has reached its usage limit. Ask your employer for a new company code.',
     companyLinkRateLimitedBody:
       'Too many attempts in a short time. Please wait a few minutes and try again.',
+    companyLinkRequestFailedBody:
+      'We could not request company access right now. Please try again.',
     companyLinkEnterCodeBody: 'Enter your company code to request access.',
     companyJoinSectionTitle: 'Join your company',
     companyJoinSectionHint:
@@ -391,6 +396,10 @@ export const enTranslations = {
     unableOpenLinkDevice: 'Unable to open this link on your device.',
     rootCheckingSession: 'Checking your session...',
     rootPreparingWorkspace: 'Preparing your workspace…',
+    rootBootTimeoutTitle: 'Session check is taking longer than expected',
+    rootBootTimeoutBody: 'You can retry now or continue to sign in.',
+    rootBootTimeoutRetry: 'Retry',
+    rootBootTimeoutContinue: 'Continue to sign in',
     welcomeTitle: 'Shiftor Employee',
     welcomeSubtitle: 'Find jobs first, then sign in or create an account when you are ready.',
     welcomeBrowseJobs: 'Browse jobs',

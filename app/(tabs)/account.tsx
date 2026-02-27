@@ -38,6 +38,7 @@ import {
 } from '@shared/utils/support';
 import Constants from 'expo-constants';
 import { formatAddress } from '@shared/utils/address';
+import { getUserFacingErrorMessage } from '@shared/utils/userFacingError';
 
 const normalizeContactString = (value?: unknown) =>
   typeof value === 'string' && value.trim() ? value.trim() : undefined;
@@ -102,25 +103,6 @@ const isRpcSignatureMismatchError = (error: unknown) => {
     /Could not find the function/i.test(message) ||
     /request_employee_company_link/i.test(message)
   );
-};
-
-const getReadableErrorMessage = (error: unknown, fallback: string) => {
-  if (error instanceof Error && error.message.trim()) {
-    return error.message;
-  }
-  if (typeof error === 'string' && error.trim()) {
-    return error;
-  }
-  if (error && typeof error === 'object') {
-    const knownKeys = ['message', 'error_description', 'details', 'hint'] as const;
-    for (const key of knownKeys) {
-      const value = (error as Record<string, unknown>)[key];
-      if (typeof value === 'string' && value.trim()) {
-        return value;
-      }
-    }
-  }
-  return fallback;
 };
 
 const fetchEmployeeProfile = async (
@@ -595,7 +577,11 @@ export default function AccountScreen() {
       redirectTo: redirectUrl,
     });
     if (error) {
-      Alert.alert(t('securityResetPassword'), error.message);
+      console.warn('Password reset request failed', error);
+      Alert.alert(
+        t('securityResetPassword'),
+        getUserFacingErrorMessage(error, { fallback: t('authGenericOperationFailed') })
+      );
       return;
     }
     Alert.alert(t('securityResetPassword'), t('securityResetLinkSent', { email }));
@@ -607,7 +593,11 @@ export default function AccountScreen() {
     }
     const { error } = await supabase.auth.signOut({ scope: 'others' });
     if (error) {
-      Alert.alert(t('securityManageSessions'), error.message);
+      console.warn('Sign-out-all request failed', error);
+      Alert.alert(
+        t('securityManageSessions'),
+        getUserFacingErrorMessage(error, { fallback: t('authGenericOperationFailed') })
+      );
       return;
     }
     Alert.alert(t('securityManageSessions'), t('securitySessionsSignedOutOthers'));
@@ -628,8 +618,11 @@ export default function AccountScreen() {
       }
       Alert.alert(t('securityEnable2fa'), t('security2faNotVerified'));
     } catch (error) {
-      const message = error instanceof Error ? error.message : t('security2faStatusCheckFailed');
-      Alert.alert(t('securityEnable2fa'), message);
+      console.warn('2FA status check failed', error);
+      Alert.alert(
+        t('securityEnable2fa'),
+        getUserFacingErrorMessage(error, { fallback: t('security2faStatusCheckFailed') })
+      );
     }
   };
   const openExternalUrl = async (title: string, url: string, fallbackUrl?: string) => {
@@ -745,9 +738,12 @@ export default function AccountScreen() {
         );
       }
     } catch (error) {
+      console.warn('Company link request failed', error);
       Alert.alert(
         t('companyLinkTitle'),
-        getReadableErrorMessage(error, t('authUnableSignIn')),
+        getUserFacingErrorMessage(error, {
+          fallback: t('companyLinkRequestFailedBody'),
+        }),
         [{ text: 'OK', onPress: () => setJoinCode('') }]
       );
     } finally {

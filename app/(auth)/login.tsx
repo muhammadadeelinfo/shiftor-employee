@@ -29,6 +29,7 @@ import {
   SUPPORT_EMAIL,
   SUPPORT_FALLBACK_URL,
 } from '@shared/utils/support';
+import { getUserFacingErrorMessage } from '@shared/utils/userFacingError';
 
 const REMEMBER_KEY = 'employee-portal-remember-me';
 const EMAIL_KEY = 'employee-portal-remembered-email';
@@ -243,9 +244,14 @@ export default function LoginScreen() {
       }
       router.replace('(tabs)/my-shifts');
     } catch (error) {
+      console.warn('Sign-in failed', error);
       Alert.alert(
         t('authFailedTitle'),
-        error instanceof Error ? error.message : t('authUnableSignIn')
+        getUserFacingErrorMessage(error, {
+          fallback: t('authUnableSignIn'),
+          invalidCredentials: t('authInvalidCredentialsBody'),
+          emailNotConfirmed: t('authVerifyEmailBody'),
+        })
       );
     } finally {
       setLoading(false);
@@ -299,7 +305,13 @@ export default function LoginScreen() {
       Alert.alert(t('authVerifyEmailTitle'), t('authVerifyEmailBody'));
       setMode('signin');
     } catch (error) {
-      Alert.alert(t('authFailedTitle'), error instanceof Error ? error.message : t('authUnableSignIn'));
+      console.warn('Sign-up failed', error);
+      Alert.alert(
+        t('authFailedTitle'),
+        getUserFacingErrorMessage(error, {
+          fallback: t('authUnableSignIn'),
+        })
+      );
     } finally {
       setLoading(false);
     }
@@ -338,7 +350,13 @@ export default function LoginScreen() {
       redirectTo: authRedirectUrl || undefined,
     });
     if (error) {
-      Alert.alert(t('securityResetPassword'), error.message);
+      console.warn('Password reset request failed', error);
+      Alert.alert(
+        t('securityResetPassword'),
+        getUserFacingErrorMessage(error, {
+          fallback: t('authGenericOperationFailed'),
+        })
+      );
       return;
     }
     Alert.alert(t('securityResetPassword'), t('securityResetLinkSent', { email: trimmedEmail }));

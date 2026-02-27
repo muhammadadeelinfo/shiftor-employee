@@ -30,6 +30,7 @@ import { useLanguage } from '@shared/context/LanguageContext';
 import { PrimaryButton } from '@shared/components/PrimaryButton';
 import { splitAddressIntoLabelMeta } from '@shared/utils/address';
 import DateTimePicker from '@react-native-community/datetimepicker';
+import { getUserFacingErrorMessage } from '@shared/utils/userFacingError';
 
 type EmployeeProfile = Record<string, unknown>;
 type AddressSuggestion = { value: string; label: string; meta: string };
@@ -287,16 +288,6 @@ const updateEmployeeProfileRecord = async (
       break;
     }
   }
-};
-
-const getReadableErrorMessage = (error: unknown, fallback: string) => {
-  if (error instanceof Error && error.message.trim()) return error.message;
-  if (typeof error === 'string' && error.trim()) return error;
-  if (error && typeof error === 'object') {
-    const value = (error as Record<string, unknown>).message;
-    if (typeof value === 'string' && value.trim()) return value;
-  }
-  return fallback;
 };
 
 const toDateOnlyString = (date: Date) => {
@@ -669,7 +660,11 @@ export default function ProfileEditScreen() {
         { text: 'OK', onPress: () => router.back() },
       ]);
     } catch (error) {
-      Alert.alert(t('profileEditTitle'), getReadableErrorMessage(error, t('authUnableSignIn')));
+      console.warn('Profile save failed', error);
+      Alert.alert(
+        t('profileEditTitle'),
+        getUserFacingErrorMessage(error, { fallback: t('profileEditSaveFailed') })
+      );
     } finally {
       setUploadingPhoto(false);
       setSaving(false);

@@ -108,6 +108,7 @@ export const deTranslations = {
     profileEditPhotoHint: 'JPG/PNG empfohlen, quadratisches Bild ist am besten.',
     profileEditPhotoPermissionDenied:
       'Bitte erlaube den Zugriff auf die Fotobibliothek, um ein Profilbild auszuwählen.',
+    profileEditSaveFailed: 'Dein Profil konnte nicht gespeichert werden. Bitte versuche es erneut.',
     profileEditAddressPlaceholder: 'Adresse',
     profileEditAddressStreetPlaceholder: 'Straße',
     profileEditAddressHouseNumberPlaceholder: 'Hausnummer',
@@ -338,6 +339,8 @@ export const deTranslations = {
     authVerifyEmailBody: 'Wir haben einen Link zur Aktivierung deines Kontos geschickt.',
     authFailedTitle: 'Authentifizierung fehlgeschlagen',
     authUnableSignIn: 'Anmeldung nicht möglich',
+    authInvalidCredentialsBody: 'E-Mail oder Passwort ist nicht korrekt.',
+    authGenericOperationFailed: 'Etwas ist schiefgelaufen. Bitte versuche es erneut.',
     authClientUnavailable: 'Der Auth-Client ist momentan nicht verfügbar.',
     authPasswordMinLengthBody: 'Das Passwort muss mindestens 8 Zeichen lang sein.',
     authPasswordMismatchBody: 'Die Passwörter stimmen nicht überein.',
@@ -366,6 +369,8 @@ export const deTranslations = {
       'Dieser Firmen-Code hat das Nutzungslimit erreicht. Bitte frage deinen Arbeitgeber nach einem neuen Code.',
     companyLinkRateLimitedBody:
       'Zu viele Versuche in kurzer Zeit. Bitte warte ein paar Minuten und versuche es erneut.',
+    companyLinkRequestFailedBody:
+      'Der Firmenzugriff konnte gerade nicht angefragt werden. Bitte versuche es erneut.',
     companyLinkEnterCodeBody: 'Gib deinen Firmen-Code ein, um Zugriff anzufragen.',
     companyJoinSectionTitle: 'Firma verbinden',
     companyJoinSectionHint:
@@ -394,6 +399,10 @@ export const deTranslations = {
     unableOpenLinkDevice: 'Dieser Link kann auf deinem Gerät nicht geöffnet werden.',
     rootCheckingSession: 'Sitzung wird überprüft...',
     rootPreparingWorkspace: 'Arbeitsbereich wird vorbereitet…',
+    rootBootTimeoutTitle: 'Die Sitzungsprüfung dauert länger als erwartet',
+    rootBootTimeoutBody: 'Du kannst jetzt erneut versuchen oder mit der Anmeldung fortfahren.',
+    rootBootTimeoutRetry: 'Erneut versuchen',
+    rootBootTimeoutContinue: 'Weiter zur Anmeldung',
     welcomeTitle: 'Shiftor Employee',
     welcomeSubtitle:
       'Entdecke zuerst Jobs und melde dich an oder registriere dich, wenn du bereit bist.',

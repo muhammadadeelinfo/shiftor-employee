@@ -8,6 +8,7 @@ type AuthContextValue = {
   loading: boolean;
   user: User | null;
   session: Session | null;
+  refreshSession: () => Promise<void>;
   signInWithEmail: (email: string) => Promise<void>;
   signOut: () => Promise<void>;
 };
@@ -19,57 +20,56 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
 
+  const refreshSession = async () => {
+    const client = supabase;
+    if (!client) {
+      setSession(null);
+      setLoading(false);
+      return;
+    }
+
+    setLoading(true);
+    let didComplete = false;
+    const completeLoad = () => {
+      if (didComplete) return;
+      didComplete = true;
+      setLoading(false);
+    };
+
+    const timeoutId = setTimeout(() => {
+      console.warn(`Supabase session bootstrap timed out after ${AUTH_BOOT_TIMEOUT_MS}ms.`);
+      completeLoad();
+    }, AUTH_BOOT_TIMEOUT_MS);
+
+    try {
+      const {
+        data: { session: currentSession },
+      } = await client.auth.getSession();
+      setSession(currentSession);
+    } catch (error) {
+      console.warn('Failed to bootstrap Supabase session.', error);
+    } finally {
+      clearTimeout(timeoutId);
+      completeLoad();
+    }
+  };
+
   useEffect(() => {
     const client = supabase;
     if (!client) {
       setLoading(false);
       return;
     }
-
-    let mounted = true;
-
-    let didResolveInitialSession = false;
-
-    const completeInitialSessionLoad = () => {
-      if (!mounted || didResolveInitialSession) return;
-      didResolveInitialSession = true;
-      setLoading(false);
-    };
-
-    const timeoutId = setTimeout(() => {
-      console.warn(`Supabase session bootstrap timed out after ${AUTH_BOOT_TIMEOUT_MS}ms.`);
-      completeInitialSessionLoad();
-    }, AUTH_BOOT_TIMEOUT_MS);
-
-    (async () => {
-      try {
-        const {
-          data: { session: currentSession },
-        } = await client.auth.getSession();
-
-        if (mounted) {
-          setSession(currentSession);
-        }
-      } catch (error) {
-        console.warn('Failed to bootstrap Supabase session.', error);
-      } finally {
-        clearTimeout(timeoutId);
-        completeInitialSessionLoad();
-      }
-    })();
+    void refreshSession();
 
     const {
       data: { subscription },
     } = client.auth.onAuthStateChange((_event, newSession) => {
-      if (mounted) {
-        setSession(newSession);
-        setLoading(false);
-      }
+      setSession(newSession);
+      setLoading(false);
     });
 
     return () => {
-      mounted = false;
-      clearTimeout(timeoutId);
       subscription.unsubscribe();
     };
   }, []);
@@ -113,10 +113,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       loading,
       user: session?.user ?? null,
       session,
+      refreshSession,
       signInWithEmail,
       signOut,
     }),
-    [loading, session]
+    [loading, refreshSession, session]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
