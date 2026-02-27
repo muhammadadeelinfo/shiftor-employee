@@ -1013,10 +1013,25 @@ export default function AccountScreen() {
                 isIOS && styles.sectionCardIOS,
               ]}
             >
-              <Text style={[styles.sectionHeading, { color: theme.textPrimary }]}>{t('accountSnapshot')}</Text>
+              <View style={styles.sectionHeadingRow}>
+                <Text style={[styles.sectionHeading, styles.sectionHeadingInRow, { color: theme.textPrimary }]}>
+                  {t('accountSnapshot')}
+                </Text>
+                <TouchableOpacity
+                  style={[styles.sectionActionChip, { borderColor: theme.borderSoft, backgroundColor: theme.surfaceMuted }]}
+                  onPress={() => router.push('/profile-edit')}
+                >
+                  <Ionicons name="create-outline" size={14} color={theme.primary} />
+                  <Text style={[styles.sectionActionText, { color: theme.primary }]}>{t('profileEditButton')}</Text>
+                </TouchableOpacity>
+              </View>
               <View style={styles.infoGrid}>
                 {[
                   { label: t('emailVerifiedLabel'), value: user?.email_confirmed_at ? t('yes') : t('pending') },
+                  {
+                    label: t('notificationsSectionTitle'),
+                    value: unreadCount > 0 ? `${unreadCount}` : t('notificationsPanelEmpty'),
+                  },
                 ].map((stat) => (
                   <View
                     key={stat.label}
@@ -1087,104 +1102,7 @@ export default function AccountScreen() {
                   </View>
                 ))}
               </View>
-              <View style={styles.toolsList}>
-                <TouchableOpacity
-                  style={[styles.toolsRow, { borderColor: theme.borderSoft }]}
-                  onPress={() => router.push('/profile-edit')}
-                >
-                  <View style={[styles.toolsIconWrap, { backgroundColor: theme.surfaceMuted }]}>
-                    <Ionicons name="create-outline" size={16} color={theme.primary} />
-                  </View>
-                  <Text style={[styles.toolsLabel, { color: theme.textPrimary }]}>
-                    {t('profileEditButton')}
-                  </Text>
-                  <Ionicons name="chevron-forward" size={16} color={theme.textSecondary} />
-                </TouchableOpacity>
-              </View>
             </View>
-            <View
-              style={[
-                styles.sectionCard,
-                { backgroundColor: theme.surface, borderColor: theme.borderSoft },
-                isIOS && styles.sectionCardIOS,
-              ]}
-            >
-              <Text style={[styles.sectionHeading, { color: theme.textPrimary }]}>
-                {t('notificationsSectionTitle')}
-              </Text>
-              <View style={styles.toolsList}>
-                <TouchableOpacity
-                  style={[styles.toolsRow, { borderColor: theme.borderSoft }]}
-                  onPress={() => router.push('/notifications')}
-                >
-                  <View style={[styles.toolsIconWrap, { backgroundColor: theme.surfaceMuted }]}>
-                    <Ionicons name="notifications-outline" size={16} color={theme.primary} />
-                  </View>
-                  <Text style={[styles.toolsLabel, { color: theme.textPrimary }]}>
-                    {t('notificationsPush')}
-                  </Text>
-                  {unreadCount > 0 ? (
-                    <View style={styles.toolsBadge}>
-                      <Text style={styles.toolsBadgeText}>{unreadCount > 9 ? '9+' : unreadCount}</Text>
-                    </View>
-                  ) : null}
-                  <Ionicons name="chevron-forward" size={16} color={theme.textSecondary} />
-                </TouchableOpacity>
-              </View>
-            </View>
-
-            <View
-              style={[
-                styles.sectionCard,
-                { backgroundColor: theme.surface, borderColor: theme.borderSoft },
-                isIOS && styles.sectionCardIOS,
-              ]}
-            >
-              <Text style={[styles.sectionHeading, { color: theme.textPrimary }]}>
-                {t('aboutSectionTitle')}
-              </Text>
-              <Text style={[styles.sectionHint, { color: theme.textSecondary }]}>
-                {t('aboutSectionHint')}
-              </Text>
-              <View style={styles.aboutMetaList}>
-                {[
-                  { label: t('aboutAppName'), value: appName },
-                  { label: t('aboutVersion'), value: appVersionLabel },
-                ].map((entry) => (
-                  <View key={entry.label} style={[styles.aboutMetaRow, { borderColor: theme.borderSoft }]}>
-                    <Text style={[styles.aboutMetaLabel, { color: theme.textSecondary }]}>{entry.label}</Text>
-                    <Text style={[styles.aboutMetaValue, { color: theme.textPrimary }]}>{entry.value}</Text>
-                  </View>
-                ))}
-              </View>
-              <View style={styles.toolsList}>
-                <TouchableOpacity
-                  style={[styles.toolsRow, { borderColor: theme.borderSoft }]}
-                  onPress={() => void handlePrivacyPolicy()}
-                >
-                  <View style={[styles.toolsIconWrap, { backgroundColor: theme.surfaceMuted }]}>
-                    <Ionicons name="shield-outline" size={16} color={theme.primary} />
-                  </View>
-                  <Text style={[styles.toolsLabel, { color: theme.textPrimary }]}>
-                    {t('aboutPrivacyPolicy')}
-                  </Text>
-                  <Ionicons name="chevron-forward" size={16} color={theme.textSecondary} />
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={[styles.toolsRow, { borderColor: theme.borderSoft }]}
-                  onPress={() => void handleTerms()}
-                >
-                  <View style={[styles.toolsIconWrap, { backgroundColor: theme.surfaceMuted }]}>
-                    <Ionicons name="document-text-outline" size={16} color={theme.primary} />
-                  </View>
-                  <Text style={[styles.toolsLabel, { color: theme.textPrimary }]}>
-                    {t('aboutTerms')}
-                  </Text>
-                  <Ionicons name="chevron-forward" size={16} color={theme.textSecondary} />
-                </TouchableOpacity>
-              </View>
-            </View>
-
             {canRequestCompanyAccess ? (
               <View
                 style={[
@@ -1337,6 +1255,89 @@ export default function AccountScreen() {
                   </View>
                   <Text style={[styles.toolsLabel, { color: theme.textPrimary }]}>
                     {t('securityEnable2fa')}
+                  </Text>
+                  <Ionicons name="chevron-forward" size={16} color={theme.textSecondary} />
+                </TouchableOpacity>
+              </View>
+            </View>
+
+            <View
+              style={[
+                styles.sectionCard,
+                { backgroundColor: theme.surface, borderColor: theme.borderSoft },
+                isIOS && styles.sectionCardIOS,
+              ]}
+            >
+              <Text style={[styles.sectionHeading, { color: theme.textPrimary }]}>
+                {t('notificationsSectionTitle')}
+              </Text>
+              <View style={styles.toolsList}>
+                <TouchableOpacity
+                  style={[styles.toolsRow, { borderColor: theme.borderSoft }]}
+                  onPress={() => router.push('/notifications')}
+                >
+                  <View style={[styles.toolsIconWrap, { backgroundColor: theme.surfaceMuted }]}>
+                    <Ionicons name="notifications-outline" size={16} color={theme.primary} />
+                  </View>
+                  <Text style={[styles.toolsLabel, { color: theme.textPrimary }]}>
+                    {t('notificationsPush')}
+                  </Text>
+                  {unreadCount > 0 ? (
+                    <View style={styles.toolsBadge}>
+                      <Text style={styles.toolsBadgeText}>{unreadCount > 9 ? '9+' : unreadCount}</Text>
+                    </View>
+                  ) : null}
+                  <Ionicons name="chevron-forward" size={16} color={theme.textSecondary} />
+                </TouchableOpacity>
+              </View>
+            </View>
+
+            <View
+              style={[
+                styles.sectionCard,
+                { backgroundColor: theme.surface, borderColor: theme.borderSoft },
+                isIOS && styles.sectionCardIOS,
+              ]}
+            >
+              <Text style={[styles.sectionHeading, { color: theme.textPrimary }]}>
+                {t('aboutSectionTitle')}
+              </Text>
+              <Text style={[styles.sectionHint, { color: theme.textSecondary }]}>
+                {t('aboutSectionHint')}
+              </Text>
+              <View style={styles.aboutMetaList}>
+                {[
+                  { label: t('aboutAppName'), value: appName },
+                  { label: t('aboutVersion'), value: appVersionLabel },
+                ].map((entry) => (
+                  <View key={entry.label} style={[styles.aboutMetaRow, { borderColor: theme.borderSoft }]}>
+                    <Text style={[styles.aboutMetaLabel, { color: theme.textSecondary }]}>{entry.label}</Text>
+                    <Text style={[styles.aboutMetaValue, { color: theme.textPrimary }]}>{entry.value}</Text>
+                  </View>
+                ))}
+              </View>
+              <View style={styles.toolsList}>
+                <TouchableOpacity
+                  style={[styles.toolsRow, { borderColor: theme.borderSoft }]}
+                  onPress={() => void handlePrivacyPolicy()}
+                >
+                  <View style={[styles.toolsIconWrap, { backgroundColor: theme.surfaceMuted }]}>
+                    <Ionicons name="shield-outline" size={16} color={theme.primary} />
+                  </View>
+                  <Text style={[styles.toolsLabel, { color: theme.textPrimary }]}>
+                    {t('aboutPrivacyPolicy')}
+                  </Text>
+                  <Ionicons name="chevron-forward" size={16} color={theme.textSecondary} />
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.toolsRow, { borderColor: theme.borderSoft }]}
+                  onPress={() => void handleTerms()}
+                >
+                  <View style={[styles.toolsIconWrap, { backgroundColor: theme.surfaceMuted }]}>
+                    <Ionicons name="document-text-outline" size={16} color={theme.primary} />
+                  </View>
+                  <Text style={[styles.toolsLabel, { color: theme.textPrimary }]}>
+                    {t('aboutTerms')}
                   </Text>
                   <Ionicons name="chevron-forward" size={16} color={theme.textSecondary} />
                 </TouchableOpacity>
@@ -1662,11 +1663,34 @@ const styles = StyleSheet.create({
   sectionCardFirst: {
     marginTop: 6,
   },
+  sectionHeadingRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 10,
+    marginBottom: 10,
+  },
   sectionHeading: {
     fontSize: 20,
     fontWeight: '700',
     marginBottom: 10,
     letterSpacing: -0.1,
+  },
+  sectionHeadingInRow: {
+    marginBottom: 0,
+  },
+  sectionActionChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    borderWidth: 1,
+    borderRadius: 999,
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+  },
+  sectionActionText: {
+    fontSize: 12,
+    fontWeight: '700',
   },
   sectionHint: {
     fontSize: 12,
