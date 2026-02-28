@@ -1234,58 +1234,6 @@ export default function AccountScreen() {
               </View>
             ) : null}
 
-            {!isGuest ? (
-              <View
-                style={[
-                  styles.sectionCard,
-                  { backgroundColor: theme.surface, borderColor: theme.borderSoft },
-                  isIOS && styles.sectionCardIOS,
-                ]}
-              >
-                <Text style={[styles.sectionHeading, { color: theme.textPrimary }]}>
-                  {t('securitySectionTitle')}
-                </Text>
-                <View style={styles.toolsList}>
-                  <TouchableOpacity
-                    style={[styles.toolsRow, { borderColor: theme.borderSoft }]}
-                    onPress={() => void handleResetPassword()}
-                  >
-                    <View style={[styles.toolsIconWrap, { backgroundColor: theme.surfaceMuted }]}>
-                      <Ionicons name="key-outline" size={16} color={theme.primary} />
-                    </View>
-                    <Text style={[styles.toolsLabel, { color: theme.textPrimary }]}>
-                      {t('securityResetPassword')}
-                    </Text>
-                    <Ionicons name="chevron-forward" size={16} color={theme.textSecondary} />
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    style={[styles.toolsRow, { borderColor: theme.borderSoft }]}
-                    onPress={() => void handleManageSessions()}
-                  >
-                    <View style={[styles.toolsIconWrap, { backgroundColor: theme.surfaceMuted }]}>
-                      <Ionicons name="phone-portrait-outline" size={16} color={theme.primary} />
-                    </View>
-                    <Text style={[styles.toolsLabel, { color: theme.textPrimary }]}>
-                      {t('securityManageSessions')}
-                    </Text>
-                    <Ionicons name="chevron-forward" size={16} color={theme.textSecondary} />
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    style={[styles.toolsRow, { borderColor: theme.borderSoft }]}
-                    onPress={() => void handleCheckTwoFactor()}
-                  >
-                    <View style={[styles.toolsIconWrap, { backgroundColor: theme.surfaceMuted }]}>
-                      <Ionicons name="shield-checkmark-outline" size={16} color={theme.primary} />
-                    </View>
-                    <Text style={[styles.toolsLabel, { color: theme.textPrimary }]}>
-                      {t('securityEnable2fa')}
-                    </Text>
-                    <Ionicons name="chevron-forward" size={16} color={theme.textSecondary} />
-                  </TouchableOpacity>
-                </View>
-              </View>
-            ) : null}
-
             <View
               style={[
                 styles.sectionCard,
@@ -1312,58 +1260,6 @@ export default function AccountScreen() {
                       <Text style={styles.toolsBadgeText}>{unreadCount > 9 ? '9+' : unreadCount}</Text>
                     </View>
                   ) : null}
-                  <Ionicons name="chevron-forward" size={16} color={theme.textSecondary} />
-                </TouchableOpacity>
-              </View>
-            </View>
-
-            <View
-              style={[
-                styles.sectionCard,
-                { backgroundColor: theme.surface, borderColor: theme.borderSoft },
-                isIOS && styles.sectionCardIOS,
-              ]}
-            >
-              <Text style={[styles.sectionHeading, { color: theme.textPrimary }]}>
-                {t('aboutSectionTitle')}
-              </Text>
-              <Text style={[styles.sectionHint, { color: theme.textSecondary }]}>
-                {t('aboutSectionHint')}
-              </Text>
-              <View style={styles.aboutMetaList}>
-                {[
-                  { label: t('aboutAppName'), value: appName },
-                  { label: t('aboutVersion'), value: appVersionLabel },
-                ].map((entry) => (
-                  <View key={entry.label} style={[styles.aboutMetaRow, { borderColor: theme.borderSoft }]}>
-                    <Text style={[styles.aboutMetaLabel, { color: theme.textSecondary }]}>{entry.label}</Text>
-                    <Text style={[styles.aboutMetaValue, { color: theme.textPrimary }]}>{entry.value}</Text>
-                  </View>
-                ))}
-              </View>
-              <View style={styles.toolsList}>
-                <TouchableOpacity
-                  style={[styles.toolsRow, { borderColor: theme.borderSoft }]}
-                  onPress={() => void handlePrivacyPolicy()}
-                >
-                  <View style={[styles.toolsIconWrap, { backgroundColor: theme.surfaceMuted }]}>
-                    <Ionicons name="shield-outline" size={16} color={theme.primary} />
-                  </View>
-                  <Text style={[styles.toolsLabel, { color: theme.textPrimary }]}>
-                    {t('aboutPrivacyPolicy')}
-                  </Text>
-                  <Ionicons name="chevron-forward" size={16} color={theme.textSecondary} />
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={[styles.toolsRow, { borderColor: theme.borderSoft }]}
-                  onPress={() => void handleTerms()}
-                >
-                  <View style={[styles.toolsIconWrap, { backgroundColor: theme.surfaceMuted }]}>
-                    <Ionicons name="document-text-outline" size={16} color={theme.primary} />
-                  </View>
-                  <Text style={[styles.toolsLabel, { color: theme.textPrimary }]}>
-                    {t('aboutTerms')}
-                  </Text>
                   <Ionicons name="chevron-forward" size={16} color={theme.textSecondary} />
                 </TouchableOpacity>
               </View>
@@ -1479,21 +1375,121 @@ export default function AccountScreen() {
                   <Ionicons name="chevron-forward" size={16} color={theme.textSecondary} />
                 </TouchableOpacity>
               </View>
-              {!isGuest ? (
-                <>
-                  <PrimaryButton
-                    title={t('signOut')}
-                    onPress={handleSignOut}
-                    style={[styles.button, isIOS && styles.buttonIOS]}
-                  />
-                  <TouchableOpacity onPress={() => void handleDeleteAccount()}>
-                    <Text style={[styles.link, styles.destructiveLink, { color: theme.fail }]}>
-                      {t('supportDeleteAccount')}
-                    </Text>
-                  </TouchableOpacity>
-                </>
-              ) : null}
             </View>
+
+            <View
+              style={[
+                styles.sectionCard,
+                { backgroundColor: theme.surface, borderColor: theme.borderSoft },
+                isIOS && styles.sectionCardIOS,
+              ]}
+            >
+              <Text style={[styles.sectionHeading, { color: theme.textPrimary }]}>
+                {t('aboutSectionTitle')}
+              </Text>
+              <Text style={[styles.sectionHint, { color: theme.textSecondary }]}>
+                {t('aboutSectionHint')}
+              </Text>
+              <View style={styles.aboutMetaList}>
+                {[
+                  { label: t('aboutAppName'), value: appName },
+                  { label: t('aboutVersion'), value: appVersionLabel },
+                ].map((entry) => (
+                  <View key={entry.label} style={[styles.aboutMetaRow, { borderColor: theme.borderSoft }]}>
+                    <Text style={[styles.aboutMetaLabel, { color: theme.textSecondary }]}>{entry.label}</Text>
+                    <Text style={[styles.aboutMetaValue, { color: theme.textPrimary }]}>{entry.value}</Text>
+                  </View>
+                ))}
+              </View>
+              <View style={styles.toolsList}>
+                <TouchableOpacity
+                  style={[styles.toolsRow, { borderColor: theme.borderSoft }]}
+                  onPress={() => void handlePrivacyPolicy()}
+                >
+                  <View style={[styles.toolsIconWrap, { backgroundColor: theme.surfaceMuted }]}>
+                    <Ionicons name="shield-outline" size={16} color={theme.primary} />
+                  </View>
+                  <Text style={[styles.toolsLabel, { color: theme.textPrimary }]}>
+                    {t('aboutPrivacyPolicy')}
+                  </Text>
+                  <Ionicons name="chevron-forward" size={16} color={theme.textSecondary} />
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.toolsRow, { borderColor: theme.borderSoft }]}
+                  onPress={() => void handleTerms()}
+                >
+                  <View style={[styles.toolsIconWrap, { backgroundColor: theme.surfaceMuted }]}>
+                    <Ionicons name="document-text-outline" size={16} color={theme.primary} />
+                  </View>
+                  <Text style={[styles.toolsLabel, { color: theme.textPrimary }]}>
+                    {t('aboutTerms')}
+                  </Text>
+                  <Ionicons name="chevron-forward" size={16} color={theme.textSecondary} />
+                </TouchableOpacity>
+              </View>
+            </View>
+
+            {!isGuest ? (
+              <View
+                style={[
+                  styles.sectionCard,
+                  { backgroundColor: theme.surface, borderColor: theme.borderSoft },
+                  isIOS && styles.sectionCardIOS,
+                ]}
+              >
+                <Text style={[styles.sectionHeading, { color: theme.textPrimary }]}>
+                  {t('securitySectionTitle')}
+                </Text>
+                <View style={styles.toolsList}>
+                  <TouchableOpacity
+                    style={[styles.toolsRow, { borderColor: theme.borderSoft }]}
+                    onPress={() => void handleResetPassword()}
+                  >
+                    <View style={[styles.toolsIconWrap, { backgroundColor: theme.surfaceMuted }]}>
+                      <Ionicons name="key-outline" size={16} color={theme.primary} />
+                    </View>
+                    <Text style={[styles.toolsLabel, { color: theme.textPrimary }]}>
+                      {t('securityResetPassword')}
+                    </Text>
+                    <Ionicons name="chevron-forward" size={16} color={theme.textSecondary} />
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[styles.toolsRow, { borderColor: theme.borderSoft }]}
+                    onPress={() => void handleManageSessions()}
+                  >
+                    <View style={[styles.toolsIconWrap, { backgroundColor: theme.surfaceMuted }]}>
+                      <Ionicons name="phone-portrait-outline" size={16} color={theme.primary} />
+                    </View>
+                    <Text style={[styles.toolsLabel, { color: theme.textPrimary }]}>
+                      {t('securityManageSessions')}
+                    </Text>
+                    <Ionicons name="chevron-forward" size={16} color={theme.textSecondary} />
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[styles.toolsRow, { borderColor: theme.borderSoft }]}
+                    onPress={() => void handleCheckTwoFactor()}
+                  >
+                    <View style={[styles.toolsIconWrap, { backgroundColor: theme.surfaceMuted }]}>
+                      <Ionicons name="shield-checkmark-outline" size={16} color={theme.primary} />
+                    </View>
+                    <Text style={[styles.toolsLabel, { color: theme.textPrimary }]}>
+                      {t('securityEnable2fa')}
+                    </Text>
+                    <Ionicons name="chevron-forward" size={16} color={theme.textSecondary} />
+                  </TouchableOpacity>
+                </View>
+                <PrimaryButton
+                  title={t('signOut')}
+                  onPress={handleSignOut}
+                  style={[styles.button, isIOS && styles.buttonIOS]}
+                />
+                <TouchableOpacity onPress={() => void handleDeleteAccount()}>
+                  <Text style={[styles.link, styles.destructiveLink, { color: theme.fail }]}>
+                    {t('supportDeleteAccount')}
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            ) : null}
           </View>
         )}
       />
@@ -1661,22 +1657,22 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-start',
   },
   headerSpacing: {
-    marginBottom: 12,
+    marginBottom: 8,
   },
   footerSpacer: {
     width: '100%',
   },
   body: {
     paddingHorizontal: layoutTokens.screenHorizontal,
-    paddingTop: layoutTokens.screenTop,
+    paddingTop: 18,
   },
   bodyIOS: {
-    paddingTop: 6,
+    paddingTop: 4,
   },
   sectionCard: {
     borderRadius: 24,
-    padding: 20,
-    marginTop: 12,
+    padding: 16,
+    marginTop: 10,
     borderWidth: 1,
     borderColor: '#27315a99',
     shadowColor: '#020617',
@@ -1686,11 +1682,11 @@ const styles = StyleSheet.create({
     elevation: 8,
   },
   sectionCardIOS: {
-    borderRadius: 28,
-    padding: 22,
+    borderRadius: 24,
+    padding: 18,
   },
   sectionCardFirst: {
-    marginTop: 6,
+    marginTop: 4,
   },
   sectionHeadingRow: {
     flexDirection: 'row',
@@ -1700,9 +1696,9 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   sectionHeading: {
-    fontSize: 20,
+    fontSize: 18,
     fontWeight: '700',
-    marginBottom: 10,
+    marginBottom: 8,
     letterSpacing: -0.1,
   },
   sectionHeadingInRow: {
@@ -1724,17 +1720,17 @@ const styles = StyleSheet.create({
   sectionHint: {
     fontSize: 12,
     marginTop: -2,
-    marginBottom: 10,
+    marginBottom: 8,
   },
   toolsList: {
     marginTop: 2,
   },
   toolsRow: {
-    minHeight: 50,
+    minHeight: 46,
     borderWidth: 1,
     borderRadius: 14,
     paddingHorizontal: 12,
-    marginTop: 8,
+    marginTop: 6,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
@@ -1792,7 +1788,7 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   contactList: {
-    marginTop: 12,
+    marginTop: 10,
   },
   guestAuthCard: {
     marginTop: 14,
@@ -1836,10 +1832,10 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     borderTopWidth: 1,
-    paddingVertical: 12,
+    paddingVertical: 10,
   },
   contactRowIOS: {
-    paddingVertical: 12,
+    paddingVertical: 10,
   },
   contactIconWrap: {
     width: 34,
