@@ -235,17 +235,6 @@ function LayoutContentInner() {
       return [...preserved, ...additions];
     });
   }, [quickShifts, formatShiftKey]);
-  useEffect(() => {
-    if (loading) return;
-
-    const authFreePaths = ['/login', '/signup', '/guest', '/startup', '/welcome'];
-    const isAuthFree = pathname ? authFreePaths.some((path) => pathname.startsWith(path)) : false;
-
-    if (!user && !isAuthFree) {
-      router.replace('/login');
-    }
-  }, [loading, pathname, router, user]);
-
   const insets = useSafeAreaInsets();
   const { theme } = useTheme();
   const reportThemeOptions = useMemo<Record<'default' | 'soft', [string, string]>>(

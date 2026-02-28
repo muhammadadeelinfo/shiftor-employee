@@ -22,6 +22,7 @@ import { useTheme } from '@shared/themeContext';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { layoutTokens } from '@shared/theme/layout';
 import Ionicons from '@expo/vector-icons/Ionicons';
+import { useAuth } from '@hooks/useSupabaseAuth';
 
 const getMonthLabel = (date: Date) => date.toLocaleDateString([], { month: 'long', year: 'numeric' });
 
@@ -40,12 +41,14 @@ export default function MyShiftsScreen() {
   const router = useRouter();
   const { t } = useLanguage();
   const { theme } = useTheme();
+  const { user } = useAuth();
   const { width, height } = useWindowDimensions();
   const isTablet = width >= 768;
   const isLargeTablet = width >= 1024;
   const isTabletLandscape = isLargeTablet && width > height;
   const showTabletGrid = isTabletLandscape && width >= 1180;
   const horizontalPadding = isTablet ? 20 : layoutTokens.screenHorizontal;
+  const isGuest = !user;
   const { orderedShifts, isLoading, error, refetch } = useShiftFeed();
   const [confirmingId, setConfirmingId] = useState<string | null>(null);
   const [confirmingAll, setConfirmingAll] = useState(false);
@@ -63,6 +66,9 @@ export default function MyShiftsScreen() {
   const referenceMonth = referenceShift ? new Date(referenceShift.start) : now;
   const monthLabel = getMonthLabel(referenceMonth);
   const nextShiftLabel = useMemo(() => {
+    if (isGuest) {
+      return t('shiftsGuestSubtitle');
+    }
     if (!nextShift) {
       return t('noUpcomingShifts');
     }
@@ -77,7 +83,7 @@ export default function MyShiftsScreen() {
     });
     const timeText = start.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
     return `${t('nextShift')}: ${dateText} · ${timeText}`;
-  }, [nextShift, t]);
+  }, [isGuest, nextShift, t]);
 
   const showSkeletons = isLoading && !orderedShifts.length && !error;
   const pendingAssignmentIds = useMemo(
@@ -98,9 +104,64 @@ export default function MyShiftsScreen() {
 
   const renderListEmptyState = () => (
     <View style={styles.listEmptyState}>
-      <Text style={styles.emptyTitle}>{t('listEmptyTitle', { month: monthLabel })}</Text>
-      <Text style={styles.emptySubtitle}>{t('listEmptySubtitle')}</Text>
-      <PrimaryButton title={t('refreshShifts')} onPress={() => refetch()} style={styles.emptyAction} />
+      {isGuest ? (
+        <View
+          style={[
+            styles.guestCard,
+            {
+              backgroundColor: theme.surfaceElevated,
+              borderColor: theme.borderSoft,
+            },
+          ]}
+        >
+          <View style={[styles.guestBadge, { backgroundColor: theme.surfaceMuted, borderColor: theme.borderSoft }]}>
+            <Ionicons name="flash-outline" size={13} color={theme.primary} />
+            <Text style={[styles.guestBadgeText, { color: theme.primary }]}>{t('shiftsGuestEyebrow')}</Text>
+          </View>
+          <View style={[styles.guestOrb, { backgroundColor: theme.primaryAccent }]}>
+            <Ionicons name="sparkles-outline" size={20} color={theme.surface} />
+          </View>
+          <Text style={[styles.guestTitle, { color: theme.textPrimary }]}>{t('shiftsGuestTitle')}</Text>
+          <Text style={[styles.guestBody, { color: theme.textSecondary }]}>{t('shiftsGuestBody')}</Text>
+          <View style={styles.guestMetricRow}>
+            {[
+              { value: 'Live', label: t('shiftsGuestStatLive') },
+              { value: '<1m', label: t('shiftsGuestStatReplies') },
+              { value: 'QR', label: t('shiftsGuestStatReady') },
+            ].map((item) => (
+              <View
+                key={item.label}
+                style={[
+                  styles.guestMetric,
+                  { backgroundColor: theme.surfaceMuted, borderColor: theme.borderSoft },
+                ]}
+              >
+                <Text style={[styles.guestMetricValue, { color: theme.textPrimary }]}>{item.value}</Text>
+                <Text style={[styles.guestMetricLabel, { color: theme.textSecondary }]}>{item.label}</Text>
+              </View>
+            ))}
+          </View>
+          <View style={styles.guestChipRow}>
+            {[t('shiftsGuestChipLive'), t('shiftsGuestChipCalendar'), t('shiftsGuestChipClockIn')].map((chip) => (
+              <View
+                key={chip}
+                style={[
+                  styles.guestChip,
+                  { backgroundColor: theme.surfaceMuted, borderColor: theme.borderSoft },
+                ]}
+              >
+                <Text style={[styles.guestChipText, { color: theme.textPrimary }]}>{chip}</Text>
+              </View>
+            ))}
+          </View>
+        </View>
+      ) : (
+        <>
+          <Text style={styles.emptyTitle}>{t('listEmptyTitle', { month: monthLabel })}</Text>
+          <Text style={styles.emptySubtitle}>{t('listEmptySubtitle')}</Text>
+          <PrimaryButton title={t('refreshShifts')} onPress={() => refetch()} style={styles.emptyAction} />
+        </>
+      )}
     </View>
   );
 
@@ -447,6 +508,99 @@ const styles = StyleSheet.create({
     marginBottom: 12,
     textAlign: 'center',
     maxWidth: 280,
+  },
+  guestCard: {
+    width: '100%',
+    borderWidth: 1,
+    borderRadius: 28,
+    padding: 20,
+    alignItems: 'center',
+    shadowColor: '#020617',
+    shadowOpacity: 0.12,
+    shadowOffset: { width: 0, height: 14 },
+    shadowRadius: 24,
+    elevation: 8,
+  },
+  guestBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    borderWidth: 1,
+    borderRadius: 999,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    marginBottom: 14,
+  },
+  guestBadgeText: {
+    fontSize: 12,
+    fontWeight: '800',
+    letterSpacing: 0.2,
+    textTransform: 'uppercase',
+  },
+  guestOrb: {
+    width: 52,
+    height: 52,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 14,
+  },
+  guestTitle: {
+    fontSize: 22,
+    fontWeight: '800',
+    textAlign: 'center',
+    letterSpacing: -0.2,
+  },
+  guestBody: {
+    marginTop: 10,
+    fontSize: 14,
+    lineHeight: 21,
+    textAlign: 'center',
+  },
+  guestMetricRow: {
+    flexDirection: 'row',
+    width: '100%',
+    gap: 8,
+    marginTop: 16,
+    marginBottom: 2,
+  },
+  guestMetric: {
+    flex: 1,
+    borderWidth: 1,
+    borderRadius: 18,
+    paddingVertical: 12,
+    paddingHorizontal: 10,
+    alignItems: 'center',
+  },
+  guestMetricValue: {
+    fontSize: 15,
+    fontWeight: '800',
+    letterSpacing: -0.2,
+  },
+  guestMetricLabel: {
+    marginTop: 4,
+    fontSize: 11,
+    fontWeight: '600',
+    textAlign: 'center',
+    lineHeight: 14,
+  },
+  guestChipRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'center',
+    gap: 8,
+    marginTop: 14,
+    marginBottom: 4,
+  },
+  guestChip: {
+    borderWidth: 1,
+    borderRadius: 999,
+    paddingVertical: 7,
+    paddingHorizontal: 12,
+  },
+  guestChipText: {
+    fontSize: 12,
+    fontWeight: '700',
   },
   emptyAction: {
     minWidth: 180,

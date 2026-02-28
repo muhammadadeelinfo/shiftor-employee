@@ -1,9 +1,11 @@
-import { Tabs } from 'expo-router';
+import { Tabs, usePathname, useRouter } from 'expo-router';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '@shared/themeContext';
 import { useLanguage } from '@shared/context/LanguageContext';
 import { useWindowDimensions } from 'react-native';
+import { useEffect } from 'react';
+import { useAuth } from '@hooks/useSupabaseAuth';
 
 const iconConfig: Record<
   string,
@@ -42,12 +44,24 @@ export default function TabsLayout() {
 }
 
 function ThemeAwareTabs({ insets }: { insets: ReturnType<typeof useSafeAreaInsets> }) {
+  const router = useRouter();
+  const pathname = usePathname();
   const { theme } = useTheme();
   const { t } = useLanguage();
+  const { user } = useAuth();
   const { width } = useWindowDimensions();
   const isTablet = width >= 768;
+
+  useEffect(() => {
+    if (user) return;
+    if (pathname === '/my-shifts' || pathname === '/qr-clock-in') {
+      router.replace('/jobs');
+    }
+  }, [pathname, router, user]);
+
   return (
     <Tabs
+      initialRouteName="jobs"
       screenOptions={({ route }) => {
         const icon = iconConfig[route.name] ?? {
           active: 'square',
@@ -87,10 +101,10 @@ function ThemeAwareTabs({ insets }: { insets: ReturnType<typeof useSafeAreaInset
         };
       }}
     >
-      <Tabs.Screen name="my-shifts" />
-      <Tabs.Screen name="calendar" />
-      <Tabs.Screen name="qr-clock-in" />
       <Tabs.Screen name="jobs" />
+      <Tabs.Screen name="my-shifts" options={{ href: user ? undefined : null }} />
+      <Tabs.Screen name="calendar" />
+      <Tabs.Screen name="qr-clock-in" options={{ href: user ? undefined : null }} />
       <Tabs.Screen name="account" />
       <Tabs.Screen name="calendar-settings" options={{ href: null }} />
     </Tabs>

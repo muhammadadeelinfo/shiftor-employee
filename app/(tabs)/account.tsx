@@ -473,6 +473,7 @@ export default function AccountScreen() {
   const isLargeTablet = width >= 1024;
   const isIOS = Platform.OS === 'ios';
   const shouldStackHeroHeader = shouldStackForCompactWidth(width);
+  const isGuest = !user;
   const employeeId = user?.id;
   const metadata = user?.user_metadata;
   const metadataRecord =
@@ -1013,13 +1014,15 @@ export default function AccountScreen() {
                 <Text style={[styles.sectionHeading, styles.sectionHeadingInRow, { color: theme.textPrimary }]}>
                   {t('accountSnapshot')}
                 </Text>
-                <TouchableOpacity
-                  style={[styles.sectionActionChip, { borderColor: theme.borderSoft, backgroundColor: theme.surfaceMuted }]}
-                  onPress={() => router.push('/profile-edit')}
-                >
-                  <Ionicons name="create-outline" size={14} color={theme.primary} />
-                  <Text style={[styles.sectionActionText, { color: theme.primary }]}>{t('profileEditButton')}</Text>
-                </TouchableOpacity>
+                {!isGuest ? (
+                  <TouchableOpacity
+                    style={[styles.sectionActionChip, { borderColor: theme.borderSoft, backgroundColor: theme.surfaceMuted }]}
+                    onPress={() => router.push('/profile-edit')}
+                  >
+                    <Ionicons name="create-outline" size={14} color={theme.primary} />
+                    <Text style={[styles.sectionActionText, { color: theme.primary }]}>{t('profileEditButton')}</Text>
+                  </TouchableOpacity>
+                ) : null}
               </View>
               <View style={styles.infoGrid}>
                 {[
@@ -1098,6 +1101,30 @@ export default function AccountScreen() {
                   </View>
                 ))}
               </View>
+              {isGuest ? (
+                <View style={[styles.guestAuthCard, { backgroundColor: theme.surfaceMuted, borderColor: theme.borderSoft }]}>
+                  <Text style={[styles.guestAuthTitle, { color: theme.textPrimary }]}>
+                    {t('welcomeAuthCta')}
+                  </Text>
+                  <Text style={[styles.sectionHint, styles.guestAuthHint, { color: theme.textSecondary }]}>
+                    {t('startupJobsReadySubtitle')}
+                  </Text>
+                  <PrimaryButton
+                    title={t('loginSignInButton')}
+                    onPress={() => router.push('/login')}
+                    style={styles.guestAuthPrimary}
+                  />
+                  <TouchableOpacity
+                    style={[styles.guestAuthSecondary, { borderColor: theme.borderSoft }]}
+                    onPress={() => router.push('/login?mode=signup')}
+                    accessibilityRole="button"
+                  >
+                    <Text style={[styles.guestAuthSecondaryText, { color: theme.primary }]}>
+                      {t('signupCreateButton')}
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              ) : null}
             </View>
             {canRequestCompanyAccess ? (
               <View
@@ -1207,55 +1234,57 @@ export default function AccountScreen() {
               </View>
             ) : null}
 
-            <View
-              style={[
-                styles.sectionCard,
-                { backgroundColor: theme.surface, borderColor: theme.borderSoft },
-                isIOS && styles.sectionCardIOS,
-              ]}
-            >
-              <Text style={[styles.sectionHeading, { color: theme.textPrimary }]}>
-                {t('securitySectionTitle')}
-              </Text>
-              <View style={styles.toolsList}>
-                <TouchableOpacity
-                  style={[styles.toolsRow, { borderColor: theme.borderSoft }]}
-                  onPress={() => void handleResetPassword()}
-                >
-                  <View style={[styles.toolsIconWrap, { backgroundColor: theme.surfaceMuted }]}>
-                    <Ionicons name="key-outline" size={16} color={theme.primary} />
-                  </View>
-                  <Text style={[styles.toolsLabel, { color: theme.textPrimary }]}>
-                    {t('securityResetPassword')}
-                  </Text>
-                  <Ionicons name="chevron-forward" size={16} color={theme.textSecondary} />
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={[styles.toolsRow, { borderColor: theme.borderSoft }]}
-                  onPress={() => void handleManageSessions()}
-                >
-                  <View style={[styles.toolsIconWrap, { backgroundColor: theme.surfaceMuted }]}>
-                    <Ionicons name="phone-portrait-outline" size={16} color={theme.primary} />
-                  </View>
-                  <Text style={[styles.toolsLabel, { color: theme.textPrimary }]}>
-                    {t('securityManageSessions')}
-                  </Text>
-                  <Ionicons name="chevron-forward" size={16} color={theme.textSecondary} />
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={[styles.toolsRow, { borderColor: theme.borderSoft }]}
-                  onPress={() => void handleCheckTwoFactor()}
-                >
-                  <View style={[styles.toolsIconWrap, { backgroundColor: theme.surfaceMuted }]}>
-                    <Ionicons name="shield-checkmark-outline" size={16} color={theme.primary} />
-                  </View>
-                  <Text style={[styles.toolsLabel, { color: theme.textPrimary }]}>
-                    {t('securityEnable2fa')}
-                  </Text>
-                  <Ionicons name="chevron-forward" size={16} color={theme.textSecondary} />
-                </TouchableOpacity>
+            {!isGuest ? (
+              <View
+                style={[
+                  styles.sectionCard,
+                  { backgroundColor: theme.surface, borderColor: theme.borderSoft },
+                  isIOS && styles.sectionCardIOS,
+                ]}
+              >
+                <Text style={[styles.sectionHeading, { color: theme.textPrimary }]}>
+                  {t('securitySectionTitle')}
+                </Text>
+                <View style={styles.toolsList}>
+                  <TouchableOpacity
+                    style={[styles.toolsRow, { borderColor: theme.borderSoft }]}
+                    onPress={() => void handleResetPassword()}
+                  >
+                    <View style={[styles.toolsIconWrap, { backgroundColor: theme.surfaceMuted }]}>
+                      <Ionicons name="key-outline" size={16} color={theme.primary} />
+                    </View>
+                    <Text style={[styles.toolsLabel, { color: theme.textPrimary }]}>
+                      {t('securityResetPassword')}
+                    </Text>
+                    <Ionicons name="chevron-forward" size={16} color={theme.textSecondary} />
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[styles.toolsRow, { borderColor: theme.borderSoft }]}
+                    onPress={() => void handleManageSessions()}
+                  >
+                    <View style={[styles.toolsIconWrap, { backgroundColor: theme.surfaceMuted }]}>
+                      <Ionicons name="phone-portrait-outline" size={16} color={theme.primary} />
+                    </View>
+                    <Text style={[styles.toolsLabel, { color: theme.textPrimary }]}>
+                      {t('securityManageSessions')}
+                    </Text>
+                    <Ionicons name="chevron-forward" size={16} color={theme.textSecondary} />
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[styles.toolsRow, { borderColor: theme.borderSoft }]}
+                    onPress={() => void handleCheckTwoFactor()}
+                  >
+                    <View style={[styles.toolsIconWrap, { backgroundColor: theme.surfaceMuted }]}>
+                      <Ionicons name="shield-checkmark-outline" size={16} color={theme.primary} />
+                    </View>
+                    <Text style={[styles.toolsLabel, { color: theme.textPrimary }]}>
+                      {t('securityEnable2fa')}
+                    </Text>
+                    <Ionicons name="chevron-forward" size={16} color={theme.textSecondary} />
+                  </TouchableOpacity>
+                </View>
               </View>
-            </View>
+            ) : null}
 
             <View
               style={[
@@ -1450,16 +1479,20 @@ export default function AccountScreen() {
                   <Ionicons name="chevron-forward" size={16} color={theme.textSecondary} />
                 </TouchableOpacity>
               </View>
-              <PrimaryButton
-                title={t('signOut')}
-                onPress={handleSignOut}
-                style={[styles.button, isIOS && styles.buttonIOS]}
-              />
-              <TouchableOpacity onPress={() => void handleDeleteAccount()}>
-                <Text style={[styles.link, styles.destructiveLink, { color: theme.fail }]}>
-                  {t('supportDeleteAccount')}
-                </Text>
-              </TouchableOpacity>
+              {!isGuest ? (
+                <>
+                  <PrimaryButton
+                    title={t('signOut')}
+                    onPress={handleSignOut}
+                    style={[styles.button, isIOS && styles.buttonIOS]}
+                  />
+                  <TouchableOpacity onPress={() => void handleDeleteAccount()}>
+                    <Text style={[styles.link, styles.destructiveLink, { color: theme.fail }]}>
+                      {t('supportDeleteAccount')}
+                    </Text>
+                  </TouchableOpacity>
+                </>
+              ) : null}
             </View>
           </View>
         )}
@@ -1760,6 +1793,37 @@ const styles = StyleSheet.create({
   },
   contactList: {
     marginTop: 12,
+  },
+  guestAuthCard: {
+    marginTop: 14,
+    borderWidth: 1,
+    borderRadius: 18,
+    padding: 14,
+  },
+  guestAuthTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    marginBottom: 6,
+  },
+  guestAuthHint: {
+    marginTop: 0,
+    marginBottom: 12,
+  },
+  guestAuthPrimary: {
+    marginTop: 0,
+  },
+  guestAuthSecondary: {
+    minHeight: 44,
+    borderWidth: 1,
+    borderRadius: 12,
+    marginTop: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 12,
+  },
+  guestAuthSecondaryText: {
+    fontSize: 14,
+    fontWeight: '700',
   },
   contactSectionTitle: {
     fontSize: 11,

@@ -445,12 +445,16 @@ export default function StartupScreen() {
 
         if (!response.ok) {
           const responseText = await response.text();
-          if (
+          const isMissingAccessToken =
             response.status === 401 ||
-            responseText.toLowerCase().includes('missing access token')
-          ) {
-            throw new Error(t('startupJobsMissingAccessToken'));
+            responseText.toLowerCase().includes('missing access token');
+
+          if (isMissingAccessToken && !accessToken) {
+            setJobs([]);
+            setJobsError(null);
+            return;
           }
+
           throw new Error(t('startupJobsLoadFailed'));
         }
 

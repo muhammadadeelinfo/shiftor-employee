@@ -26,6 +26,7 @@ import * as Calendar from 'expo-calendar';
 import { useTheme } from '@shared/themeContext';
 import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
 import { layoutTokens } from '@shared/theme/layout';
+import { useAuth } from '@hooks/useSupabaseAuth';
 
 const WEEKDAY_LABELS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
@@ -158,11 +159,13 @@ export default function CalendarScreen() {
   const router = useRouter();
   const { t } = useLanguage();
   const { theme } = useTheme();
+  const { user } = useAuth();
   const { width, height } = useWindowDimensions();
   const isTablet = width >= 768;
   const isLargeTablet = width >= 1024;
   const isTabletLandscape = isLargeTablet && width > height;
   const horizontalPadding = isTablet ? 20 : layoutTokens.screenHorizontal;
+  const isGuest = !user;
   const insets = useSafeAreaInsets();
   const tabBarHeight = useBottomTabBarHeight();
   const isIOS = Platform.OS === 'ios';
@@ -292,7 +295,7 @@ export default function CalendarScreen() {
   }, [monthShifts, now]);
 
   const calendarWeeks = useMemo(() => getCalendarWeeks(visibleMonth), [visibleMonth]);
-  const showSkeletons = isLoading && !orderedShifts.length && !error;
+  const showSkeletons = !isGuest && isLoading && !orderedShifts.length && !error;
 
   const importedCalendarColorMap = useMemo(() => {
     const palette = ['#34d399', '#fb923c', '#38bdf8', '#a855f7', '#f472b6'];
@@ -431,6 +434,11 @@ export default function CalendarScreen() {
   const emptyNotifiedRef = useRef(false);
 
   useEffect(() => {
+    if (isGuest) {
+      emptyNotifiedRef.current = false;
+      setShowEmptyModal(false);
+      return;
+    }
     if (!error && !isLoading && !orderedShifts.length) {
       if (!emptyNotifiedRef.current) {
         addNotification({
@@ -444,7 +452,7 @@ export default function CalendarScreen() {
       emptyNotifiedRef.current = false;
       setShowEmptyModal(false);
     }
-  }, [addNotification, error, isLoading, orderedShifts.length, t]);
+  }, [addNotification, error, isGuest, isLoading, orderedShifts.length, t]);
 
   const containerStyle = [
     styles.container,
@@ -755,7 +763,7 @@ export default function CalendarScreen() {
         </View>
       </ScrollView>
       </View>
-      <Modal transparent visible={showEmptyModal} animationType="fade">
+      <Modal transparent visible={showEmptyModal && !isGuest} animationType="fade">
         <View style={styles.emptyModalBackdrop}>
           <LinearGradient
             colors={[`${theme.primary}66`, `${theme.primaryAccent}22`]}
@@ -1391,5 +1399,100 @@ const styles = StyleSheet.create({
   },
   emptyModalButton: {
     width: '100%',
+  },
+  guestPanel: {
+    marginHorizontal: 16,
+    marginTop: 12,
+    marginBottom: 8,
+    borderWidth: 1,
+    borderRadius: 28,
+    padding: 20,
+    alignItems: 'center',
+    shadowColor: '#020617',
+    shadowOpacity: 0.12,
+    shadowOffset: { width: 0, height: 14 },
+    shadowRadius: 24,
+    elevation: 8,
+  },
+  guestPanelBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    borderWidth: 1,
+    borderRadius: 999,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    marginBottom: 14,
+  },
+  guestPanelBadgeText: {
+    fontSize: 12,
+    fontWeight: '800',
+    letterSpacing: 0.2,
+    textTransform: 'uppercase',
+  },
+  guestPanelIcon: {
+    width: 52,
+    height: 52,
+    borderRadius: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 14,
+  },
+  guestPanelTitle: {
+    fontSize: 22,
+    fontWeight: '800',
+    textAlign: 'center',
+    letterSpacing: -0.2,
+  },
+  guestPanelBody: {
+    marginTop: 10,
+    fontSize: 14,
+    lineHeight: 21,
+    textAlign: 'center',
+  },
+  guestPanelMetricRow: {
+    flexDirection: 'row',
+    width: '100%',
+    gap: 8,
+    marginTop: 16,
+    marginBottom: 2,
+  },
+  guestPanelMetric: {
+    flex: 1,
+    borderWidth: 1,
+    borderRadius: 18,
+    paddingVertical: 12,
+    paddingHorizontal: 10,
+    alignItems: 'center',
+  },
+  guestPanelMetricValue: {
+    fontSize: 15,
+    fontWeight: '800',
+    letterSpacing: -0.2,
+  },
+  guestPanelMetricLabel: {
+    marginTop: 4,
+    fontSize: 11,
+    fontWeight: '600',
+    textAlign: 'center',
+    lineHeight: 14,
+  },
+  guestPanelChipRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'center',
+    gap: 8,
+    marginTop: 14,
+    marginBottom: 12,
+  },
+  guestPanelChip: {
+    borderWidth: 1,
+    borderRadius: 999,
+    paddingVertical: 7,
+    paddingHorizontal: 12,
+  },
+  guestPanelChipText: {
+    fontSize: 12,
+    fontWeight: '700',
   },
 });
