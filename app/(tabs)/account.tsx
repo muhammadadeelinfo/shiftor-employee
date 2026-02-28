@@ -23,7 +23,7 @@ import { languageDefinitions } from '@shared/utils/languageUtils';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { LinearGradient } from 'expo-linear-gradient';
-import { supabase, supabaseStorageBucket } from '@lib/supabaseClient';
+import { getPublicSupabaseClient, supabase, supabaseStorageBucket } from '@lib/supabaseClient';
 import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
 import { layoutTokens } from '@shared/theme/layout';
 import { useRouter } from 'expo-router';
@@ -174,6 +174,30 @@ const fetchCompanySummary = async (companyId: string): Promise<CompanySummary | 
   if (!supabase) {
     return null;
   }
+  const loadWithPublicClient = async (): Promise<CompanySummary | null> => {
+    const publicSupabase = getPublicSupabaseClient();
+    if (!publicSupabase) {
+      return null;
+    }
+    const { data: publicData, error: publicError } = await publicSupabase
+      .from('companies')
+      .select('*')
+      .eq('id', companyId)
+      .limit(1)
+      .maybeSingle();
+
+    if (publicError) {
+      if (!isMissingColumnError(publicError)) {
+        console.warn('Failed to load company summary via public client', publicError);
+      }
+      return null;
+    }
+    if (!publicData || typeof publicData !== 'object') {
+      return null;
+    }
+    return publicData as CompanySummary;
+  };
+
   const { data: rpcData, error: rpcError } = await supabase.rpc(
     'get_employee_current_company_profile',
     { target_company_id: companyId }
@@ -194,13 +218,13 @@ const fetchCompanySummary = async (companyId: string): Promise<CompanySummary | 
 
   if (error) {
     if (isMissingColumnError(error)) {
-      return null;
+      return loadWithPublicClient();
     }
     console.warn('Failed to load company summary', error);
-    return null;
+    return loadWithPublicClient();
   }
   if (!data || typeof data !== 'object') {
-    return null;
+    return loadWithPublicClient();
   }
   return data as CompanySummary;
 };
@@ -304,6 +328,40 @@ const getNestedString = (source: unknown, path: string[]): string | undefined =>
   }
   return typeof cursor === 'string' && cursor.trim() ? cursor.trim() : undefined;
 };
+
+const getCompanyNameFromMetadata = (metadata?: Record<string, unknown>) =>
+  getStringField(metadata, 'companyName') ??
+  getStringField(metadata, 'company_name') ??
+  getStringField(metadata, 'companyDisplayName') ??
+  getStringField(metadata, 'company_display_name') ??
+  getNestedString(metadata, ['company', 'name']) ??
+  getNestedString(metadata, ['company', 'companyName']) ??
+  getNestedString(metadata, ['company', 'company_name']) ??
+  getNestedString(metadata, ['company', 'displayName']) ??
+  getNestedString(metadata, ['company', 'display_name']) ??
+  getNestedString(metadata, ['currentCompany', 'name']) ??
+  getNestedString(metadata, ['currentCompany', 'companyName']) ??
+  getNestedString(metadata, ['currentCompany', 'company_name']) ??
+  getNestedString(metadata, ['currentCompany', 'displayName']) ??
+  getNestedString(metadata, ['currentCompany', 'display_name']);
+
+const getCompanyAddressFromMetadata = (metadata?: Record<string, unknown>) =>
+  getStringField(metadata, 'companyAddress') ??
+  getStringField(metadata, 'company_address') ??
+  getStringField(metadata, 'companyFullAddress') ??
+  getStringField(metadata, 'company_full_address') ??
+  getStringField(metadata, 'companyStreetAddress') ??
+  getStringField(metadata, 'company_street_address') ??
+  getNestedString(metadata, ['company', 'address']) ??
+  getNestedString(metadata, ['company', 'fullAddress']) ??
+  getNestedString(metadata, ['company', 'full_address']) ??
+  getNestedString(metadata, ['company', 'streetAddress']) ??
+  getNestedString(metadata, ['company', 'street_address']) ??
+  getNestedString(metadata, ['currentCompany', 'address']) ??
+  getNestedString(metadata, ['currentCompany', 'fullAddress']) ??
+  getNestedString(metadata, ['currentCompany', 'full_address']) ??
+  getNestedString(metadata, ['currentCompany', 'streetAddress']) ??
+  getNestedString(metadata, ['currentCompany', 'street_address']);
 
 const getProfilePhone = (profile?: EmployeeProfile | null) => {
   if (!profile) return undefined;
@@ -476,16 +534,29 @@ export default function AccountScreen() {
   const isGuest = !user;
   const employeeId = user?.id;
   const metadata = user?.user_metadata;
+  const appMetadata = user?.app_metadata;
   const metadataRecord =
     metadata && typeof metadata === 'object' ? (metadata as Record<string, unknown>) : undefined;
+  const appMetadataRecord =
+    appMetadata && typeof appMetadata === 'object'
+      ? (appMetadata as Record<string, unknown>)
+      : undefined;
   const { data: freshAuthMetadata } = useQuery({
     queryKey: ['authUserMetadata', user?.id],
     queryFn: async () => {
       if (!supabase || !user?.id) return null;
       const { data, error } = await supabase.auth.getUser();
       if (error) return null;
-      const fresh = data.user?.user_metadata;
-      return fresh && typeof fresh === 'object' ? (fresh as Record<string, unknown>) : null;
+      const freshUser = data.user?.user_metadata;
+      const freshApp = data.user?.app_metadata;
+      return {
+        ...(freshUser && typeof freshUser === 'object'
+          ? (freshUser as Record<string, unknown>)
+          : {}),
+        ...(freshApp && typeof freshApp === 'object'
+          ? (freshApp as Record<string, unknown>)
+          : {}),
+      };
     },
     enabled: Boolean(user?.id && supabase),
     staleTime: 0,
@@ -493,6 +564,7 @@ export default function AccountScreen() {
     refetchOnWindowFocus: true,
   });
   const mergedMetadataRecord = {
+    ...(appMetadataRecord ?? {}),
     ...(metadataRecord ?? {}),
     ...(freshAuthMetadata ?? {}),
   } as Record<string, unknown>;
@@ -536,8 +608,15 @@ export default function AccountScreen() {
   const isSwitchFlow = Boolean(linkedCompanyId);
   const currentCompanyName =
     getStringField(companySummary ?? undefined, 'name') ??
+    getStringField(companySummary ?? undefined, 'companyName') ??
+    getStringField(companySummary ?? undefined, 'company_name') ??
+    getStringField(companySummary ?? undefined, 'displayName') ??
+    getStringField(companySummary ?? undefined, 'display_name') ??
     getStringField(employeeRecord ?? undefined, 'companyName') ??
     getStringField(employeeRecord ?? undefined, 'company_name') ??
+    getStringField(employeeRecord ?? undefined, 'companyDisplayName') ??
+    getStringField(employeeRecord ?? undefined, 'company_display_name') ??
+    getCompanyNameFromMetadata(mergedMetadataRecord) ??
     t('companyUnknownName');
   const currentCompanyLogoUrl =
     getStringField(companySummary ?? undefined, 'logo_url') ??
@@ -550,6 +629,7 @@ export default function AccountScreen() {
   const currentCompanyAddress =
     getCompanyAddress(companySummary ?? undefined) ??
     getEmployeeCompanyAddress(employeeRecord ?? undefined) ??
+    getCompanyAddressFromMetadata(mergedMetadataRecord) ??
     t('notProvided');
   const currentCompanyAddressParts = formatAddress(currentCompanyAddress);
   const currentCompanyInitials = currentCompanyName

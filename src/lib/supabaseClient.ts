@@ -3,8 +3,8 @@ import { createClient, SupabaseClient } from '@supabase/supabase-js';
 
 const { extra } = Constants.expoConfig ?? {};
 
-const supabaseUrl = extra?.supabaseUrl as string | undefined;
-const supabaseAnonKey = extra?.supabaseAnonKey as string | undefined;
+export const supabaseUrl = extra?.supabaseUrl as string | undefined;
+export const supabaseAnonKey = extra?.supabaseAnonKey as string | undefined;
 const configuredStorageBucket = extra?.supabaseStorageBucket as string | undefined;
 
 const isSupabaseConfigured = Boolean(supabaseUrl && supabaseAnonKey);
@@ -17,6 +17,23 @@ export const supabase: SupabaseClient | null = isSupabaseConfigured
       },
     })
   : null;
+
+let publicSupabaseClient: SupabaseClient | null = null;
+
+export const getPublicSupabaseClient = (): SupabaseClient | null => {
+  if (!isSupabaseConfigured) {
+    return null;
+  }
+  if (!publicSupabaseClient) {
+    publicSupabaseClient = createClient(supabaseUrl as string, supabaseAnonKey as string, {
+      auth: {
+        persistSession: false,
+        detectSessionInUrl: false,
+      },
+    });
+  }
+  return publicSupabaseClient;
+};
 
 export const supabaseStorageBucket =
   configuredStorageBucket && configuredStorageBucket.trim()
