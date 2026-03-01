@@ -403,6 +403,7 @@ export default function StartupScreen() {
   const [loadingJobs, setLoadingJobs] = useState(true);
   const [refreshingJobs, setRefreshingJobs] = useState(false);
   const [jobsError, setJobsError] = useState<string | null>(null);
+  const [jobsActionError, setJobsActionError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [runtimeIssues, setRuntimeIssues] = useState<string[]>([]);
   const [runningHealthChecks, setRunningHealthChecks] = useState(true);
@@ -429,6 +430,7 @@ export default function StartupScreen() {
       } else {
         setLoadingJobs(true);
       }
+      setJobsActionError(null);
 
       try {
         const headers: Record<string, string> = {
@@ -461,6 +463,7 @@ export default function StartupScreen() {
         const payload = (await response.json()) as StartupJobsResponse;
         setJobs(normalizeStartupJobs(payload));
         setJobsError(null);
+        setJobsActionError(null);
       } catch (error) {
         setJobs([]);
         setJobsError(error instanceof Error ? error.message : t('startupJobsLoadFailed'));
@@ -540,7 +543,7 @@ export default function StartupScreen() {
   const openJobLink = async (url?: string | null) => {
     const resolvedUrl = resolveCtaUrl(url);
     if (!resolvedUrl) {
-      setJobsError(t('startupJobsOpenLinkFailed'));
+      setJobsActionError(t('startupJobsOpenLinkFailed'));
       return;
     }
 
@@ -550,8 +553,9 @@ export default function StartupScreen() {
         throw new Error('Unsupported URL');
       }
       await Linking.openURL(resolvedUrl);
+      setJobsActionError(null);
     } catch {
-      setJobsError(t('startupJobsOpenLinkFailed'));
+      setJobsActionError(t('startupJobsOpenLinkFailed'));
     }
   };
 
@@ -678,6 +682,13 @@ export default function StartupScreen() {
           <View style={[styles.statusCard, { backgroundColor: theme.surface, borderColor: theme.border }]}> 
             <Ionicons name="alert-circle-outline" size={18} color={theme.fail} />
             <Text style={[styles.errorText, { color: theme.fail }]}>{jobsError}</Text>
+          </View>
+        ) : null}
+
+        {!loadingJobs && !jobsError && jobsActionError ? (
+          <View style={[styles.statusCard, { backgroundColor: theme.surface, borderColor: theme.border }]}>
+            <Ionicons name="warning-outline" size={18} color={theme.fail} />
+            <Text style={[styles.errorText, { color: theme.fail }]}>{jobsActionError}</Text>
           </View>
         ) : null}
 

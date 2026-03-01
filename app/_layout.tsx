@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Stack, usePathname, useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
+import * as SplashScreen from 'expo-splash-screen';
 import { QueryClientProvider } from '@tanstack/react-query';
 import Constants from 'expo-constants';
 import {
@@ -22,6 +23,7 @@ import {
   ActivityIndicator,
   Animated,
   Easing,
+  Platform,
 } from 'react-native';
 import { AuthProvider } from '@hooks/useSupabaseAuth';
 import { queryClient } from '@lib/queryClient';
@@ -41,6 +43,10 @@ import { useAuth } from '@hooks/useSupabaseAuth';
 import { useQuery } from '@tanstack/react-query';
 import { getShifts, type Shift } from '@features/shifts/shiftsService';
 import { useShiftNotifications } from '@shared/hooks/useShiftNotifications';
+
+void SplashScreen.preventAutoHideAsync().catch(() => {
+  /* splash screen is optional in dev */
+});
 
 type ReportOptionKey =
   | 'includeEmployeeName'
@@ -255,6 +261,15 @@ function LayoutContentInner() {
     }, BRAND_LAUNCH_MS);
     return () => clearTimeout(timer);
   }, []);
+
+  useEffect(() => {
+    if (!isBrandLaunchDone) {
+      return;
+    }
+    SplashScreen.hideAsync().catch(() => {
+      /* no-op if splash screen is unavailable */
+    });
+  }, [isBrandLaunchDone]);
 
   useEffect(() => {
     Animated.parallel([
@@ -764,12 +779,12 @@ function LayoutContentInner() {
 
   return (
     <SafeAreaView style={[styles.root, { backgroundColor: statusBarBgColor }]} edges={['top']}>
-      <StatusBar
-        translucent
-        hidden={false}
-        backgroundColor={statusBarBgColor}
-        style={statusBarStyle}
-      />
+      {Platform.OS === 'ios' ? (
+        <StatusBar
+          hidden={false}
+          style={statusBarStyle}
+        />
+      ) : null}
       <Modal
         visible={isPreviewVisible}
         transparent

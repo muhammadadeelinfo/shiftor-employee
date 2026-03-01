@@ -149,8 +149,13 @@ export default function LoginScreen() {
   useEffect(() => {
     if (mode === 'signup') {
       setEmail('');
-      setEmailError(null);
     }
+    setEmailError(null);
+    setPasswordError(null);
+    setPassword('');
+    setConfirmPassword('');
+    setShowPassword(false);
+    setShowConfirmPassword(false);
   }, [mode]);
 
   useEffect(() => {

@@ -101,6 +101,10 @@ export default function MyShiftsScreen() {
     () => new Set(pendingAssignmentIds),
     [pendingAssignmentIds]
   );
+  const shiftIdentityKey = useMemo(
+    () => orderedShifts.map((shift) => `${shift.id}:${shift.start}:${shift.end}`).join('|'),
+    [orderedShifts]
+  );
 
   const renderListEmptyState = () => (
     <View style={styles.listEmptyState}>
@@ -212,7 +216,7 @@ export default function MyShiftsScreen() {
     shiftLayouts.current.clear();
     lastAutoScrolledShiftId.current = null;
     setLayoutTick((tick) => tick + 1);
-  }, [orderedShifts.length]);
+  }, [shiftIdentityKey]);
 
   useEffect(() => {
     if (!focusedShiftId) return;

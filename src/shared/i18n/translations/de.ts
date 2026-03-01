@@ -455,6 +455,9 @@ export const deTranslations = {
     requestingCameraPermission: 'Kameraberechtigung wird angefordert...',
     cameraPermissionRequired: 'Kameraberechtigung ist erforderlich, um einen QR zu scannen.',
     grantCameraAccess: 'Kamerazugriff erlauben',
+    openSystemSettings: 'Systemeinstellungen oeffnen',
+    openSystemSettingsFailed:
+      'Die Systemeinstellungen konnten nicht geoeffnet werden. Oeffne die Einstellungen manuell und erlaube den Kamerazugriff.',
     qrInstructions: 'Richte die Kamera auf den QR-/Barcode aus, den dir deine Leitung gegeben hat.',
     lastScanLabel: 'Zuletzt gescannt',
     scanAnotherBadge: 'Weiteren Badge scannen',
@@ -465,6 +468,8 @@ export const deTranslations = {
     qrClockInSubmitting: 'Dein Clock-in wird uebermittelt...',
     qrClockInInvalidTitle: 'QR nicht erkannt',
     qrClockInInvalidCode: 'Dieser QR-Code passt zu keiner deiner zugewiesenen Schichten.',
+    qrClockInNotEligible:
+      'Dieser QR-Code ist gueltig, aber du hast aktuell keine berechtigte Schichtzuweisung dafuer.',
     qrClockInMissingApiBaseUrl: 'API-Basis-URL fehlt. Setze API_BASE_URL in der App-Umgebung.',
     qrClockInSessionRequired: 'Deine Sitzung ist abgelaufen. Bitte melde dich erneut an.',
     qrClockInSubmitFailed: 'Der QR-Clock-in konnte gerade nicht abgeschlossen werden.',

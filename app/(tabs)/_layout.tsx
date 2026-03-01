@@ -2,14 +2,14 @@ import { Tabs, usePathname, useRouter } from 'expo-router';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '@shared/themeContext';
-import { useLanguage } from '@shared/context/LanguageContext';
+import { useLanguage, type TranslationKey } from '@shared/context/LanguageContext';
 import { useWindowDimensions } from 'react-native';
 import { useEffect } from 'react';
 import { useAuth } from '@hooks/useSupabaseAuth';
 
 const iconConfig: Record<
   string,
-  { active: string; inactive: string; labelKey: string }
+  { active: string; inactive: string; labelKey: TranslationKey }
 > = {
   'my-shifts': {
     active: 'list',

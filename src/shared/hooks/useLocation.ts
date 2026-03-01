@@ -1,12 +1,24 @@
 import Constants from 'expo-constants';
 import { useEffect, useState } from 'react';
-import * as Location from 'expo-location';
+
+type PermissionStatus = 'undetermined' | 'granted' | 'denied';
+
+type LocationObject = {
+  coords: {
+    latitude: number;
+    longitude: number;
+    accuracy?: number | null;
+    altitude?: number | null;
+    altitudeAccuracy?: number | null;
+    heading?: number | null;
+    speed?: number | null;
+  };
+  timestamp: number;
+};
 
 export const useLocation = () => {
-  const [location, setLocation] = useState<Location.LocationObject | null>(null);
-  const [status, setStatus] = useState<Location.PermissionStatus>(
-    Location.PermissionStatus.UNDETERMINED
-  );
+  const [location, setLocation] = useState<LocationObject | null>(null);
+  const [status, setStatus] = useState<PermissionStatus>('undetermined');
   const enableLocationInDev = Boolean(Constants.expoConfig?.extra?.enableLocationInDev);
 
   useEffect(() => {
@@ -16,24 +28,34 @@ export const useLocation = () => {
     (async () => {
       if (skipLocationInDev) {
         if (!cancelled) {
-          setStatus(Location.PermissionStatus.DENIED);
+          setStatus('denied');
         }
         return;
       }
 
-      const { status: newStatus } = await Location.requestForegroundPermissionsAsync();
-      if (cancelled) return;
-
-      setStatus(newStatus);
-
-      if (newStatus !== 'granted') {
+      if (typeof navigator === 'undefined' || !navigator.geolocation) {
+        if (!cancelled) {
+          setStatus('denied');
+        }
         return;
       }
 
-      const current = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
-      if (!cancelled) {
-        setLocation(current);
-      }
+      navigator.geolocation.getCurrentPosition(
+        (current) => {
+          if (cancelled) return;
+          setStatus('granted');
+          setLocation({
+            coords: current.coords,
+            timestamp: current.timestamp,
+          });
+        },
+        () => {
+          if (!cancelled) {
+            setStatus('denied');
+          }
+        },
+        { enableHighAccuracy: false, maximumAge: 60_000, timeout: 10_000 }
+      );
     })();
 
     return () => {

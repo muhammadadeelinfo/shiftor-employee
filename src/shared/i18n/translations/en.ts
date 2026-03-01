@@ -449,6 +449,9 @@ export const enTranslations = {
     requestingCameraPermission: 'Requesting camera permission...',
     cameraPermissionRequired: 'Camera permission is required to scan a QR.',
     grantCameraAccess: 'Grant camera access',
+    openSystemSettings: 'Open system settings',
+    openSystemSettingsFailed:
+      'Unable to open system settings. Open Settings manually and allow camera access.',
     qrInstructions: 'Point the camera at the QR / barcode provided by your manager.',
     lastScanLabel: 'Last scan',
     scanAnotherBadge: 'Scan another badge',
@@ -459,6 +462,8 @@ export const enTranslations = {
     qrClockInSubmitting: 'Submitting your clock-in...',
     qrClockInInvalidTitle: 'QR not recognized',
     qrClockInInvalidCode: 'This QR code does not match any of your assigned shifts.',
+    qrClockInNotEligible:
+      'This QR code is valid, but you do not have an eligible shift assignment for it right now.',
     qrClockInMissingApiBaseUrl: 'Missing API base URL. Set API_BASE_URL in the app environment.',
     qrClockInSessionRequired: 'Your session expired. Please sign in again.',
     qrClockInSubmitFailed: 'Unable to complete QR clock-in right now.',

@@ -1,6 +1,8 @@
 import 'dotenv/config';
 import { ExpoConfig, ConfigContext } from 'expo/config';
 
+type ConfigPluginEntry = NonNullable<ExpoConfig['plugins']>[number];
+
 export default ({ config }: ConfigContext): ExpoConfig => ({
   ...config,
   name: config.name ?? 'Shiftor Employee',
@@ -42,7 +44,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     },
   },
   plugins: (() => {
-    const plugins = [
+    const plugins: ConfigPluginEntry[] = [
       ...(config.plugins ?? []),
       'expo-router',
       [
@@ -54,7 +56,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
           microphonePermission: false,
           recordAudioAndroid: false,
         },
-      ],
+      ] as [string, Record<string, unknown>],
       [
         'expo-calendar',
         {
@@ -63,7 +65,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
             'Calendar access lets you import shifts and sync your schedule.',
           remindersPermission: false,
         },
-      ],
+      ] as [string, Record<string, unknown>],
       [
         'expo-image-picker',
         {
@@ -71,7 +73,15 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
             process.env.IOS_PHOTOS_USAGE_DESCRIPTION ??
             'Photo library access lets you upload a profile picture.',
         },
-      ],
+      ] as [string, Record<string, unknown>],
+      [
+        'expo-splash-screen',
+        {
+          backgroundColor: '#ffffff',
+          image: './assets/splash-icon.png',
+          imageWidth: 180,
+        },
+      ] as [string, Record<string, unknown>],
     ];
     const sentryOrg = process.env.SENTRY_ORG?.trim();
     const sentryProject = process.env.SENTRY_PROJECT?.trim();
@@ -83,7 +93,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
           organization: sentryOrg,
           project: sentryProject,
         },
-      ]);
+      ] as [string, Record<string, unknown>]);
     }
 
     return plugins;

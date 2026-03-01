@@ -504,6 +504,7 @@ export default function AccountScreen() {
   );
   const requestedCompanyCode = getStringField(mergedMetadataRecord, 'requested_company_code');
   const [joinCode, setJoinCode] = useState(requestedCompanyCode ?? '');
+  const hasEditedJoinCode = useRef(false);
   const joinCodeInputRef = useRef<TextInput | null>(null);
   const [linkingCompany, setLinkingCompany] = useState(false);
   const canRequestCompanyAccess = Boolean(user?.id);
@@ -519,6 +520,12 @@ export default function AccountScreen() {
     .slice(0, 2)
     .join('')
     .toUpperCase();
+  useEffect(() => {
+    if (hasEditedJoinCode.current) {
+      return;
+    }
+    setJoinCode(requestedCompanyCode ?? '');
+  }, [requestedCompanyCode]);
   const handleSignOut = () => {
     signOut();
   };
@@ -655,6 +662,7 @@ export default function AccountScreen() {
       const fullName = getStringField(mergedMetadataRecord, 'full_name') ?? profileName(user);
       const data = await requestCompanyLink(normalizedJoinCode, fullName);
       const refreshAfterAlert = () => {
+        hasEditedJoinCode.current = false;
         setJoinCode('');
         void queryClient.invalidateQueries({ queryKey: ['employeeProfile'] });
         void queryClient.invalidateQueries({ queryKey: ['companySummary'] });
@@ -835,7 +843,7 @@ export default function AccountScreen() {
     enabled: Boolean(supabase && effectiveProfilePhotoPath),
     staleTime: 30 * 60_000,
   });
-  const appendVersionQuery = (url: string | null) => {
+  const appendVersionQuery = (url: string | null | undefined) => {
     if (!url || !profilePhotoUpdatedAt) return url;
     const separator = url.includes('?') ? '&' : '?';
     return `${url}${separator}v=${encodeURIComponent(profilePhotoUpdatedAt)}`;
@@ -1170,9 +1178,12 @@ export default function AccountScreen() {
                   ]}
                 >
                   <TextInput
-                    ref={joinCodeInputRef}
-                    value={joinCode}
-                    onChangeText={setJoinCode}
+                        ref={joinCodeInputRef}
+                        value={joinCode}
+                        onChangeText={(value) => {
+                          hasEditedJoinCode.current = true;
+                          setJoinCode(value);
+                        }}
                     placeholder={t('companyJoinCodePlaceholder')}
                     placeholderTextColor={theme.textPlaceholder}
                     autoCapitalize="characters"

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -15,7 +15,7 @@ import {
   View,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import * as FileSystem from 'expo-file-system';
+import * as FileSystem from 'expo-file-system/legacy';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useRouter } from 'expo-router';
@@ -474,7 +474,9 @@ export default function ProfileEditScreen() {
   const [photoDirty, setPhotoDirty] = useState(false);
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const [saving, setSaving] = useState(false);
+  const hasUserEditedForm = useRef(false);
   useEffect(() => {
+    if (hasUserEditedForm.current) return;
     setFirstName(currentFirstName);
     setLastName(currentLastName);
     const parsedPhone = parseMobileWithDialCode(currentPhone);
@@ -630,6 +632,7 @@ export default function ProfileEditScreen() {
       setPhotoUri(finalPhotoUrl ?? null);
       setPhotoPath(finalPhotoPath ?? null);
       setPhotoDirty(false);
+      hasUserEditedForm.current = false;
 
       queryClient.setQueriesData({ queryKey: ['employeeProfile'] }, (existing: unknown) => {
         if (!existing || typeof existing !== 'object') return existing;
@@ -677,6 +680,7 @@ export default function ProfileEditScreen() {
   };
 
   const handleDobConfirm = () => {
+    hasUserEditedForm.current = true;
     setDob(toDateOnlyString(dobDraftDate));
     setDobModalVisible(false);
   };
@@ -749,11 +753,13 @@ export default function ProfileEditScreen() {
     if (result.canceled || !result.assets?.length) return;
     const pickedUri = result.assets[0]?.uri;
     if (!pickedUri) return;
+    hasUserEditedForm.current = true;
     setPhotoUri(pickedUri);
     setPhotoDirty(true);
   };
 
   const removeProfilePhoto = () => {
+    hasUserEditedForm.current = true;
     setPhotoUri(null);
     setPhotoPath(null);
     setPhotoDirty(true);
@@ -817,7 +823,10 @@ export default function ProfileEditScreen() {
           <View style={[styles.inputWrap, { backgroundColor: theme.surfaceMuted, borderColor: theme.borderSoft }]}>
             <TextInput
               value={firstName}
-              onChangeText={setFirstName}
+              onChangeText={(value) => {
+                hasUserEditedForm.current = true;
+                setFirstName(value);
+              }}
               placeholder={t('profileEditFirstNamePlaceholder')}
               placeholderTextColor={theme.textPlaceholder}
               autoCapitalize="words"
@@ -830,7 +839,10 @@ export default function ProfileEditScreen() {
           <View style={[styles.inputWrap, { backgroundColor: theme.surfaceMuted, borderColor: theme.borderSoft }]}>
             <TextInput
               value={lastName}
-              onChangeText={setLastName}
+              onChangeText={(value) => {
+                hasUserEditedForm.current = true;
+                setLastName(value);
+              }}
               placeholder={t('profileEditLastNamePlaceholder')}
               placeholderTextColor={theme.textPlaceholder}
               autoCapitalize="words"
@@ -880,7 +892,10 @@ export default function ProfileEditScreen() {
             >
               <TextInput
                 value={mobileNumber}
-                onChangeText={(value) => setMobileNumber(sanitizeLocalMobileInput(value))}
+                onChangeText={(value) => {
+                  hasUserEditedForm.current = true;
+                  setMobileNumber(sanitizeLocalMobileInput(value));
+                }}
                 placeholder={t('profileEditMobilePlaceholder')}
                 placeholderTextColor={theme.textPlaceholder}
                 autoCapitalize="none"
@@ -907,7 +922,10 @@ export default function ProfileEditScreen() {
           <View style={[styles.inputWrap, { backgroundColor: theme.surfaceMuted, borderColor: theme.borderSoft }]}>
             <TextInput
               value={address}
-              onChangeText={setAddress}
+              onChangeText={(value) => {
+                hasUserEditedForm.current = true;
+                setAddress(value);
+              }}
               placeholder={t('profileEditAddressPlaceholder')}
               placeholderTextColor={theme.textPlaceholder}
               autoCapitalize="words"
@@ -923,6 +941,7 @@ export default function ProfileEditScreen() {
                   key={suggestion.value}
                   style={[styles.suggestionItem, { borderColor: theme.borderSoft }]}
                   onPress={() => {
+                    hasUserEditedForm.current = true;
                     setAddress(suggestion.value);
                     setAddressSuggestions([]);
                   }}
@@ -1018,6 +1037,7 @@ export default function ProfileEditScreen() {
                   <TouchableOpacity
                     style={[styles.dialCodeRow, { borderColor: theme.borderSoft }]}
                     onPress={() => {
+                      hasUserEditedForm.current = true;
                       setDialCode(item.code);
                       setDialCodeModalVisible(false);
                       setDialCodeQuery('');

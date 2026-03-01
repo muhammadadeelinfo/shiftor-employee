@@ -257,7 +257,9 @@ export default function CalendarScreen() {
       return 'night';
     };
     monthShifts.forEach((shift) => {
-      const key = shift.start.split('T')[0];
+      const shiftDate = new Date(shift.start);
+      if (Number.isNaN(shiftDate.getTime())) return;
+      const key = dayKey(shiftDate);
       const set = map.get(key) ?? new Set<ShiftType>();
       set.add(categorize(shift.start));
       map.set(key, set);
@@ -270,7 +272,7 @@ export default function CalendarScreen() {
     monthShifts.forEach((shift) => {
       const shiftDate = new Date(shift.start);
       if (Number.isNaN(shiftDate.getTime())) return;
-      const key = shiftDate.toISOString().split('T')[0];
+      const key = dayKey(shiftDate);
       const bucket = map.get(key) ?? [];
       bucket.push(shift);
       map.set(key, bucket);
@@ -284,7 +286,9 @@ export default function CalendarScreen() {
   const dayPhaseMap = useMemo(() => {
     const map = new Map<string, ShiftPhase>();
     monthShifts.forEach((shift) => {
-      const key = shift.start.split('T')[0];
+      const shiftDate = new Date(shift.start);
+      if (Number.isNaN(shiftDate.getTime())) return;
+      const key = dayKey(shiftDate);
       const phase = getShiftPhase(shift.start, shift.end, now);
       const existing = map.get(key);
       if (!existing || existing === 'past' || (existing === 'upcoming' && phase === 'live')) {

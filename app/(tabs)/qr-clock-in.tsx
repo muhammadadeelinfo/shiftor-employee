@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Alert, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
+import { Alert, Linking, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import { Camera, CameraView, BarcodeScanningResult, PermissionResponse } from 'expo-camera';
 import { useRouter } from 'expo-router';
 import Constants from 'expo-constants';
@@ -34,6 +34,31 @@ export default function QrClockInScreen() {
   const apiBaseUrl = apiBaseUrlValue ? apiBaseUrlValue.replace(/\/+$/, '') : '';
   const lastScanRef = useRef<{ value: string; at: number } | null>(null);
 
+  const resolveQrClockInErrorMessage = (status: number, errorMessage?: string) => {
+    if (status === 401) {
+      return t('qrClockInSessionRequired');
+    }
+    if (status === 403) {
+      return typeof errorMessage === 'string' && errorMessage.trim()
+        ? errorMessage.trim()
+        : t('qrClockInNotEligible');
+    }
+    if (status >= 500) {
+      return t('qrClockInSubmitFailed');
+    }
+    if (
+      status === 400 &&
+      typeof errorMessage === 'string' &&
+      (errorMessage.startsWith('Invalid QR token') ||
+        errorMessage.startsWith('Malformed QR token') ||
+        errorMessage.startsWith('Missing QR token') ||
+        errorMessage.startsWith('Unsupported QR token payload'))
+    ) {
+      return t('qrClockInInvalidCode');
+    }
+    return t('qrClockInInvalidCode');
+  };
+
   useEffect(() => {
     (async () => {
       const response = await Camera.requestCameraPermissionsAsync();
@@ -44,6 +69,12 @@ export default function QrClockInScreen() {
   const handleRequestPermission = async () => {
     const response = await Camera.requestCameraPermissionsAsync();
     setPermission(response);
+  };
+
+  const handleOpenSettings = () => {
+    Linking.openSettings().catch(() => {
+      Alert.alert(t('qrClockInInvalidTitle'), t('openSystemSettingsFailed'));
+    });
   };
 
   const handleBarCodeScanned = async ({ data }: BarcodeScanningResult) => {
@@ -98,10 +129,11 @@ export default function QrClockInScreen() {
 
       const payload = (await response.json().catch(() => ({}))) as {
         clockIn?: { shiftId?: string };
+        error?: string;
       };
 
       if (!response.ok || !payload.clockIn?.shiftId) {
-        const message = response.status >= 500 ? t('qrClockInSubmitFailed') : t('qrClockInInvalidCode');
+        const message = resolveQrClockInErrorMessage(response.status, payload.error);
         setScanFeedback(message);
         Alert.alert(t('qrClockInInvalidTitle'), message);
         return;
@@ -137,6 +169,9 @@ export default function QrClockInScreen() {
     <SafeAreaView style={[styles.center, { backgroundColor: theme.background }]} edges={['left', 'right']}>
       <Text style={[styles.error, { color: theme.fail }]}>{t('cameraPermissionRequired')}</Text>
       <PrimaryButton title={t('grantCameraAccess')} onPress={handleRequestPermission} />
+      {!permission.canAskAgain ? (
+        <PrimaryButton title={t('openSystemSettings')} onPress={handleOpenSettings} style={styles.button} />
+      ) : null}
     </SafeAreaView>
   );
   }
