@@ -420,6 +420,8 @@ export default function AccountScreen() {
   const isLargeTablet = width >= 1024;
   const isIOS = Platform.OS === 'ios';
   const shouldStackHeroHeader = shouldStackForCompactWidth(width);
+  const greetingFontSize = width < 360 ? 18 : width < 420 ? 22 : isIOS ? 26 : 30;
+  const greetingLineHeight = Math.round(greetingFontSize * 1.12);
   const isGuest = !user;
   const employeeId = user?.id;
   const metadata = user?.user_metadata;
@@ -925,13 +927,15 @@ export default function AccountScreen() {
                         <Text style={styles.avatarText}>{initials}</Text>
                       )}
                     </View>
-                    <View>
+                    <View style={styles.heroGreetingWrap}>
                       <Text
                         style={[
                           styles.profileGreeting,
                           { color: theme.textPrimary },
+                          { fontSize: greetingFontSize, lineHeight: greetingLineHeight },
                           isIOS && styles.profileGreetingIOS,
                         ]}
+                        allowFontScaling
                       >
                         {t('profileGreeting', { name: profileName(user) })}
                       </Text>
@@ -1503,9 +1507,16 @@ const styles = StyleSheet.create({
   heroIdentity: {
     flex: 1,
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     gap: 12,
+    minWidth: 0,
     paddingRight: 12,
+  },
+  heroGreetingWrap: {
+    flex: 1,
+    flexShrink: 1,
+    minWidth: 0,
+    justifyContent: 'center',
   },
   avatar: {
     width: 48,
@@ -1538,6 +1549,7 @@ const styles = StyleSheet.create({
     fontSize: 30,
     fontWeight: '700',
     letterSpacing: -0.4,
+    flexShrink: 1,
   },
   profileGreetingIOS: {
     fontSize: 26,
