@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Alert, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import { Camera, CameraView, BarcodeScanningResult, PermissionResponse } from 'expo-camera';
 import { useRouter } from 'expo-router';
@@ -32,6 +32,7 @@ export default function QrClockInScreen() {
   const { user, session } = useAuth();
   const apiBaseUrlValue = (Constants.expoConfig?.extra?.apiBaseUrl as string | undefined)?.trim();
   const apiBaseUrl = apiBaseUrlValue ? apiBaseUrlValue.replace(/\/+$/, '') : '';
+  const lastScanRef = useRef<{ value: string; at: number } | null>(null);
 
   useEffect(() => {
     (async () => {
@@ -50,6 +51,18 @@ export default function QrClockInScreen() {
     if (!normalizedData || isSubmitting) {
       return;
     }
+    const now = Date.now();
+    if (
+      lastScanRef.current &&
+      lastScanRef.current.value === normalizedData &&
+      now - lastScanRef.current.at < 2500
+    ) {
+      return;
+    }
+    lastScanRef.current = {
+      value: normalizedData,
+      at: now,
+    };
 
     setScannedData(data);
     setIsScanning(false);
@@ -194,6 +207,7 @@ export default function QrClockInScreen() {
             onPress={() => {
               setScannedData(null);
               setScanFeedback(null);
+              lastScanRef.current = null;
               setIsScanning(true);
             }}
             style={styles.button}
