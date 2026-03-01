@@ -38,6 +38,10 @@ import {
 } from '@shared/utils/support';
 import Constants from 'expo-constants';
 import { formatAddress } from '@shared/utils/address';
+import {
+  getLinkedCompanyIdFromSources,
+  resolveCompanyDisplaySnapshot,
+} from '@shared/utils/companyDisplay';
 import { getUserFacingErrorMessage } from '@shared/utils/userFacingError';
 
 const normalizeContactString = (value?: unknown) =>
@@ -329,40 +333,6 @@ const getNestedString = (source: unknown, path: string[]): string | undefined =>
   return typeof cursor === 'string' && cursor.trim() ? cursor.trim() : undefined;
 };
 
-const getCompanyNameFromMetadata = (metadata?: Record<string, unknown>) =>
-  getStringField(metadata, 'companyName') ??
-  getStringField(metadata, 'company_name') ??
-  getStringField(metadata, 'companyDisplayName') ??
-  getStringField(metadata, 'company_display_name') ??
-  getNestedString(metadata, ['company', 'name']) ??
-  getNestedString(metadata, ['company', 'companyName']) ??
-  getNestedString(metadata, ['company', 'company_name']) ??
-  getNestedString(metadata, ['company', 'displayName']) ??
-  getNestedString(metadata, ['company', 'display_name']) ??
-  getNestedString(metadata, ['currentCompany', 'name']) ??
-  getNestedString(metadata, ['currentCompany', 'companyName']) ??
-  getNestedString(metadata, ['currentCompany', 'company_name']) ??
-  getNestedString(metadata, ['currentCompany', 'displayName']) ??
-  getNestedString(metadata, ['currentCompany', 'display_name']);
-
-const getCompanyAddressFromMetadata = (metadata?: Record<string, unknown>) =>
-  getStringField(metadata, 'companyAddress') ??
-  getStringField(metadata, 'company_address') ??
-  getStringField(metadata, 'companyFullAddress') ??
-  getStringField(metadata, 'company_full_address') ??
-  getStringField(metadata, 'companyStreetAddress') ??
-  getStringField(metadata, 'company_street_address') ??
-  getNestedString(metadata, ['company', 'address']) ??
-  getNestedString(metadata, ['company', 'fullAddress']) ??
-  getNestedString(metadata, ['company', 'full_address']) ??
-  getNestedString(metadata, ['company', 'streetAddress']) ??
-  getNestedString(metadata, ['company', 'street_address']) ??
-  getNestedString(metadata, ['currentCompany', 'address']) ??
-  getNestedString(metadata, ['currentCompany', 'fullAddress']) ??
-  getNestedString(metadata, ['currentCompany', 'full_address']) ??
-  getNestedString(metadata, ['currentCompany', 'streetAddress']) ??
-  getNestedString(metadata, ['currentCompany', 'street_address']);
-
 const getProfilePhone = (profile?: EmployeeProfile | null) => {
   if (!profile) return undefined;
   const direct = [
@@ -404,87 +374,6 @@ const getProfileAddress = (profile?: EmployeeProfile | null) => {
     state: getStringField(profile, 'state'),
     country: getStringField(profile, 'country'),
   });
-};
-
-const getLinkedCompanyId = (
-  profile?: EmployeeProfile | null,
-  metadata?: Record<string, unknown>
-) => {
-  const profileCompanyId =
-    getStringField(profile ?? undefined, 'companyId') ??
-    getStringField(profile ?? undefined, 'company_id');
-  if (profileCompanyId) {
-    return profileCompanyId;
-  }
-  return getStringField(metadata, 'companyId') ?? getStringField(metadata, 'company_id');
-};
-
-const getCompanyAddress = (source?: Record<string, unknown> | null) => {
-  if (!source) return undefined;
-  const direct = [
-    'address',
-    'full_address',
-    'fullAddress',
-    'street_address',
-    'streetAddress',
-    'location',
-  ]
-    .map((key) => getStringField(source, key))
-    .find(Boolean);
-  if (direct) return direct;
-
-  const composed = [
-    'line1',
-    'line2',
-    'street',
-    'city',
-    'state',
-    'postal_code',
-    'postalCode',
-    'country',
-  ]
-    .map((key) => getStringField(source, key))
-    .filter((part): part is string => Boolean(part));
-  return composed.length ? composed.join(', ') : undefined;
-};
-
-const getEmployeeCompanyAddress = (source?: Record<string, unknown> | null) => {
-  if (!source) return undefined;
-
-  const direct = [
-    'companyAddress',
-    'company_address',
-    'companyFullAddress',
-    'company_full_address',
-    'companyStreetAddress',
-    'company_street_address',
-    'companyLocation',
-    'company_location',
-  ]
-    .map((key) => getStringField(source, key))
-    .find(Boolean);
-  if (direct) return direct;
-
-  const composed = [
-    'companyLine1',
-    'company_line1',
-    'companyLine2',
-    'company_line2',
-    'companyStreet',
-    'company_street',
-    'companyCity',
-    'company_city',
-    'companyState',
-    'company_state',
-    'companyPostalCode',
-    'company_postal_code',
-    'companyCountry',
-    'company_country',
-  ]
-    .map((key) => getStringField(source, key))
-    .filter((part): part is string => Boolean(part));
-
-  return composed.length ? composed.join(', ') : undefined;
 };
 
 const getMetadataPhoneDeep = (metadata?: Record<string, unknown>) =>
@@ -593,44 +482,33 @@ export default function AccountScreen() {
     getMetadataPhoneDeep(metadata);
   const contactAddress =
     normalizeContactString(getProfileAddress(employeeRecord)) ?? getMetadataAddressDeep(metadata);
-  const linkedCompanyId = getLinkedCompanyId(employeeRecord, mergedMetadataRecord);
+  const linkedCompanyId = getLinkedCompanyIdFromSources(employeeRecord, mergedMetadataRecord);
   const { data: companySummary } = useQuery({
     queryKey: ['companySummary', linkedCompanyId],
     queryFn: () => (linkedCompanyId ? fetchCompanySummary(linkedCompanyId) : null),
     enabled: Boolean(linkedCompanyId),
     staleTime: 60_000,
   });
+  const companyDisplay = useMemo(
+    () =>
+      resolveCompanyDisplaySnapshot({
+        companySummary: companySummary ?? undefined,
+        employeeRecord: employeeRecord ?? undefined,
+        metadata: mergedMetadataRecord,
+        fallbackName: t('companyUnknownName'),
+        fallbackAddress: t('notProvided'),
+      }),
+    [companySummary, employeeRecord, mergedMetadataRecord, t]
+  );
   const requestedCompanyCode = getStringField(mergedMetadataRecord, 'requested_company_code');
   const [joinCode, setJoinCode] = useState(requestedCompanyCode ?? '');
   const joinCodeInputRef = useRef<TextInput | null>(null);
   const [linkingCompany, setLinkingCompany] = useState(false);
   const canRequestCompanyAccess = Boolean(user?.id);
   const isSwitchFlow = Boolean(linkedCompanyId);
-  const currentCompanyName =
-    getStringField(companySummary ?? undefined, 'name') ??
-    getStringField(companySummary ?? undefined, 'companyName') ??
-    getStringField(companySummary ?? undefined, 'company_name') ??
-    getStringField(companySummary ?? undefined, 'displayName') ??
-    getStringField(companySummary ?? undefined, 'display_name') ??
-    getStringField(employeeRecord ?? undefined, 'companyName') ??
-    getStringField(employeeRecord ?? undefined, 'company_name') ??
-    getStringField(employeeRecord ?? undefined, 'companyDisplayName') ??
-    getStringField(employeeRecord ?? undefined, 'company_display_name') ??
-    getCompanyNameFromMetadata(mergedMetadataRecord) ??
-    t('companyUnknownName');
-  const currentCompanyLogoUrl =
-    getStringField(companySummary ?? undefined, 'logo_url') ??
-    getStringField(companySummary ?? undefined, 'logoUrl') ??
-    getStringField(companySummary ?? undefined, 'logo') ??
-    getStringField(employeeRecord ?? undefined, 'companyLogoUrl') ??
-    getStringField(employeeRecord ?? undefined, 'company_logo_url') ??
-    getStringField(employeeRecord ?? undefined, 'companyLogo') ??
-    getStringField(employeeRecord ?? undefined, 'company_logo');
-  const currentCompanyAddress =
-    getCompanyAddress(companySummary ?? undefined) ??
-    getEmployeeCompanyAddress(employeeRecord ?? undefined) ??
-    getCompanyAddressFromMetadata(mergedMetadataRecord) ??
-    t('notProvided');
+  const currentCompanyName = companyDisplay.name;
+  const currentCompanyLogoUrl = companyDisplay.logoUrl;
+  const currentCompanyAddress = companyDisplay.address;
   const currentCompanyAddressParts = formatAddress(currentCompanyAddress);
   const currentCompanyInitials = currentCompanyName
     .split(' ')
