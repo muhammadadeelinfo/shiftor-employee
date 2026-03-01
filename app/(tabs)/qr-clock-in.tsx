@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
 import { Alert, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import { Camera, CameraView, BarcodeScanningResult, PermissionResponse } from 'expo-camera';
+import { useRouter } from 'expo-router';
+import Constants from 'expo-constants';
 import { PrimaryButton } from '@shared/components/PrimaryButton';
 import { useLanguage } from '@shared/context/LanguageContext';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -8,9 +10,11 @@ import { useTheme } from '@shared/themeContext';
 import { LinearGradient } from 'expo-linear-gradient';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { layoutTokens } from '@shared/theme/layout';
+import { useAuth } from '@hooks/useSupabaseAuth';
 
 export default function QrClockInScreen() {
   const { theme } = useTheme();
+  const router = useRouter();
   const { width, height } = useWindowDimensions();
   const isTablet = width >= 768;
   const isLargeTablet = width >= 1024;
@@ -22,7 +26,12 @@ export default function QrClockInScreen() {
   const [permission, setPermission] = useState<PermissionResponse | null>(null);
   const [scannedData, setScannedData] = useState<string | null>(null);
   const [isScanning, setIsScanning] = useState(true);
+  const [scanFeedback, setScanFeedback] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const { t } = useLanguage();
+  const { user, session } = useAuth();
+  const apiBaseUrlValue = (Constants.expoConfig?.extra?.apiBaseUrl as string | undefined)?.trim();
+  const apiBaseUrl = apiBaseUrlValue ? apiBaseUrlValue.replace(/\/+$/, '') : '';
 
   useEffect(() => {
     (async () => {
@@ -36,10 +45,70 @@ export default function QrClockInScreen() {
     setPermission(response);
   };
 
-  const handleBarCodeScanned = ({ data }: BarcodeScanningResult) => {
+  const handleBarCodeScanned = async ({ data }: BarcodeScanningResult) => {
+    const normalizedData = data.trim();
+    if (!normalizedData || isSubmitting) {
+      return;
+    }
+
     setScannedData(data);
     setIsScanning(false);
-    Alert.alert(t('qrDetectedTitle'), t('qrDetectedMessage', { code: data }));
+    setIsSubmitting(true);
+
+    if (!apiBaseUrl) {
+      const message = t('qrClockInMissingApiBaseUrl');
+      setScanFeedback(message);
+      Alert.alert(t('qrClockInInvalidTitle'), message);
+      setIsSubmitting(false);
+      return;
+    }
+
+    if (!session?.access_token) {
+      const message = t('qrClockInSessionRequired');
+      setScanFeedback(message);
+      Alert.alert(t('qrClockInInvalidTitle'), message);
+      setIsSubmitting(false);
+      return;
+    }
+
+    try {
+      const response = await fetch(`${apiBaseUrl}/api/objects/qr-clock-in`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({
+          qrCode: normalizedData,
+        }),
+      });
+
+      const payload = (await response.json().catch(() => ({}))) as {
+        clockIn?: { shiftId?: string };
+      };
+
+      if (!response.ok || !payload.clockIn?.shiftId) {
+        const message = response.status >= 500 ? t('qrClockInSubmitFailed') : t('qrClockInInvalidCode');
+        setScanFeedback(message);
+        Alert.alert(t('qrClockInInvalidTitle'), message);
+        return;
+      }
+
+      const message = t('qrClockInSuccessMessage');
+      setScanFeedback(message);
+      Alert.alert(t('qrClockInSuccessTitle'), message, [
+        {
+          text: t('commonContinue'),
+          onPress: () => router.push(`/shift-details/${payload.clockIn?.shiftId}`),
+        },
+      ]);
+    } catch {
+      const message = t('qrClockInSubmitFailed');
+      setScanFeedback(message);
+      Alert.alert(t('qrClockInInvalidTitle'), message);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   if (!permission) {
@@ -57,6 +126,14 @@ export default function QrClockInScreen() {
       <PrimaryButton title={t('grantCameraAccess')} onPress={handleRequestPermission} />
     </SafeAreaView>
   );
+  }
+
+  if (!user) {
+    return (
+      <SafeAreaView style={[styles.center, { backgroundColor: theme.background }]} edges={['left', 'right']}>
+        <Text style={[styles.error, { color: theme.fail }]}>{t('qrClockInSignInRequired')}</Text>
+      </SafeAreaView>
+    );
   }
 
   return (
@@ -82,7 +159,7 @@ export default function QrClockInScreen() {
         <View style={[styles.preview, previewStyle, { borderColor: theme.borderSoft }]}>
           <CameraView
             style={styles.camera}
-            onBarcodeScanned={isScanning ? handleBarCodeScanned : undefined}
+            onBarcodeScanned={!isSubmitting && isScanning ? handleBarCodeScanned : undefined}
             barcodeScannerSettings={{
               barcodeTypes: ['qr', 'code128', 'code39'],
             }}
@@ -101,6 +178,14 @@ export default function QrClockInScreen() {
           <View style={[styles.scanResult, { backgroundColor: theme.surface }]}>
             <Text style={[styles.scanLabel, { color: theme.textSecondary }]}>{t('lastScanLabel')}</Text>
             <Text style={[styles.scanValue, { color: theme.textPrimary }]}>{scannedData}</Text>
+            {scanFeedback ? (
+              <Text style={[styles.scanFeedback, { color: theme.textSecondary }]}>{scanFeedback}</Text>
+            ) : null}
+          </View>
+        ) : null}
+        {isSubmitting ? (
+          <View style={[styles.scanResult, { backgroundColor: theme.surface }]}>
+            <Text style={[styles.scanLabel, { color: theme.textSecondary }]}>{t('qrClockInSubmitting')}</Text>
           </View>
         ) : null}
         {!isScanning ? (
@@ -108,6 +193,7 @@ export default function QrClockInScreen() {
             title={t('scanAnotherBadge')}
             onPress={() => {
               setScannedData(null);
+              setScanFeedback(null);
               setIsScanning(true);
             }}
             style={styles.button}
@@ -237,6 +323,11 @@ const styles = StyleSheet.create({
   scanValue: {
     marginTop: 4,
     fontWeight: '600',
+  },
+  scanFeedback: {
+    marginTop: 8,
+    fontSize: 12,
+    lineHeight: 18,
   },
   button: {
     marginTop: 24,
