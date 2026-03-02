@@ -181,6 +181,7 @@ const fetchCompanySummary = async (
   if (!supabase) {
     return null;
   }
+  let diagnosticError: string | null = null;
   const normalizedApiBaseUrl = options?.apiBaseUrl?.trim()
     ? options.apiBaseUrl.trim().replace(/\/+$/, '')
     : '';
@@ -198,6 +199,7 @@ const fetchCompanySummary = async (
           name?: string | null;
           address?: string | null;
         };
+        error?: string;
       };
 
       if (response.ok && payload.company?.id === companyId) {
@@ -207,8 +209,12 @@ const fetchCompanySummary = async (
           address: payload.company.address ?? null,
         } as CompanySummary;
       }
+      if (!response.ok && typeof payload.error === 'string' && payload.error.trim()) {
+        diagnosticError = payload.error.trim();
+      }
     } catch (error) {
       console.warn('Failed to load company summary via backend API', error);
+      diagnosticError = 'Failed to reach company service.';
     }
   }
 
@@ -228,10 +234,10 @@ const fetchCompanySummary = async (
       if (!isMissingColumnError(publicError)) {
         console.warn('Failed to load company summary via public client', publicError);
       }
-      return null;
+      return diagnosticError ? ({ _diagnosticError: diagnosticError } as CompanySummary) : null;
     }
     if (!publicData || typeof publicData !== 'object') {
-      return null;
+      return diagnosticError ? ({ _diagnosticError: diagnosticError } as CompanySummary) : null;
     }
     return publicData as CompanySummary;
   };
@@ -555,6 +561,7 @@ export default function AccountScreen() {
   const currentCompanyName = companyDisplay.name;
   const currentCompanyLogoUrl = companyDisplay.logoUrl;
   const currentCompanyAddress = companyDisplay.address;
+  const currentCompanyDiagnostic = getStringField(companySummary ?? undefined, '_diagnosticError');
   const currentCompanyAddressParts = formatAddress(currentCompanyAddress);
   const currentCompanyInitials = currentCompanyName
     .split(' ')
@@ -1205,6 +1212,11 @@ export default function AccountScreen() {
                           </Text>
                         )}
                       </View>
+                      {currentCompanyDiagnostic ? (
+                        <Text style={[styles.sectionHint, { color: theme.fail }]}>
+                          {currentCompanyDiagnostic}
+                        </Text>
+                      ) : null}
                     </View>
                   </View>
                 ) : null}
