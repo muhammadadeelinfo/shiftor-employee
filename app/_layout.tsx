@@ -13,6 +13,7 @@ import {
   View,
   StyleSheet,
   TouchableOpacity,
+  StatusBar as NativeStatusBar,
   Text,
   Alert,
   ScrollView,
@@ -779,10 +780,10 @@ function LayoutContentInner() {
 
   return (
     <SafeAreaView style={[styles.root, { backgroundColor: statusBarBgColor }]} edges={['top']}>
-      {Platform.OS === 'ios' ? (
-        <StatusBar
-          hidden={false}
-          style={statusBarStyle}
+      {Platform.OS === 'ios' ? <StatusBar hidden={false} style={statusBarStyle} /> : null}
+      {Platform.OS === 'android' ? (
+        <NativeStatusBar
+          barStyle="light-content"
         />
       ) : null}
       <Modal
