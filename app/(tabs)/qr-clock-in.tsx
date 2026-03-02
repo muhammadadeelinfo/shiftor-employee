@@ -59,6 +59,22 @@ export default function QrClockInScreen() {
     return t('qrClockInInvalidCode');
   };
 
+  const formatWorkedDuration = (workedMs?: number) => {
+    if (typeof workedMs !== 'number' || !Number.isFinite(workedMs) || workedMs <= 0) {
+      return null;
+    }
+    const totalMinutes = Math.max(1, Math.round(workedMs / 60000));
+    const hours = Math.floor(totalMinutes / 60);
+    const minutes = totalMinutes % 60;
+    if (hours <= 0) {
+      return t('qrClockOutWorkedMinutes', { minutes: totalMinutes });
+    }
+    if (minutes === 0) {
+      return t('qrClockOutWorkedHours', { hours });
+    }
+    return t('qrClockOutWorkedHoursMinutes', { hours, minutes });
+  };
+
   useEffect(() => {
     (async () => {
       const response = await Camera.requestCameraPermissionsAsync();
@@ -128,7 +144,11 @@ export default function QrClockInScreen() {
       });
 
       const payload = (await response.json().catch(() => ({}))) as {
-        clockIn?: { shiftId?: string };
+        clockIn?: {
+          shiftId?: string;
+          action?: 'clock_in' | 'clock_out';
+          workedMs?: number;
+        };
         error?: string;
       };
 
@@ -139,9 +159,15 @@ export default function QrClockInScreen() {
         return;
       }
 
-      const message = t('qrClockInSuccessMessage');
+      const workedDuration = formatWorkedDuration(payload.clockIn?.workedMs);
+      const isClockOut = payload.clockIn?.action === 'clock_out';
+      const message = isClockOut
+        ? t('qrClockOutSuccessMessage', {
+            duration: workedDuration ?? t('qrClockOutWorkedUnknown'),
+          })
+        : t('qrClockInSuccessMessage');
       setScanFeedback(message);
-      Alert.alert(t('qrClockInSuccessTitle'), message, [
+      Alert.alert(isClockOut ? t('qrClockOutSuccessTitle') : t('qrClockInSuccessTitle'), message, [
         {
           text: t('commonContinue'),
           onPress: () => router.push(`/shift-details/${payload.clockIn?.shiftId}`),

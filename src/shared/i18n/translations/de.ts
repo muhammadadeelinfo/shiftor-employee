@@ -475,6 +475,13 @@ export const deTranslations = {
     qrClockInSubmitFailed: 'Der QR-Clock-in konnte gerade nicht abgeschlossen werden.',
     qrClockInSuccessTitle: 'Clock-in bereit',
     qrClockInSuccessMessage: 'Clock-in gespeichert. Die Schichtdetails werden jetzt geoeffnet.',
+    qrClockOutSuccessTitle: 'Clock-out bereit',
+    qrClockOutSuccessMessage:
+      'Clock-out gespeichert. Arbeitszeit: {duration}. Die Schichtdetails werden jetzt geoeffnet.',
+    qrClockOutWorkedUnknown: 'nicht verfuegbar',
+    qrClockOutWorkedMinutes: '{minutes} Min',
+    qrClockOutWorkedHours: '{hours} Std',
+    qrClockOutWorkedHoursMinutes: '{hours} Std {minutes} Min',
     qrClockInSignInRequired: 'Zum QR-Clock-in bitte anmelden.',
     shiftNotFound: 'Schicht nicht gefunden. Zieh nach unten, um es erneut zu laden.',
     shiftDetailsMissingId: 'Die zu ladende Schicht konnte nicht bestimmt werden.',
