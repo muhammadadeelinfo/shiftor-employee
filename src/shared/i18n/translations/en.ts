@@ -286,7 +286,7 @@ export const enTranslations = {
     noUpcomingShifts: 'No upcoming shifts',
     shiftsTabTitle: 'Shifts',
     tabCalendar: 'Calendar',
-    tabQrClockIn: 'QR Clock-In/Out',
+    tabQrClockIn: 'Clock In/Out',
     tabAccount: 'Account',
     tabNotifications: 'Notifications',
     tabQuickActions: 'Quick Actions',

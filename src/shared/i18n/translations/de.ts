@@ -288,7 +288,7 @@ export const deTranslations = {
     noUpcomingShifts: 'Keine kommenden Schichten',
     shiftsTabTitle: 'Schichten',
     tabCalendar: 'Kalender',
-    tabQrClockIn: 'QR-Check-in/-out',
+    tabQrClockIn: 'Check-in/-out',
     tabAccount: 'Konto',
     tabNotifications: 'Benachrichtigungen',
     tabQuickActions: 'Schnellaktionen',
