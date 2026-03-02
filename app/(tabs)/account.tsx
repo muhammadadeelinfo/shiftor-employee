@@ -810,13 +810,19 @@ export default function AccountScreen() {
   ];
   const appName =
     ((Constants.expoConfig?.name as string | undefined)?.trim() || 'Shiftor Employee');
-  const appVersion = ((Constants.expoConfig?.version as string | undefined)?.trim() || '1.0.0');
-  const iosBuildNumber = ((Constants.expoConfig?.ios?.buildNumber as string | undefined)?.trim() || '');
-  const androidBuildCode =
+  const nativeAppVersion =
+    typeof Constants.nativeAppVersion === 'string' ? Constants.nativeAppVersion.trim() : '';
+  const configAppVersion = ((Constants.expoConfig?.version as string | undefined)?.trim() || '');
+  const appVersion = nativeAppVersion || configAppVersion || '1.0.0';
+  const nativeBuildVersion =
+    typeof Constants.nativeBuildVersion === 'string' ? Constants.nativeBuildVersion.trim() : '';
+  const configIosBuildNumber =
+    ((Constants.expoConfig?.ios?.buildNumber as string | undefined)?.trim() || '');
+  const configAndroidBuildCode =
     typeof Constants.expoConfig?.android?.versionCode === 'number'
       ? String(Constants.expoConfig.android.versionCode)
       : '';
-  const appBuild = iosBuildNumber || androidBuildCode;
+  const appBuild = nativeBuildVersion || configIosBuildNumber || configAndroidBuildCode;
   const appVersionLabel = appBuild ? `${appVersion} (${appBuild})` : appVersion;
   const initials = profileName(user)
     .split(' ')
