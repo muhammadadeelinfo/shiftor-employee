@@ -489,7 +489,8 @@ export default function AccountScreen() {
     queryKey: ['companySummary', linkedCompanyId],
     queryFn: () => (linkedCompanyId ? fetchCompanySummary(linkedCompanyId) : null),
     enabled: Boolean(linkedCompanyId),
-    staleTime: 60_000,
+    staleTime: 0,
+    refetchOnMount: 'always',
   });
   const companyDisplay = useMemo(
     () =>
