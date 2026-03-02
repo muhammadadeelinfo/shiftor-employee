@@ -48,6 +48,12 @@ const getCompanyNameFromMetadata = (metadata?: GenericRecord) =>
   getNestedString(metadata, ['currentCompany', 'displayName']) ??
   getNestedString(metadata, ['currentCompany', 'display_name']);
 
+const getEmployeeCompanyName = (source?: GenericRecord | null) =>
+  getStringField(source ?? undefined, 'companyName') ??
+  getStringField(source ?? undefined, 'company_name') ??
+  getStringField(source ?? undefined, 'companyDisplayName') ??
+  getStringField(source ?? undefined, 'company_display_name');
+
 const getCompanyAddress = (source?: GenericRecord | null) => {
   if (!source) return undefined;
   const direct = [
@@ -149,36 +155,33 @@ export const resolveCompanyDisplaySnapshot = (params: {
     getStringField(companySummary ?? undefined, 'company_name') ??
     getStringField(companySummary ?? undefined, 'displayName') ??
     getStringField(companySummary ?? undefined, 'display_name');
-  const fallbackCompanyName =
-    getStringField(employeeRecord ?? undefined, 'companyName') ??
-    getStringField(employeeRecord ?? undefined, 'company_name') ??
-    getStringField(employeeRecord ?? undefined, 'companyDisplayName') ??
-    getStringField(employeeRecord ?? undefined, 'company_display_name') ??
-    getCompanyNameFromMetadata(metadata);
+  const employeeCompanyName = getEmployeeCompanyName(employeeRecord ?? undefined);
+  const metadataCompanyName = getCompanyNameFromMetadata(metadata);
   const name =
     companySummaryName ??
-    (linkedCompanyId ? undefined : fallbackCompanyName) ??
+    employeeCompanyName ??
+    (linkedCompanyId ? undefined : metadataCompanyName) ??
     fallbackName;
 
   const companySummaryAddress = getCompanyAddress(companySummary ?? undefined);
-  const fallbackCompanyAddress =
-    getEmployeeCompanyAddress(employeeRecord ?? undefined) ??
-    getCompanyAddressFromMetadata(metadata);
+  const employeeCompanyAddress = getEmployeeCompanyAddress(employeeRecord ?? undefined);
+  const metadataCompanyAddress = getCompanyAddressFromMetadata(metadata);
   const address =
     companySummaryAddress ??
-    (linkedCompanyId ? undefined : fallbackCompanyAddress) ??
+    employeeCompanyAddress ??
+    (linkedCompanyId ? undefined : metadataCompanyAddress) ??
     fallbackAddress;
 
   const companySummaryLogoUrl =
     getStringField(companySummary ?? undefined, 'logo_url') ??
     getStringField(companySummary ?? undefined, 'logoUrl') ??
     getStringField(companySummary ?? undefined, 'logo');
-  const fallbackCompanyLogoUrl =
+  const employeeCompanyLogoUrl =
     getStringField(employeeRecord ?? undefined, 'companyLogoUrl') ??
     getStringField(employeeRecord ?? undefined, 'company_logo_url') ??
     getStringField(employeeRecord ?? undefined, 'companyLogo') ??
     getStringField(employeeRecord ?? undefined, 'company_logo');
-  const logoUrl = companySummaryLogoUrl ?? (linkedCompanyId ? undefined : fallbackCompanyLogoUrl);
+  const logoUrl = companySummaryLogoUrl ?? employeeCompanyLogoUrl;
 
   return {
     linkedCompanyId: linkedCompanyId ?? null,

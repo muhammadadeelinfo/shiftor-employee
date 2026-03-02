@@ -174,10 +174,44 @@ const fetchEmployeeProfile = async (
   return null;
 };
 
-const fetchCompanySummary = async (companyId: string): Promise<CompanySummary | null> => {
+const fetchCompanySummary = async (
+  companyId: string,
+  options?: { accessToken?: string | null; apiBaseUrl?: string | null }
+): Promise<CompanySummary | null> => {
   if (!supabase) {
     return null;
   }
+  const normalizedApiBaseUrl = options?.apiBaseUrl?.trim()
+    ? options.apiBaseUrl.trim().replace(/\/+$/, '')
+    : '';
+
+  if (normalizedApiBaseUrl && options?.accessToken) {
+    try {
+      const response = await fetch(`${normalizedApiBaseUrl}/api/company-access/current-company`, {
+        headers: {
+          Authorization: `Bearer ${options.accessToken}`,
+        },
+      });
+      const payload = (await response.json().catch(() => ({}))) as {
+        company?: {
+          id?: string;
+          name?: string | null;
+          address?: string | null;
+        };
+      };
+
+      if (response.ok && payload.company?.id === companyId) {
+        return {
+          id: payload.company.id,
+          name: payload.company.name ?? null,
+          address: payload.company.address ?? null,
+        } as CompanySummary;
+      }
+    } catch (error) {
+      console.warn('Failed to load company summary via backend API', error);
+    }
+  }
+
   const loadWithPublicClient = async (): Promise<CompanySummary | null> => {
     const publicSupabase = getPublicSupabaseClient();
     if (!publicSupabase) {
@@ -409,8 +443,10 @@ const shiftStatus = (metadata?: Record<string, unknown> | null) => {
 
 export default function AccountScreen() {
   const router = useRouter();
+  const apiBaseUrlValue = (Constants.expoConfig?.extra?.apiBaseUrl as string | undefined)?.trim();
+  const apiBaseUrl = apiBaseUrlValue ? apiBaseUrlValue.replace(/\/+$/, '') : '';
   const queryClient = useQueryClient();
-  const { user, signOut } = useAuth();
+  const { user, session, signOut } = useAuth();
   const { unreadCount } = useNotifications();
   const { theme } = useTheme();
   const { t, language, setLanguage } = useLanguage();
@@ -487,7 +523,13 @@ export default function AccountScreen() {
   const linkedCompanyId = getLinkedCompanyIdFromSources(employeeRecord, mergedMetadataRecord);
   const { data: companySummary } = useQuery({
     queryKey: ['companySummary', linkedCompanyId],
-    queryFn: () => (linkedCompanyId ? fetchCompanySummary(linkedCompanyId) : null),
+    queryFn: () =>
+      linkedCompanyId
+        ? fetchCompanySummary(linkedCompanyId, {
+            accessToken: session?.access_token ?? null,
+            apiBaseUrl,
+          })
+        : null,
     enabled: Boolean(linkedCompanyId),
     staleTime: 0,
     refetchOnMount: 'always',
