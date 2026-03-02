@@ -30,6 +30,10 @@ assert.deepStrictEqual(
   parseQrClockInCode('https://shiftorapp.com/clock-in?assignmentId=assignment-1'),
   { assignmentId: 'assignment-1' }
 );
+assert.deepStrictEqual(
+  parseQrClockInCode('SHIFTOR_QR_CLOCK_IN:eyJ2IjoyLCJzaGlmdElkIjoic2hpZnQtMiJ9.signature'),
+  { shiftId: 'shift-2' }
+);
 assert.deepStrictEqual(parseQrClockInCode('shift-1'), { shiftId: 'shift-1' });
 
 assert.strictEqual(findShiftForQrClockIn('shift:shift-1', shifts)?.id, 'shift-1');

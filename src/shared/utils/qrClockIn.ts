@@ -5,6 +5,8 @@ type ParsedQrPayload = {
   assignmentId?: string;
 };
 
+const SHIFTOR_QR_CLOCK_IN_PREFIX = 'SHIFTOR_QR_CLOCK_IN:';
+
 const compactPayload = (payload: ParsedQrPayload): ParsedQrPayload => {
   const next: ParsedQrPayload = {};
   if (payload.shiftId) next.shiftId = payload.shiftId;
@@ -65,9 +67,76 @@ const readPrefixedPayload = (rawValue: string): ParsedQrPayload => {
   }
 };
 
+const decodeBase64UrlValue = (value: string): string | null => {
+  const normalized = value.replace(/-/g, '+').replace(/_/g, '/');
+  const padding = (4 - (normalized.length % 4)) % 4;
+  const padded = normalized + '='.repeat(padding);
+
+  if (typeof globalThis.atob === 'function') {
+    try {
+      return globalThis.atob(padded);
+    } catch {
+      return null;
+    }
+  }
+
+  const maybeBuffer = (
+    globalThis as typeof globalThis & {
+      Buffer?: {
+        from: (input: string, encoding: string) => { toString: (encoding: string) => string };
+      };
+    }
+  ).Buffer;
+  if (!maybeBuffer) {
+    return null;
+  }
+
+  try {
+    return maybeBuffer.from(padded, 'base64').toString('utf8');
+  } catch {
+    return null;
+  }
+};
+
+const readSignedShiftorPayload = (rawValue: string): ParsedQrPayload | null => {
+  if (!rawValue.startsWith(SHIFTOR_QR_CLOCK_IN_PREFIX)) {
+    return null;
+  }
+
+  const token = rawValue.slice(SHIFTOR_QR_CLOCK_IN_PREFIX.length).trim();
+  const [encodedPayload] = token.split('.');
+  if (!encodedPayload) {
+    return {};
+  }
+
+  const decodedPayload = decodeBase64UrlValue(encodedPayload);
+  if (!decodedPayload) {
+    return {};
+  }
+
+  try {
+    const parsed = JSON.parse(decodedPayload) as Record<string, unknown>;
+    const version = parsed.v;
+    if (version !== 2) {
+      return {};
+    }
+    return compactPayload({
+      shiftId: normalizeToken(parsed.shiftId ?? parsed.shift_id),
+      assignmentId: normalizeToken(parsed.assignmentId ?? parsed.assignment_id),
+    });
+  } catch {
+    return {};
+  }
+};
+
 export const parseQrClockInCode = (rawValue: string): ParsedQrPayload => {
   const normalized = rawValue.trim();
   if (!normalized) return {};
+
+  const signedPayload = readSignedShiftorPayload(normalized);
+  if (signedPayload && (signedPayload.shiftId || signedPayload.assignmentId)) {
+    return signedPayload;
+  }
 
   const jsonPayload = readJsonPayload(normalized);
   if (jsonPayload && (jsonPayload.shiftId || jsonPayload.assignmentId)) {
