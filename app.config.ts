@@ -52,7 +52,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
         {
           cameraPermission:
             process.env.IOS_CAMERA_USAGE_DESCRIPTION ??
-            'Camera access is required to scan QR codes for clock-in.',
+            'Camera access is required to scan QR codes for clock-in and clock-out.',
           microphonePermission: false,
           recordAudioAndroid: false,
         },
@@ -108,7 +108,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
       ...config.ios?.infoPlist,
       NSCameraUsageDescription:
         process.env.IOS_CAMERA_USAGE_DESCRIPTION ??
-        'Camera access is required to scan QR codes for clock-in.',
+        'Camera access is required to scan QR codes for clock-in and clock-out.',
       NSCalendarsUsageDescription:
         process.env.IOS_CALENDAR_USAGE_DESCRIPTION ??
         'Calendar access lets you import shifts and sync your schedule.',

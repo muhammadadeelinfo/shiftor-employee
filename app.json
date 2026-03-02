@@ -18,7 +18,7 @@
       "bundleIdentifier": "com.shiftor.employee",
       "buildNumber": "1",
       "infoPlist": {
-        "NSCameraUsageDescription": "Camera access is required to scan QR codes for clock-in.",
+        "NSCameraUsageDescription": "Camera access is required to scan QR codes for clock-in and clock-out.",
         "NSLocationWhenInUseUsageDescription": "Location access is used to show nearby shifts and verify shift locations.",
         "NSCalendarsUsageDescription": "Calendar access lets you import shifts and sync your schedule.",
         "NSCalendarsFullAccessUsageDescription": "Calendar access lets you import shifts and sync your schedule.",
