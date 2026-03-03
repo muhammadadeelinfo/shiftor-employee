@@ -46,11 +46,16 @@ export default function AboutScreen() {
       showsVerticalScrollIndicator={false}
     >
       <View style={[styles.heroCard, { backgroundColor: theme.surfaceElevated, borderColor: theme.border }]}>
-        <View style={[styles.heroIcon, { backgroundColor: theme.surface, borderColor: theme.borderSoft }]}>
+        <View
+          style={[
+            styles.heroBrandFrame,
+            { backgroundColor: theme.surface, borderColor: theme.borderSoft },
+          ]}
+        >
           <Image
             source={require('../../assets/icon.png')}
             style={styles.heroLogo}
-            resizeMode="contain"
+            resizeMode="cover"
           />
         </View>
         <Text style={[styles.heroTitle, { color: theme.textPrimary }]}>{t('guestAboutTitle')}</Text>
@@ -144,18 +149,17 @@ const styles = StyleSheet.create({
     padding: 20,
     gap: 10,
   },
-  heroIcon: {
-    width: 54,
-    height: 54,
-    borderRadius: 18,
-    alignItems: 'center',
-    justifyContent: 'center',
+  heroBrandFrame: {
+    alignSelf: 'center',
+    width: 88,
+    height: 88,
+    borderRadius: 26,
     borderWidth: 1,
     overflow: 'hidden',
   },
   heroLogo: {
-    width: 34,
-    height: 34,
+    width: '100%',
+    height: '100%',
   },
   heroTitle: {
     fontSize: 28,

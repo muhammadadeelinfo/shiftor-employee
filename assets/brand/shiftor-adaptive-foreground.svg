@@ -2,22 +2,22 @@
   <title id="title">Shiftor adaptive icon foreground</title>
   <desc id="desc">Centered foreground mark for Android adaptive icons.</desc>
   <defs>
-    <linearGradient id="iconBlue" x1="300" y1="300" x2="700" y2="640" gradientUnits="userSpaceOnUse">
+    <linearGradient id="iconBlue" x1="320" y1="300" x2="720" y2="640" gradientUnits="userSpaceOnUse">
       <stop offset="0" stop-color="#2F7DF2" />
       <stop offset="1" stop-color="#2467D8" />
     </linearGradient>
-    <linearGradient id="iconGreen" x1="310" y1="764" x2="730" y2="420" gradientUnits="userSpaceOnUse">
+    <linearGradient id="iconGreen" x1="330" y1="764" x2="750" y2="420" gradientUnits="userSpaceOnUse">
       <stop offset="0" stop-color="#2D9A56" />
       <stop offset="1" stop-color="#4BC355" />
     </linearGradient>
   </defs>
 
   <path
-    d="M300 286h438c8 0 12 8 6 14L373 612c-18 15-42 26-70 26-50 0-90-40-90-90V376c0-50 40-90 87-90Z"
+    d="M320 286h438c8 0 12 8 6 14L393 612c-18 15-42 26-70 26-50 0-90-40-90-90V376c0-50 40-90 87-90Z"
     fill="url(#iconBlue)"
   />
   <path
-    d="M201 737h354c85 0 147-62 147-147V456c0-48-39-87-87-87-22 0-42 8-58 22L201 737Z"
+    d="M221 737h354c85 0 147-62 147-147V456c0-48-39-87-87-87-22 0-42 8-58 22L221 737Z"
     fill="url(#iconGreen)"
   />
 </svg>
