@@ -420,10 +420,6 @@ export const deTranslations = {
     welcomePublicNote: 'Keine Einladung nötig, um offene Stellen anzusehen.',
     startupJobsTitle: 'Jobs',
     startupJobsGoToLogin: 'Zum Login',
-    startupJobsGoToSignup: 'Konto erstellen',
-    startupJobsReadyTitle: 'Bereit für den nächsten Schritt?',
-    startupJobsReadySubtitle:
-      'Melde dich an oder erstelle ein Konto, um dich mit einer Firma zu verbinden und Schichten zu verwalten.',
     shiftsGuestSubtitle:
       'Entdecke das öffentliche Schichtboard und offene Einsätze in Echtzeit.',
     shiftsGuestEyebrow: 'Öffentlicher Zugriff',

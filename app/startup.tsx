@@ -681,36 +681,6 @@ export default function StartupScreen() {
             ))
           : null}
 
-        {shouldShowJobsSection ? (
-          <LinearGradient
-            colors={[theme.heroGradientEnd, theme.heroGradientStart]}
-            start={[0, 0]}
-            end={[1, 1]}
-            style={[styles.authNextStepCard, { borderColor: theme.border }]}
-          >
-            <Text style={[styles.authNextStepTitle, { color: theme.textPrimary }]}>
-              {t('startupJobsReadyTitle')}
-            </Text>
-            <Text style={[styles.authNextStepSubtitle, { color: theme.textSecondary }]}>
-              {t('startupJobsReadySubtitle')}
-            </Text>
-            <TouchableOpacity
-              onPress={() => router.push('/login')}
-              activeOpacity={0.85}
-              style={[
-                styles.authNextStepButton,
-                { backgroundColor: theme.primary, borderColor: theme.primary },
-              ]}
-            >
-              <Text style={styles.authNextStepButtonText}>{t('welcomeAuthCta')}</Text>
-            </TouchableOpacity>
-            <TouchableOpacity onPress={() => router.push('/login?mode=signup')} activeOpacity={0.72}>
-              <Text style={[styles.authNextStepLink, { color: theme.textSecondary }]}>
-                {t('startupJobsGoToSignup')}
-              </Text>
-            </TouchableOpacity>
-          </LinearGradient>
-        ) : null}
       </View>
     </ScrollView>
   );
@@ -953,39 +923,5 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
-  },
-  authNextStepCard: {
-    marginTop: 10,
-    borderWidth: 1,
-    borderRadius: 18,
-    padding: 16,
-  },
-  authNextStepTitle: {
-    fontSize: 18,
-    fontWeight: '800',
-    marginBottom: 4,
-  },
-  authNextStepSubtitle: {
-    fontSize: 13,
-    lineHeight: 18,
-    marginBottom: 12,
-  },
-  authNextStepButton: {
-    borderRadius: 10,
-    borderWidth: 1,
-    paddingVertical: 10,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  authNextStepButtonText: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: '#fff',
-  },
-  authNextStepLink: {
-    marginTop: 10,
-    textAlign: 'center',
-    fontSize: 13,
-    fontWeight: '600',
   },
 });

@@ -1123,7 +1123,7 @@ export default function AccountScreen() {
                     {t('welcomeAuthCta')}
                   </Text>
                   <Text style={[styles.sectionHint, styles.guestAuthHint, { color: theme.textSecondary }]}>
-                    {t('startupJobsReadySubtitle')}
+                    {t('guestAboutPreviewUnlock')}
                   </Text>
                   <PrimaryButton
                     title={t('loginSignInButton')}
