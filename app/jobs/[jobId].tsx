@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
+  Alert,
   Linking,
   RefreshControl,
   ScrollView,
@@ -47,9 +48,30 @@ const buildDescriptionSections = (job: StartupJob | null, fallbackText: string):
     .filter(Boolean);
 };
 
+const buildJobTranslationUrl = (job: StartupJob | null, targetLanguage: 'en' | 'de'): string | null => {
+  if (!job) return null;
+
+  const text = [job.title, job.summary, job.description]
+    .map((value) => value?.trim())
+    .filter((value): value is string => !!value)
+    .join('\n\n')
+    .trim();
+
+  if (!text) {
+    return null;
+  }
+
+  const url = new URL('https://translate.google.com/');
+  url.searchParams.set('sl', 'auto');
+  url.searchParams.set('tl', targetLanguage);
+  url.searchParams.set('text', text);
+  url.searchParams.set('op', 'translate');
+  return url.toString();
+};
+
 export default function JobDetailsScreen() {
   const { theme } = useTheme();
-  const { t } = useLanguage();
+  const { language, t } = useLanguage();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { session } = useAuth();
@@ -198,6 +220,24 @@ export default function JobDetailsScreen() {
       // Leave the user on the details page if the system cannot open the link.
     }
   };
+
+  const openTranslatedJob = useCallback(async () => {
+    const translationUrl = buildJobTranslationUrl(job, language);
+    if (!translationUrl) {
+      Alert.alert(t('startupJobDetailsTranslate'), t('startupJobDetailsTranslateFailed'));
+      return;
+    }
+
+    try {
+      const supported = await Linking.canOpenURL(translationUrl);
+      if (!supported) {
+        throw new Error('Unsupported URL');
+      }
+      await Linking.openURL(translationUrl);
+    } catch {
+      Alert.alert(t('startupJobDetailsTranslate'), t('startupJobDetailsTranslateFailed'));
+    }
+  }, [job, language, t]);
 
   if (isLoading) {
     return (
@@ -403,6 +443,19 @@ export default function JobDetailsScreen() {
             </Text>
           ))}
         </View>
+        <Text style={[styles.translateHint, { color: theme.textSecondary }]}>
+          {t('startupJobDetailsTranslateHint')}
+        </Text>
+        <TouchableOpacity
+          onPress={openTranslatedJob}
+          activeOpacity={0.85}
+          style={[styles.secondaryButton, { backgroundColor: theme.surface, borderColor: theme.border }]}
+        >
+          <Text style={[styles.secondaryButtonText, { color: theme.textPrimary }]}>
+            {t('startupJobDetailsTranslate')}
+          </Text>
+          <Ionicons name="language-outline" size={16} color={theme.textPrimary} />
+        </TouchableOpacity>
       </View>
 
       {loadError ? (
@@ -599,6 +652,10 @@ const styles = StyleSheet.create({
   description: {
     fontSize: 14,
     lineHeight: 22,
+  },
+  translateHint: {
+    fontSize: 13,
+    lineHeight: 20,
   },
   inlineNotice: {
     borderWidth: 1,

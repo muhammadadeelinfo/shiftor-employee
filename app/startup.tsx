@@ -405,20 +405,6 @@ export default function StartupScreen() {
       .map((item) => item.job);
   }, [jobs, parsedSearchQuery]);
 
-  const quickEmploymentTypes = useMemo(() => {
-    const seen = new Set<string>();
-    return jobs
-      .map((job) => job.employmentType?.trim())
-      .filter((value): value is string => !!value)
-      .filter((value) => {
-        const key = normalizeForSearch(value);
-        if (!key || seen.has(key)) return false;
-        seen.add(key);
-        return true;
-      })
-      .slice(0, 4);
-  }, [jobs]);
-
   const shownCount = filteredJobs.length;
 
   const openJobDetails = (job: StartupJob) => {
@@ -540,42 +526,6 @@ export default function StartupScreen() {
                 </TouchableOpacity>
               ) : null}
             </View>
-            <Text style={[styles.searchHint, { color: theme.textSecondary }]}>{t('startupJobsSearchHint')}</Text>
-            {quickEmploymentTypes.length > 0 ? (
-              <View style={styles.quickFilterRow}>
-                {quickEmploymentTypes.map((employmentType) => {
-                  const normalized = normalizeForSearch(employmentType);
-                  const isActive =
-                    parsedSearchQuery.fieldTerms.employmentType.length === 1 &&
-                    parsedSearchQuery.genericTerms.length === 0 &&
-                    parsedSearchQuery.fieldTerms.employmentType[0] === normalized;
-
-                  return (
-                    <TouchableOpacity
-                      key={employmentType}
-                      onPress={() => setSearchQuery(isActive ? '' : `type:${employmentType}`)}
-                      activeOpacity={0.82}
-                      style={[
-                        styles.quickFilterChip,
-                        {
-                          backgroundColor: isActive ? theme.primary : theme.surfaceElevated,
-                          borderColor: isActive ? theme.primary : theme.borderSoft,
-                        },
-                      ]}
-                    >
-                      <Text
-                        style={[
-                          styles.quickFilterChipText,
-                          { color: isActive ? '#fff' : theme.textSecondary },
-                        ]}
-                      >
-                        {employmentType}
-                      </Text>
-                    </TouchableOpacity>
-                  );
-                })}
-              </View>
-            ) : null}
           </View>
         ) : null}
 
@@ -781,27 +731,6 @@ const styles = StyleSheet.create({
     flex: 1,
     marginHorizontal: 8,
     paddingVertical: 0,
-  },
-  searchHint: {
-    fontSize: 12,
-    lineHeight: 17,
-    marginTop: 10,
-  },
-  quickFilterRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-    marginTop: 10,
-  },
-  quickFilterChip: {
-    borderWidth: 1,
-    borderRadius: 999,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-  },
-  quickFilterChipText: {
-    fontSize: 12,
-    fontWeight: '700',
   },
   statusCard: {
     borderWidth: 1,

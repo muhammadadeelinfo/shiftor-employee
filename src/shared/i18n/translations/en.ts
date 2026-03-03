@@ -450,6 +450,10 @@ export const enTranslations = {
     startupJobDetailsCompany: 'Employer',
     startupJobDetailsVisitCompany: 'Visit company site',
     startupJobDetailsNoDescription: 'No additional job details were provided for this role.',
+    startupJobDetailsTranslate: 'Translate job text',
+    startupJobDetailsTranslateHint:
+      'Open the visible job text in your browser and translate it to your selected app language.',
+    startupJobDetailsTranslateFailed: 'Unable to open translation on this device.',
     startupJobDetailsApplication: 'Apply for this role',
     startupJobDetailsApplyHint: 'Applications are completed on the employer site. We will open the official link in your browser.',
     startupJobDetailsMissingTitle: 'Job details unavailable',

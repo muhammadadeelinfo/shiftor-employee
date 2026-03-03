@@ -456,6 +456,10 @@ export const deTranslations = {
     startupJobDetailsCompany: 'Arbeitgeber',
     startupJobDetailsVisitCompany: 'Unternehmensseite öffnen',
     startupJobDetailsNoDescription: 'Für diese Stelle wurden keine weiteren Details hinterlegt.',
+    startupJobDetailsTranslate: 'Jobtext übersetzen',
+    startupJobDetailsTranslateHint:
+      'Öffne den sichtbaren Jobtext im Browser und übersetze ihn in deine ausgewählte App-Sprache.',
+    startupJobDetailsTranslateFailed: 'Die Übersetzung konnte auf diesem Gerät nicht geöffnet werden.',
     startupJobDetailsApplication: 'Für diese Stelle bewerben',
     startupJobDetailsApplyHint:
       'Die Bewerbung wird auf der Seite des Arbeitgebers abgeschlossen. Wir öffnen dafür den offiziellen Link im Browser.',

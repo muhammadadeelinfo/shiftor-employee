@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import {
   Image,
+  Platform,
   ScrollView,
   StyleSheet,
   Text,
@@ -19,8 +20,15 @@ export default function AboutScreen() {
   const insets = useSafeAreaInsets();
   const { theme } = useTheme();
   const { t } = useLanguage();
-  const appVersion = Constants.nativeAppVersion || Constants.expoConfig?.version || '1.0.0';
-  const appBuild = Constants.nativeBuildVersion || null;
+  const configuredAndroidVersionCode = Constants.expoConfig?.android?.versionCode;
+  const configuredIosBuildNumber = Constants.expoConfig?.ios?.buildNumber;
+  const appVersion = Constants.expoConfig?.version || Constants.nativeAppVersion || '1.0.0';
+  const appBuild =
+    Platform.OS === 'android'
+      ? (configuredAndroidVersionCode ? String(configuredAndroidVersionCode) : null)
+      : Platform.OS === 'ios'
+        ? configuredIosBuildNumber || null
+        : null;
   const versionLabel = appBuild ? `${appVersion} (${appBuild})` : appVersion;
   const { privacyPolicyUrl, termsUrl, supportPageUrl } = getLegalLinks();
 
@@ -35,9 +43,11 @@ export default function AboutScreen() {
 
   return (
     <ScrollView
+      style={[styles.scrollView, { backgroundColor: theme.background }]}
       contentContainerStyle={[
         styles.container,
         {
+          flexGrow: 1,
           backgroundColor: theme.background,
           paddingTop: insets.top + 10,
           paddingBottom: insets.bottom + 32,
@@ -143,6 +153,9 @@ export default function AboutScreen() {
 }
 
 const styles = StyleSheet.create({
+  scrollView: {
+    flex: 1,
+  },
   container: {
     paddingHorizontal: 24,
     gap: 16,

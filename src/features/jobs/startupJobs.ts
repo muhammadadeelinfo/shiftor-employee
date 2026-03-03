@@ -30,6 +30,39 @@ type StartupJobsRequestOptions = {
   jobId?: string | null;
 };
 
+const normalizeSearchText = (value?: string | null): string =>
+  (value ?? '')
+    .replace(/ß/g, 'ss')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .trim();
+
+const isLikelyDemoJob = (job: StartupJob): boolean => {
+  const title = normalizeSearchText(job.title);
+  const summary = normalizeSearchText(job.summary);
+  const description = normalizeSearchText(job.description);
+  const employmentType = normalizeSearchText(job.employmentType);
+  const location = normalizeSearchText(job.location);
+
+  const titleLooksSynthetic =
+    title.includes('(test)') ||
+    title.includes('(demo)') ||
+    title.startsWith('test job');
+
+  const contentLooksSynthetic =
+    summary.includes('system demonstration') ||
+    summary.includes('qa purposes') ||
+    description.includes('dummy listing') ||
+    description.includes('test data') ||
+    description.includes('not a real job opening');
+
+  const metadataLooksSynthetic =
+    employmentType.includes('(test)') || location.includes('(test location)');
+
+  return titleLooksSynthetic || contentLooksSynthetic || metadataLooksSynthetic;
+};
+
 const isLocalhostHost = (host: string): boolean => {
   const normalized = host.trim().toLowerCase();
   return normalized === 'localhost' || normalized === '127.0.0.1' || normalized === '::1';
@@ -136,7 +169,8 @@ export const normalizeStartupJobs = (payload: StartupJobsResponse): StartupJob[]
     return [];
   }
 
-  return payload.jobs;
+  // Hide seeded demo/test jobs from the public jobs surfaces.
+  return payload.jobs.filter((job) => !isLikelyDemoJob(job));
 };
 
 export const resolveStartupJobCtaUrl = (rawUrl?: string | null): string | null => {
