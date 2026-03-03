@@ -3,7 +3,6 @@ import {
   Alert,
   FlatList,
   Image,
-  Linking,
   Platform,
   StyleSheet,
   Text,
@@ -33,7 +32,6 @@ import {
 } from '@shared/utils/responsiveLayout';
 import {
   buildSupportMailto,
-  SUPPORT_EMAIL,
   SUPPORT_FALLBACK_URL,
 } from '@shared/utils/support';
 import Constants from 'expo-constants';
@@ -43,6 +41,7 @@ import {
   resolveCompanyDisplaySnapshot,
 } from '@shared/utils/companyDisplay';
 import { getUserFacingErrorMessage } from '@shared/utils/userFacingError';
+import { getLegalLinks, openExternalUrlWithFallback } from '@shared/utils/legalLinks';
 
 const normalizeContactString = (value?: unknown) =>
   typeof value === 'string' && value.trim() ? value.trim() : undefined;
@@ -643,40 +642,30 @@ export default function AccountScreen() {
       );
     }
   };
-  const openExternalUrl = async (title: string, url: string, fallbackUrl?: string) => {
-    try {
-      const supported = await Linking.canOpenURL(url);
-      if (supported) {
-        await Linking.openURL(url);
-        return;
-      }
-      if (fallbackUrl) {
-        const fallbackSupported = await Linking.canOpenURL(fallbackUrl);
-        if (fallbackSupported) {
-          await Linking.openURL(fallbackUrl);
-          return;
-        }
-      }
-      Alert.alert(title, `${t('unableOpenLinkDevice')}\n${SUPPORT_EMAIL}`);
-    } catch {
-      Alert.alert(title, `${t('unableOpenLinkDevice')}\n${SUPPORT_EMAIL}`);
-    }
-  };
-  const baseSiteUrl = SUPPORT_FALLBACK_URL.replace(/\/+$/, '');
-  const privacyPolicyUrl =
-    ((Constants.expoConfig?.extra?.legalPrivacyUrl as string | undefined)?.trim() || `${baseSiteUrl}/privacy#mobile`);
-  const termsUrl =
-    ((Constants.expoConfig?.extra?.legalTermsUrl as string | undefined)?.trim() || `${baseSiteUrl}/terms#mobile`);
-  const supportPageUrl =
-    ((Constants.expoConfig?.extra?.legalSupportUrl as string | undefined)?.trim() || `${baseSiteUrl}/support#mobile`);
+  const { privacyPolicyUrl, termsUrl, supportPageUrl } = getLegalLinks();
   const handlePrivacyPolicy = async () => {
-    await openExternalUrl(t('aboutPrivacyPolicy'), privacyPolicyUrl, SUPPORT_FALLBACK_URL);
+    await openExternalUrlWithFallback({
+      title: t('aboutPrivacyPolicy'),
+      url: privacyPolicyUrl,
+      fallbackUrl: SUPPORT_FALLBACK_URL,
+      unableToOpenMessage: t('unableOpenLinkDevice'),
+    });
   };
   const handleTerms = async () => {
-    await openExternalUrl(t('aboutTerms'), termsUrl, SUPPORT_FALLBACK_URL);
+    await openExternalUrlWithFallback({
+      title: t('aboutTerms'),
+      url: termsUrl,
+      fallbackUrl: SUPPORT_FALLBACK_URL,
+      unableToOpenMessage: t('unableOpenLinkDevice'),
+    });
   };
   const handleHelpCenter = async () => {
-    await openExternalUrl(t('supportHelpCenter'), supportPageUrl, SUPPORT_FALLBACK_URL);
+    await openExternalUrlWithFallback({
+      title: t('supportHelpCenter'),
+      url: supportPageUrl,
+      fallbackUrl: SUPPORT_FALLBACK_URL,
+      unableToOpenMessage: t('unableOpenLinkDevice'),
+    });
   };
   const confirmCompanySwitch = () =>
     new Promise<boolean>((resolve) => {
@@ -771,14 +760,15 @@ export default function AccountScreen() {
   };
   const handleDeleteAccount = async () => {
     const email = user?.email?.trim() || '';
-    await openExternalUrl(
-      t('supportDeleteAccount'),
-      buildSupportMailto(
+    await openExternalUrlWithFallback({
+      title: t('supportDeleteAccount'),
+      url: buildSupportMailto(
         'Delete my account',
         `Please delete my account${email ? ` for ${email}` : ''}.`
       ),
-      SUPPORT_FALLBACK_URL
-    );
+      fallbackUrl: SUPPORT_FALLBACK_URL,
+      unableToOpenMessage: t('unableOpenLinkDevice'),
+    });
   };
   const contentContainerStyle = [
     styles.content,
@@ -1385,31 +1375,33 @@ export default function AccountScreen() {
               </View>
             </View>
 
-            <View
-              style={[
-                styles.sectionCard,
-                { backgroundColor: theme.surface, borderColor: theme.borderSoft },
-                isIOS && styles.sectionCardIOS,
-              ]}
-            >
-              <Text style={[styles.sectionHeading, { color: theme.textPrimary }]}>
-                {t('supportSectionTitle')}
-              </Text>
-              <View style={styles.toolsList}>
-                <TouchableOpacity
-                  style={[styles.toolsRow, { borderColor: theme.borderSoft }]}
-                  onPress={() => void handleHelpCenter()}
-                >
-                  <View style={[styles.toolsIconWrap, { backgroundColor: theme.surfaceMuted }]}>
-                    <Ionicons name="help-circle-outline" size={16} color={theme.primary} />
-                  </View>
-                  <Text style={[styles.toolsLabel, { color: theme.textPrimary }]}>
-                    {t('supportHelpCenter')}
-                  </Text>
-                  <Ionicons name="chevron-forward" size={16} color={theme.textSecondary} />
-                </TouchableOpacity>
+            {!isGuest ? (
+              <View
+                style={[
+                  styles.sectionCard,
+                  { backgroundColor: theme.surface, borderColor: theme.borderSoft },
+                  isIOS && styles.sectionCardIOS,
+                ]}
+              >
+                <Text style={[styles.sectionHeading, { color: theme.textPrimary }]}>
+                  {t('supportSectionTitle')}
+                </Text>
+                <View style={styles.toolsList}>
+                  <TouchableOpacity
+                    style={[styles.toolsRow, { borderColor: theme.borderSoft }]}
+                    onPress={() => void handleHelpCenter()}
+                  >
+                    <View style={[styles.toolsIconWrap, { backgroundColor: theme.surfaceMuted }]}>
+                      <Ionicons name="help-circle-outline" size={16} color={theme.primary} />
+                    </View>
+                    <Text style={[styles.toolsLabel, { color: theme.textPrimary }]}>
+                      {t('supportHelpCenter')}
+                    </Text>
+                    <Ionicons name="chevron-forward" size={16} color={theme.textSecondary} />
+                  </TouchableOpacity>
+                </View>
               </View>
-            </View>
+            ) : null}
 
             {!isGuest ? (
               <View

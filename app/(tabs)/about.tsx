@@ -1,8 +1,6 @@
 import { useMemo } from 'react';
 import {
-  Alert,
   Image,
-  Linking,
   ScrollView,
   StyleSheet,
   Text,
@@ -14,7 +12,8 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLanguage } from '@shared/context/LanguageContext';
 import { useTheme } from '@shared/themeContext';
-import { SUPPORT_EMAIL, SUPPORT_FALLBACK_URL } from '@shared/utils/support';
+import { SUPPORT_FALLBACK_URL } from '@shared/utils/support';
+import { getLegalLinks, openExternalUrlWithFallback } from '@shared/utils/legalLinks';
 
 export default function AboutScreen() {
   const insets = useSafeAreaInsets();
@@ -23,16 +22,7 @@ export default function AboutScreen() {
   const appVersion = Constants.nativeAppVersion || Constants.expoConfig?.version || '1.0.0';
   const appBuild = Constants.nativeBuildVersion || null;
   const versionLabel = appBuild ? `${appVersion} (${appBuild})` : appVersion;
-  const baseSiteUrl = SUPPORT_FALLBACK_URL.replace(/\/+$/, '');
-  const privacyPolicyUrl =
-    ((Constants.expoConfig?.extra?.legalPrivacyUrl as string | undefined)?.trim() ||
-      `${baseSiteUrl}/privacy#mobile`);
-  const termsUrl =
-    ((Constants.expoConfig?.extra?.legalTermsUrl as string | undefined)?.trim() ||
-      `${baseSiteUrl}/terms#mobile`);
-  const supportPageUrl =
-    ((Constants.expoConfig?.extra?.legalSupportUrl as string | undefined)?.trim() ||
-      `${baseSiteUrl}/support#mobile`);
+  const { privacyPolicyUrl, termsUrl, supportPageUrl } = getLegalLinks();
 
   const previewBullets = useMemo(
     () => [
@@ -42,26 +32,6 @@ export default function AboutScreen() {
     ],
     [t]
   );
-
-  const openExternalUrl = async (title: string, url: string, fallbackUrl?: string) => {
-    try {
-      const supported = await Linking.canOpenURL(url);
-      if (supported) {
-        await Linking.openURL(url);
-        return;
-      }
-      if (fallbackUrl) {
-        const fallbackSupported = await Linking.canOpenURL(fallbackUrl);
-        if (fallbackSupported) {
-          await Linking.openURL(fallbackUrl);
-          return;
-        }
-      }
-      Alert.alert(title, `${t('unableOpenLinkDevice')}\n${SUPPORT_EMAIL}`);
-    } catch {
-      Alert.alert(title, `${t('unableOpenLinkDevice')}\n${SUPPORT_EMAIL}`);
-    }
-  };
 
   return (
     <ScrollView
@@ -114,7 +84,14 @@ export default function AboutScreen() {
       <View style={[styles.sectionCard, { backgroundColor: theme.surfaceElevated, borderColor: theme.border }]}>
         <Text style={[styles.sectionTitle, { color: theme.textPrimary }]}>{t('supportSectionTitle')}</Text>
         <TouchableOpacity
-          onPress={() => openExternalUrl(t('supportHelpCenter'), supportPageUrl, SUPPORT_FALLBACK_URL)}
+          onPress={() =>
+            void openExternalUrlWithFallback({
+              title: t('supportHelpCenter'),
+              url: supportPageUrl,
+              fallbackUrl: SUPPORT_FALLBACK_URL,
+              unableToOpenMessage: t('unableOpenLinkDevice'),
+            })
+          }
           activeOpacity={0.85}
           style={[styles.linkButton, { backgroundColor: theme.surface, borderColor: theme.borderSoft }]}
         >
@@ -122,7 +99,14 @@ export default function AboutScreen() {
           <Ionicons name="open-outline" size={16} color={theme.textPrimary} />
         </TouchableOpacity>
         <TouchableOpacity
-          onPress={() => openExternalUrl(t('aboutPrivacyPolicy'), privacyPolicyUrl, SUPPORT_FALLBACK_URL)}
+          onPress={() =>
+            void openExternalUrlWithFallback({
+              title: t('aboutPrivacyPolicy'),
+              url: privacyPolicyUrl,
+              fallbackUrl: SUPPORT_FALLBACK_URL,
+              unableToOpenMessage: t('unableOpenLinkDevice'),
+            })
+          }
           activeOpacity={0.85}
           style={[styles.linkButton, { backgroundColor: theme.surface, borderColor: theme.borderSoft }]}
         >
@@ -130,7 +114,14 @@ export default function AboutScreen() {
           <Ionicons name="open-outline" size={16} color={theme.textPrimary} />
         </TouchableOpacity>
         <TouchableOpacity
-          onPress={() => openExternalUrl(t('aboutTerms'), termsUrl, SUPPORT_FALLBACK_URL)}
+          onPress={() =>
+            void openExternalUrlWithFallback({
+              title: t('aboutTerms'),
+              url: termsUrl,
+              fallbackUrl: SUPPORT_FALLBACK_URL,
+              unableToOpenMessage: t('unableOpenLinkDevice'),
+            })
+          }
           activeOpacity={0.85}
           style={[styles.linkButton, { backgroundColor: theme.surface, borderColor: theme.borderSoft }]}
         >
