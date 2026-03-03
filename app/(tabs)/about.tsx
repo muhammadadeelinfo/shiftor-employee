@@ -46,20 +46,24 @@ export default function AboutScreen() {
       showsVerticalScrollIndicator={false}
     >
       <View style={[styles.heroCard, { backgroundColor: theme.surfaceElevated, borderColor: theme.border }]}>
-        <View
-          style={[
-            styles.heroBrandFrame,
-            { backgroundColor: theme.surface, borderColor: theme.borderSoft },
-          ]}
-        >
-          <Image
-            source={require('../../assets/icon.png')}
-            style={styles.heroLogo}
-            resizeMode="cover"
-          />
+        <View style={styles.heroHeader}>
+          <View
+            style={[
+              styles.heroBrandFrame,
+              { backgroundColor: theme.surface, borderColor: theme.borderSoft },
+            ]}
+          >
+            <Image
+              source={require('../../assets/icon.png')}
+              style={styles.heroLogo}
+              resizeMode="cover"
+            />
+          </View>
+          <View style={styles.heroTextBlock}>
+            <Text style={[styles.heroTitle, { color: theme.textPrimary }]}>{t('guestAboutTitle')}</Text>
+            <Text style={[styles.heroBody, { color: theme.textSecondary }]}>{t('guestAboutBody')}</Text>
+          </View>
         </View>
-        <Text style={[styles.heroTitle, { color: theme.textPrimary }]}>{t('guestAboutTitle')}</Text>
-        <Text style={[styles.heroBody, { color: theme.textSecondary }]}>{t('guestAboutBody')}</Text>
       </View>
 
       <View style={[styles.sectionCard, { backgroundColor: theme.surfaceElevated, borderColor: theme.border }]}>
@@ -147,27 +151,35 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderRadius: 22,
     padding: 20,
-    gap: 10,
+  },
+  heroHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 14,
   },
   heroBrandFrame: {
-    alignSelf: 'center',
-    width: 88,
-    height: 88,
-    borderRadius: 26,
+    width: 76,
+    height: 76,
+    borderRadius: 22,
     borderWidth: 1,
     overflow: 'hidden',
+    flexShrink: 0,
+  },
+  heroTextBlock: {
+    flex: 1,
+    gap: 6,
   },
   heroLogo: {
     width: '100%',
     height: '100%',
   },
   heroTitle: {
-    fontSize: 28,
+    fontSize: 24,
     fontWeight: '900',
   },
   heroBody: {
-    fontSize: 15,
-    lineHeight: 22,
+    fontSize: 14,
+    lineHeight: 20,
   },
   sectionCard: {
     borderWidth: 1,
