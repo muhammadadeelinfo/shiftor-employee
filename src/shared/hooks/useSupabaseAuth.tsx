@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect, useMemo, useState } from 'react';
 import type { ReactNode } from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Session, User } from '@supabase/supabase-js';
 import Constants from 'expo-constants';
 import { supabase } from '@lib/supabaseClient';
@@ -15,6 +16,7 @@ type AuthContextValue = {
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 const AUTH_BOOT_TIMEOUT_MS = 8000;
+const REMEMBER_KEY = 'employee-portal-remember-me';
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [session, setSession] = useState<Session | null>(null);
@@ -42,6 +44,16 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }, AUTH_BOOT_TIMEOUT_MS);
 
     try {
+      const rememberPreference = await AsyncStorage.getItem(REMEMBER_KEY);
+      if (rememberPreference === 'false') {
+        const { error } = await client.auth.signOut();
+        if (error) {
+          console.warn('Failed to clear non-persistent Supabase session.', error);
+        }
+        setSession(null);
+        return;
+      }
+
       const {
         data: { session: currentSession },
       } = await client.auth.getSession();
