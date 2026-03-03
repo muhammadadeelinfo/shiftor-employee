@@ -1411,57 +1411,59 @@ export default function AccountScreen() {
               </View>
             </View>
 
-            <View
-              style={[
-                styles.sectionCard,
-                { backgroundColor: theme.surface, borderColor: theme.borderSoft },
-                isIOS && styles.sectionCardIOS,
-              ]}
-            >
-              <Text style={[styles.sectionHeading, { color: theme.textPrimary }]}>
-                {t('aboutSectionTitle')}
-              </Text>
-              <Text style={[styles.sectionHint, { color: theme.textSecondary }]}>
-                {t('aboutSectionHint')}
-              </Text>
-              <View style={styles.aboutMetaList}>
-                {[
-                  { label: t('aboutAppName'), value: appName },
-                  { label: t('aboutVersion'), value: appVersionLabel },
-                ].map((entry) => (
-                  <View key={entry.label} style={[styles.aboutMetaRow, { borderColor: theme.borderSoft }]}>
-                    <Text style={[styles.aboutMetaLabel, { color: theme.textSecondary }]}>{entry.label}</Text>
-                    <Text style={[styles.aboutMetaValue, { color: theme.textPrimary }]}>{entry.value}</Text>
-                  </View>
-                ))}
+            {!isGuest ? (
+              <View
+                style={[
+                  styles.sectionCard,
+                  { backgroundColor: theme.surface, borderColor: theme.borderSoft },
+                  isIOS && styles.sectionCardIOS,
+                ]}
+              >
+                <Text style={[styles.sectionHeading, { color: theme.textPrimary }]}>
+                  {t('aboutSectionTitle')}
+                </Text>
+                <Text style={[styles.sectionHint, { color: theme.textSecondary }]}>
+                  {t('aboutSectionHint')}
+                </Text>
+                <View style={styles.aboutMetaList}>
+                  {[
+                    { label: t('aboutAppName'), value: appName },
+                    { label: t('aboutVersion'), value: appVersionLabel },
+                  ].map((entry) => (
+                    <View key={entry.label} style={[styles.aboutMetaRow, { borderColor: theme.borderSoft }]}>
+                      <Text style={[styles.aboutMetaLabel, { color: theme.textSecondary }]}>{entry.label}</Text>
+                      <Text style={[styles.aboutMetaValue, { color: theme.textPrimary }]}>{entry.value}</Text>
+                    </View>
+                  ))}
+                </View>
+                <View style={styles.toolsList}>
+                  <TouchableOpacity
+                    style={[styles.toolsRow, { borderColor: theme.borderSoft }]}
+                    onPress={() => void handlePrivacyPolicy()}
+                  >
+                    <View style={[styles.toolsIconWrap, { backgroundColor: theme.surfaceMuted }]}>
+                      <Ionicons name="shield-outline" size={16} color={theme.primary} />
+                    </View>
+                    <Text style={[styles.toolsLabel, { color: theme.textPrimary }]}>
+                      {t('aboutPrivacyPolicy')}
+                    </Text>
+                    <Ionicons name="chevron-forward" size={16} color={theme.textSecondary} />
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[styles.toolsRow, { borderColor: theme.borderSoft }]}
+                    onPress={() => void handleTerms()}
+                  >
+                    <View style={[styles.toolsIconWrap, { backgroundColor: theme.surfaceMuted }]}>
+                      <Ionicons name="document-text-outline" size={16} color={theme.primary} />
+                    </View>
+                    <Text style={[styles.toolsLabel, { color: theme.textPrimary }]}>
+                      {t('aboutTerms')}
+                    </Text>
+                    <Ionicons name="chevron-forward" size={16} color={theme.textSecondary} />
+                  </TouchableOpacity>
+                </View>
               </View>
-              <View style={styles.toolsList}>
-                <TouchableOpacity
-                  style={[styles.toolsRow, { borderColor: theme.borderSoft }]}
-                  onPress={() => void handlePrivacyPolicy()}
-                >
-                  <View style={[styles.toolsIconWrap, { backgroundColor: theme.surfaceMuted }]}>
-                    <Ionicons name="shield-outline" size={16} color={theme.primary} />
-                  </View>
-                  <Text style={[styles.toolsLabel, { color: theme.textPrimary }]}>
-                    {t('aboutPrivacyPolicy')}
-                  </Text>
-                  <Ionicons name="chevron-forward" size={16} color={theme.textSecondary} />
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={[styles.toolsRow, { borderColor: theme.borderSoft }]}
-                  onPress={() => void handleTerms()}
-                >
-                  <View style={[styles.toolsIconWrap, { backgroundColor: theme.surfaceMuted }]}>
-                    <Ionicons name="document-text-outline" size={16} color={theme.primary} />
-                  </View>
-                  <Text style={[styles.toolsLabel, { color: theme.textPrimary }]}>
-                    {t('aboutTerms')}
-                  </Text>
-                  <Ionicons name="chevron-forward" size={16} color={theme.textSecondary} />
-                </TouchableOpacity>
-              </View>
-            </View>
+            ) : null}
 
             {!isGuest ? (
               <View

@@ -36,6 +36,11 @@ const iconConfig: Record<
     inactive: 'person-circle-outline',
     labelKey: 'tabAccount',
   },
+  about: {
+    active: 'information-circle',
+    inactive: 'information-circle-outline',
+    labelKey: 'tabAbout',
+  },
 };
 
 export default function TabsLayout() {
@@ -53,8 +58,14 @@ function ThemeAwareTabs({ insets }: { insets: ReturnType<typeof useSafeAreaInset
   const isTablet = width >= 768;
 
   useEffect(() => {
-    if (user) return;
-    if (pathname === '/my-shifts' || pathname === '/qr-clock-in') {
+    if (!user) {
+      if (pathname === '/my-shifts' || pathname === '/qr-clock-in') {
+        router.replace('/jobs');
+      }
+      return;
+    }
+
+    if (pathname === '/about') {
       router.replace('/jobs');
     }
   }, [pathname, router, user]);
@@ -104,6 +115,7 @@ function ThemeAwareTabs({ insets }: { insets: ReturnType<typeof useSafeAreaInset
       <Tabs.Screen name="jobs" />
       <Tabs.Screen name="my-shifts" options={{ href: user ? undefined : null }} />
       <Tabs.Screen name="calendar" />
+      <Tabs.Screen name="about" options={{ href: user ? null : undefined }} />
       <Tabs.Screen name="qr-clock-in" options={{ href: user ? undefined : null }} />
       <Tabs.Screen name="account" />
       <Tabs.Screen name="calendar-settings" options={{ href: null }} />

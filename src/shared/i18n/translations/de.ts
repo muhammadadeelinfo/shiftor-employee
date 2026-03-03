@@ -146,6 +146,15 @@ export const deTranslations = {
     aboutVersion: 'Version',
     aboutPrivacyPolicy: 'Datenschutzrichtlinie',
     aboutTerms: 'Nutzungsbedingungen',
+    tabAbout: 'Info',
+    guestAboutTitle: 'Über Shiftor',
+    guestAboutBody:
+      'Sieh dir offene Jobs an, durchstöbere den öffentlichen Kalender und erfahre, wie Shiftor funktioniert, bevor du dich anmeldest.',
+    guestAboutPreviewTitle: 'Vor der Anmeldung möglich',
+    guestAboutPreviewJobs: 'Offene Jobs und Jobdetails ohne Einladung ansehen.',
+    guestAboutPreviewCalendar: 'Den öffentlichen Kalender nutzen, um den Monatsablauf zu verstehen.',
+    guestAboutPreviewUnlock:
+      'Nach der Anmeldung werden persönliche Schichten, Check-in/-out und unternehmensbezogene Aktionen freigeschaltet.',
     supportHelpCenter: 'Hilfe-Center',
     supportLegal: 'Rechtliches & Datenschutz',
     supportDeleteAccount: 'Konto löschen',
