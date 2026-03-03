@@ -2,7 +2,6 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   AppState,
-  Linking,
   Platform,
   RefreshControl,
   ScrollView,
@@ -27,7 +26,6 @@ import {
 import { openAddressInMaps } from '@shared/utils/maps';
 import {
   buildStartupJobsEndpoint,
-  getApiOrigin,
   normalizeStartupJobs,
   resolveStartupJobCtaUrl,
   serializeStartupJob,
@@ -273,7 +271,6 @@ export default function StartupScreen() {
   const [loadingJobs, setLoadingJobs] = useState(true);
   const [refreshingJobs, setRefreshingJobs] = useState(false);
   const [jobsError, setJobsError] = useState<string | null>(null);
-  const [jobsActionError, setJobsActionError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [runtimeIssues, setRuntimeIssues] = useState<string[]>([]);
   const [runningHealthChecks, setRunningHealthChecks] = useState(true);
@@ -300,7 +297,6 @@ export default function StartupScreen() {
       } else {
         setLoadingJobs(true);
       }
-      setJobsActionError(null);
 
       try {
         const headers: Record<string, string> = {
@@ -333,7 +329,6 @@ export default function StartupScreen() {
         const payload = (await response.json()) as StartupJobsResponse;
         setJobs(normalizeStartupJobs(payload));
         setJobsError(null);
-        setJobsActionError(null);
       } catch (error) {
         setJobs([]);
         setJobsError(error instanceof Error ? error.message : t('startupJobsLoadFailed'));
@@ -394,8 +389,10 @@ export default function StartupScreen() {
     };
   }, [fetchStartupJobs]);
 
+  const parsedSearchQuery = useMemo(() => parseSearchQuery(searchQuery), [searchQuery]);
+
   const filteredJobs = useMemo(() => {
-    const parsed = parseSearchQuery(searchQuery);
+    const parsed = parsedSearchQuery;
     const hasTerms =
       parsed.genericTerms.length ||
       Object.values(parsed.fieldTerms).some((terms) => terms.length > 0);
@@ -406,7 +403,21 @@ export default function StartupScreen() {
       .filter((item) => item.score >= 0)
       .sort((a, b) => b.score - a.score || a.index - b.index)
       .map((item) => item.job);
-  }, [jobs, searchQuery]);
+  }, [jobs, parsedSearchQuery]);
+
+  const quickEmploymentTypes = useMemo(() => {
+    const seen = new Set<string>();
+    return jobs
+      .map((job) => job.employmentType?.trim())
+      .filter((value): value is string => !!value)
+      .filter((value) => {
+        const key = normalizeForSearch(value);
+        if (!key || seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      })
+      .slice(0, 4);
+  }, [jobs]);
 
   const shownCount = filteredJobs.length;
 
@@ -418,25 +429,6 @@ export default function StartupScreen() {
         payload: serializeStartupJob(job),
       },
     });
-  };
-
-  const openJobLink = async (url?: string | null) => {
-    const resolvedUrl = resolveStartupJobCtaUrl(url);
-    if (!resolvedUrl) {
-      setJobsActionError(t('startupJobsOpenLinkFailed'));
-      return;
-    }
-
-    try {
-      const supported = await Linking.canOpenURL(resolvedUrl);
-      if (!supported) {
-        throw new Error('Unsupported URL');
-      }
-      await Linking.openURL(resolvedUrl);
-      setJobsActionError(null);
-    } catch {
-      setJobsActionError(t('startupJobsOpenLinkFailed'));
-    }
   };
 
   const shouldShowJobsSection = !loadingJobs && !jobsError && jobs.length > 0;
@@ -548,6 +540,42 @@ export default function StartupScreen() {
                 </TouchableOpacity>
               ) : null}
             </View>
+            <Text style={[styles.searchHint, { color: theme.textSecondary }]}>{t('startupJobsSearchHint')}</Text>
+            {quickEmploymentTypes.length > 0 ? (
+              <View style={styles.quickFilterRow}>
+                {quickEmploymentTypes.map((employmentType) => {
+                  const normalized = normalizeForSearch(employmentType);
+                  const isActive =
+                    parsedSearchQuery.fieldTerms.employmentType.length === 1 &&
+                    parsedSearchQuery.genericTerms.length === 0 &&
+                    parsedSearchQuery.fieldTerms.employmentType[0] === normalized;
+
+                  return (
+                    <TouchableOpacity
+                      key={employmentType}
+                      onPress={() => setSearchQuery(isActive ? '' : `type:${employmentType}`)}
+                      activeOpacity={0.82}
+                      style={[
+                        styles.quickFilterChip,
+                        {
+                          backgroundColor: isActive ? theme.primary : theme.surfaceElevated,
+                          borderColor: isActive ? theme.primary : theme.borderSoft,
+                        },
+                      ]}
+                    >
+                      <Text
+                        style={[
+                          styles.quickFilterChipText,
+                          { color: isActive ? '#fff' : theme.textSecondary },
+                        ]}
+                      >
+                        {employmentType}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+            ) : null}
           </View>
         ) : null}
 
@@ -562,13 +590,6 @@ export default function StartupScreen() {
           <View style={[styles.statusCard, { backgroundColor: theme.surface, borderColor: theme.border }]}> 
             <Ionicons name="alert-circle-outline" size={18} color={theme.fail} />
             <Text style={[styles.errorText, { color: theme.fail }]}>{jobsError}</Text>
-          </View>
-        ) : null}
-
-        {!loadingJobs && !jobsError && jobsActionError ? (
-          <View style={[styles.statusCard, { backgroundColor: theme.surface, borderColor: theme.border }]}>
-            <Ionicons name="warning-outline" size={18} color={theme.fail} />
-            <Text style={[styles.errorText, { color: theme.fail }]}>{jobsActionError}</Text>
           </View>
         ) : null}
 
@@ -790,6 +811,27 @@ const styles = StyleSheet.create({
     flex: 1,
     marginHorizontal: 8,
     paddingVertical: 0,
+  },
+  searchHint: {
+    fontSize: 12,
+    lineHeight: 17,
+    marginTop: 10,
+  },
+  quickFilterRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginTop: 10,
+  },
+  quickFilterChip: {
+    borderWidth: 1,
+    borderRadius: 999,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+  },
+  quickFilterChipText: {
+    fontSize: 12,
+    fontWeight: '700',
   },
   statusCard: {
     borderWidth: 1,

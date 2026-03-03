@@ -28,6 +28,25 @@ import {
 
 const JOB_DETAILS_FETCH_LIMIT = 50;
 
+const extractDomainLabel = (value?: string | null): string | null => {
+  const resolvedUrl = resolveStartupJobCtaUrl(value);
+  if (!resolvedUrl) return null;
+
+  try {
+    return new URL(resolvedUrl).hostname.replace(/^www\./, '');
+  } catch {
+    return null;
+  }
+};
+
+const buildDescriptionSections = (job: StartupJob | null, fallbackText: string): string[] => {
+  const source = job?.description?.trim() || job?.summary?.trim() || fallbackText;
+  return source
+    .split(/\n\s*\n/g)
+    .map((section) => section.replace(/\s+/g, ' ').trim())
+    .filter(Boolean);
+};
+
 export default function JobDetailsScreen() {
   const { theme } = useTheme();
   const { t } = useLanguage();
@@ -41,6 +60,60 @@ export default function JobDetailsScreen() {
   const [isLoading, setIsLoading] = useState(!initialJob && !!requestedJobId);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const companyDomain = useMemo(() => extractDomainLabel(job?.ctaUrl), [job?.ctaUrl]);
+  const publishedLabel = useMemo(
+    () =>
+      job?.publishAt
+        ? new Date(job.publishAt).toLocaleDateString(undefined, {
+            day: 'numeric',
+            month: 'short',
+            year: 'numeric',
+          })
+        : null,
+    [job?.publishAt]
+  );
+  const expiresLabel = useMemo(
+    () =>
+      job?.expiresAt
+        ? new Date(job.expiresAt).toLocaleDateString(undefined, {
+            day: 'numeric',
+            month: 'short',
+            year: 'numeric',
+          })
+        : null,
+    [job?.expiresAt]
+  );
+  const detailSections = useMemo(
+    () => buildDescriptionSections(job, t('startupJobDetailsNoDescription')),
+    [job, t]
+  );
+  const factRows = useMemo(
+    () =>
+      [
+        job?.location
+          ? {
+              icon: 'location-outline' as const,
+              label: t('startupJobDetailsLocation'),
+              value: job.location,
+            }
+          : null,
+        job?.employmentType
+          ? {
+              icon: 'time-outline' as const,
+              label: t('startupJobDetailsEmploymentType'),
+              value: job.employmentType,
+            }
+          : null,
+        job?.salaryText
+          ? {
+              icon: 'cash-outline' as const,
+              label: t('startupJobDetailsSalary'),
+              value: job.salaryText,
+            }
+          : null,
+      ].filter(Boolean) as Array<{ icon: keyof typeof Ionicons.glyphMap; label: string; value: string }>,
+    [job?.employmentType, job?.location, job?.salaryText, t]
+  );
 
   const loadJob = useCallback(
     async ({ asRefresh = false }: { asRefresh?: boolean } = {}) => {
@@ -123,12 +196,12 @@ export default function JobDetailsScreen() {
       await Linking.openURL(resolvedUrl);
     } catch {
       // Leave the user on the details page if the system cannot open the link.
-      }
+    }
   };
 
   if (isLoading) {
     return (
-      <View style={[styles.emptyRoot, { backgroundColor: theme.background, paddingTop: insets.top + 20 }]}>
+      <View style={[styles.emptyRoot, { backgroundColor: theme.background, paddingTop: insets.top + 2 }]}>
         <TouchableOpacity
           onPress={() => router.replace('/jobs')}
           activeOpacity={0.8}
@@ -147,7 +220,7 @@ export default function JobDetailsScreen() {
 
   if (!job) {
     return (
-      <View style={[styles.emptyRoot, { backgroundColor: theme.background, paddingTop: insets.top + 20 }]}>
+      <View style={[styles.emptyRoot, { backgroundColor: theme.background, paddingTop: insets.top + 2 }]}>
         <TouchableOpacity
           onPress={() => router.replace('/jobs')}
           activeOpacity={0.8}
@@ -177,7 +250,7 @@ export default function JobDetailsScreen() {
     <ScrollView
       contentContainerStyle={[
         styles.container,
-        { backgroundColor: theme.background, paddingTop: insets.top + 20, paddingBottom: insets.bottom + 32 },
+        { backgroundColor: theme.background, paddingTop: insets.top + 2, paddingBottom: insets.bottom + 32 },
       ]}
       showsVerticalScrollIndicator={false}
       refreshControl={
@@ -203,10 +276,19 @@ export default function JobDetailsScreen() {
         end={[1, 1]}
         style={[styles.heroCard, { borderColor: theme.border }]}
       >
+        <View style={styles.heroBadgeRow}>
+          {job.companyName ? (
+            <View style={[styles.heroBadge, { backgroundColor: theme.surface, borderColor: theme.borderSoft }]}>
+              <Text style={[styles.heroBadgeText, { color: theme.textSecondary }]}>{job.companyName}</Text>
+            </View>
+          ) : null}
+          {job.isActive ? (
+            <View style={[styles.heroBadge, { backgroundColor: theme.surface, borderColor: theme.borderSoft }]}>
+              <Text style={[styles.heroBadgeText, { color: theme.textSecondary }]}>{t('startupJobDetailsActive')}</Text>
+            </View>
+          ) : null}
+        </View>
         <Text style={[styles.title, { color: theme.textPrimary }]}>{job.title}</Text>
-        {job.companyName ? (
-          <Text style={[styles.companyName, { color: theme.textSecondary }]}>{job.companyName}</Text>
-        ) : null}
         {job.summary ? (
           <Text style={[styles.summary, { color: theme.textPrimary }]}>{job.summary}</Text>
         ) : null}
@@ -241,11 +323,86 @@ export default function JobDetailsScreen() {
         </View>
       </LinearGradient>
 
+      {factRows.length ? (
+        <View style={[styles.sectionCard, { backgroundColor: theme.surfaceElevated, borderColor: theme.border }]}>
+          <Text style={[styles.sectionTitle, { color: theme.textPrimary }]}>{t('startupJobDetailsAtGlance')}</Text>
+          <View style={styles.factGrid}>
+            {factRows.map((item) => (
+              <View
+                key={`${item.label}-${item.value}`}
+                style={[styles.factCard, { backgroundColor: theme.surface, borderColor: theme.borderSoft }]}
+              >
+                <View style={styles.factHeader}>
+                  <Ionicons name={item.icon} size={16} color={theme.textSecondary} />
+                  <Text style={[styles.factLabel, { color: theme.textSecondary }]}>{item.label}</Text>
+                </View>
+                <Text style={[styles.factValue, { color: theme.textPrimary }]}>{item.value}</Text>
+              </View>
+            ))}
+          </View>
+        </View>
+      ) : null}
+
+      {publishedLabel || expiresLabel ? (
+        <View style={[styles.sectionCard, { backgroundColor: theme.surfaceElevated, borderColor: theme.border }]}>
+          <Text style={[styles.sectionTitle, { color: theme.textPrimary }]}>{t('startupJobDetailsTimeline')}</Text>
+          {publishedLabel ? (
+            <View style={styles.timelineRow}>
+              <Ionicons name="calendar-outline" size={16} color={theme.textSecondary} />
+              <Text style={[styles.timelineLabel, { color: theme.textSecondary }]}>
+                {t('startupJobDetailsPublished')}
+              </Text>
+              <Text style={[styles.timelineValue, { color: theme.textPrimary }]}>{publishedLabel}</Text>
+            </View>
+          ) : null}
+          {expiresLabel ? (
+            <View style={styles.timelineRow}>
+              <Ionicons name="hourglass-outline" size={16} color={theme.textSecondary} />
+              <Text style={[styles.timelineLabel, { color: theme.textSecondary }]}>
+                {t('startupJobDetailsCloses')}
+              </Text>
+              <Text style={[styles.timelineValue, { color: theme.textPrimary }]}>{expiresLabel}</Text>
+            </View>
+          ) : null}
+        </View>
+      ) : null}
+
+      {job.companyName || companyDomain ? (
+        <View style={[styles.sectionCard, { backgroundColor: theme.surfaceElevated, borderColor: theme.border }]}>
+          <Text style={[styles.sectionTitle, { color: theme.textPrimary }]}>{t('startupJobDetailsCompany')}</Text>
+          {job.companyName ? (
+            <Text style={[styles.companyName, { color: theme.textPrimary }]}>{job.companyName}</Text>
+          ) : null}
+          {companyDomain ? (
+            <View style={styles.companyMetaRow}>
+              <Ionicons name="globe-outline" size={16} color={theme.textSecondary} />
+              <Text style={[styles.companyMetaText, { color: theme.textSecondary }]}>{companyDomain}</Text>
+            </View>
+          ) : null}
+          {job.ctaUrl ? (
+            <TouchableOpacity
+              onPress={openJobLink}
+              activeOpacity={0.85}
+              style={[styles.secondaryButton, { backgroundColor: theme.surface, borderColor: theme.border }]}
+            >
+              <Text style={[styles.secondaryButtonText, { color: theme.textPrimary }]}>
+                {t('startupJobDetailsVisitCompany')}
+              </Text>
+              <Ionicons name="open-outline" size={16} color={theme.textPrimary} />
+            </TouchableOpacity>
+          ) : null}
+        </View>
+      ) : null}
+
       <View style={[styles.sectionCard, { backgroundColor: theme.surfaceElevated, borderColor: theme.border }]}>
         <Text style={[styles.sectionTitle, { color: theme.textPrimary }]}>{t('startupJobDetailsOverview')}</Text>
-        <Text style={[styles.description, { color: theme.textSecondary }]}>
-          {job.description?.trim() || job.summary?.trim() || t('startupJobDetailsNoDescription')}
-        </Text>
+        <View style={styles.descriptionWrap}>
+          {detailSections.map((section, index) => (
+            <Text key={`${index}-${section.slice(0, 24)}`} style={[styles.description, { color: theme.textSecondary }]}>
+              {section}
+            </Text>
+          ))}
+        </View>
       </View>
 
       {loadError ? (
@@ -258,14 +415,18 @@ export default function JobDetailsScreen() {
       ) : null}
 
       {job.ctaUrl ? (
-        <TouchableOpacity
-          onPress={openJobLink}
-          activeOpacity={0.85}
-          style={[styles.applyButton, { backgroundColor: theme.primary }]}
-        >
-          <Text style={styles.applyButtonText}>{job.ctaLabel?.trim() || t('startupJobsApplyNow')}</Text>
-          <Ionicons name="arrow-forward" size={16} color="#fff" />
-        </TouchableOpacity>
+        <View style={[styles.sectionCard, { backgroundColor: theme.surfaceElevated, borderColor: theme.border }]}>
+          <Text style={[styles.sectionTitle, { color: theme.textPrimary }]}>{t('startupJobDetailsApplication')}</Text>
+          <Text style={[styles.applyHint, { color: theme.textSecondary }]}>{t('startupJobDetailsApplyHint')}</Text>
+          <TouchableOpacity
+            onPress={openJobLink}
+            activeOpacity={0.85}
+            style={[styles.applyButton, { backgroundColor: theme.primary }]}
+          >
+            <Text style={styles.applyButtonText}>{job.ctaLabel?.trim() || t('startupJobsApplyNow')}</Text>
+            <Ionicons name="arrow-forward" size={16} color="#fff" />
+          </TouchableOpacity>
+        </View>
       ) : null}
     </ScrollView>
   );
@@ -289,7 +450,7 @@ const styles = StyleSheet.create({
     borderRadius: 999,
     paddingHorizontal: 14,
     paddingVertical: 10,
-    marginBottom: 16,
+    marginBottom: 6,
   },
   backButtonText: {
     fontSize: 14,
@@ -301,13 +462,24 @@ const styles = StyleSheet.create({
     padding: 20,
     gap: 10,
   },
+  heroBadgeRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  heroBadge: {
+    borderWidth: 1,
+    borderRadius: 999,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+  },
+  heroBadgeText: {
+    fontSize: 11,
+    fontWeight: '700',
+  },
   title: {
     fontSize: 28,
     fontWeight: '900',
-  },
-  companyName: {
-    fontSize: 14,
-    fontWeight: '700',
   },
   summary: {
     fontSize: 15,
@@ -353,6 +525,77 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '800',
   },
+  timelineRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  timelineLabel: {
+    fontSize: 13,
+    minWidth: 68,
+  },
+  timelineValue: {
+    fontSize: 13,
+    fontWeight: '700',
+    flex: 1,
+  },
+  factGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
+  },
+  factCard: {
+    flexBasis: '48%',
+    flexGrow: 1,
+    borderWidth: 1,
+    borderRadius: 14,
+    padding: 12,
+    gap: 8,
+  },
+  factHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  factLabel: {
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  factValue: {
+    fontSize: 14,
+    lineHeight: 20,
+    fontWeight: '700',
+  },
+  companyName: {
+    fontSize: 20,
+    fontWeight: '900',
+  },
+  companyMetaRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  companyMetaText: {
+    fontSize: 14,
+  },
+  secondaryButton: {
+    marginTop: 4,
+    borderWidth: 1,
+    borderRadius: 14,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+  },
+  secondaryButtonText: {
+    fontSize: 14,
+    fontWeight: '800',
+  },
+  descriptionWrap: {
+    gap: 10,
+  },
   description: {
     fontSize: 14,
     lineHeight: 22,
@@ -371,6 +614,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   applyButton: {
+    marginTop: 4,
     borderRadius: 16,
     paddingHorizontal: 18,
     paddingVertical: 16,
@@ -378,6 +622,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
+  },
+  applyHint: {
+    fontSize: 14,
+    lineHeight: 21,
   },
   applyButtonText: {
     color: '#fff',
