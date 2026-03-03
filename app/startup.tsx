@@ -17,7 +17,6 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '@shared/themeContext';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { LinearGradient } from 'expo-linear-gradient';
-import Constants from 'expo-constants';
 import { useAuth } from '@hooks/useSupabaseAuth';
 import { useLanguage } from '@shared/context/LanguageContext';
 import {
@@ -26,127 +25,21 @@ import {
   shouldRunNotificationsTableHealthCheck,
 } from '@shared/utils/runtimeHealth';
 import { openAddressInMaps } from '@shared/utils/maps';
-
-type StartupJob = {
-  id: string;
-  companyId: string;
-  companyName?: string | null;
-  title: string;
-  summary: string | null;
-  description: string | null;
-  location: string | null;
-  employmentType: string | null;
-  salaryText: string | null;
-  ctaLabel: string | null;
-  ctaUrl: string | null;
-  isActive: boolean;
-  publishAt: string | null;
-  expiresAt: string | null;
-  priority: number;
-  createdAt: string;
-  updatedAt: string;
-};
-
-type StartupJobsResponse = {
-  jobs?: StartupJob[];
-};
+import {
+  buildStartupJobsEndpoint,
+  getApiOrigin,
+  normalizeStartupJobs,
+  resolveStartupJobCtaUrl,
+  serializeStartupJob,
+  type StartupJob,
+  type StartupJobsResponse,
+} from '@features/jobs/startupJobs';
 
 const STARTUP_JOBS_LIMIT = 3;
 const BACKGROUND_REFRESH_MS = 5 * 60 * 1000;
 
-const isLocalhostHost = (host: string): boolean => {
-  const normalized = host.trim().toLowerCase();
-  return normalized === 'localhost' || normalized === '127.0.0.1' || normalized === '::1';
-};
 
-const extractHostFromHostUri = (value?: string | null): string | null => {
-  if (!value) return null;
-  const trimmed = value.trim();
-  if (!trimmed) return null;
-  const withoutProtocol = trimmed.replace(/^[a-z]+:\/\//i, '');
-  const [host] = withoutProtocol.split('/');
-  if (!host) return null;
-  return host.split(':')[0] ?? null;
-};
-
-const resolveExpoDevHost = (): string | null => {
-  const candidates = [
-    Constants.expoConfig?.hostUri,
-    (Constants as unknown as { manifest2?: { extra?: { expoGo?: { debuggerHost?: string } } } }).manifest2?.extra
-      ?.expoGo?.debuggerHost,
-    (Constants as unknown as { manifest?: { debuggerHost?: string } }).manifest?.debuggerHost,
-  ];
-
-  for (const candidate of candidates) {
-    const host = extractHostFromHostUri(candidate);
-    if (host && !isLocalhostHost(host)) {
-      return host;
-    }
-  }
-
-  return null;
-};
-
-const resolveApiOriginForDevice = (value: string): string => {
-  if (Platform.OS === 'web') {
-    return value;
-  }
-
-  try {
-    const parsed = new URL(value);
-    if (!isLocalhostHost(parsed.hostname)) {
-      return value;
-    }
-
-    const resolvedHost = resolveExpoDevHost();
-    if (!resolvedHost) {
-      return value;
-    }
-
-    parsed.hostname = resolvedHost;
-    return parsed.origin;
-  } catch {
-    return value;
-  }
-};
-
-const getApiOrigin = (): string | null => {
-  const explicitBaseUrl = (Constants.expoConfig?.extra?.apiBaseUrl as string | undefined)?.trim();
-  if (explicitBaseUrl) {
-    return resolveApiOriginForDevice(explicitBaseUrl.replace(/\/+$/, ''));
-  }
-
-  const redirectUrl = (Constants.expoConfig?.extra?.authRedirectUrl as string | undefined)?.trim();
-  if (!redirectUrl) {
-    return Platform.OS === 'web' ? '' : null;
-  }
-
-  try {
-    const parsed = new URL(redirectUrl);
-    if (parsed.protocol === 'http:' || parsed.protocol === 'https:') {
-      return parsed.origin;
-    }
-  } catch {
-    // Ignore malformed URL and fallback below.
-  }
-
-  return Platform.OS === 'web' ? '' : null;
-};
-
-const jobsEndpointUrl = () => {
-  const origin = getApiOrigin();
-  if (origin === null) {
-    return null;
-  }
-  return `${origin}/api/jobs/list?startup=true&limit=${STARTUP_JOBS_LIMIT}`;
-};
-
-const normalizeStartupJobs = (payload: StartupJobsResponse): StartupJob[] => {
-  if (!Array.isArray(payload.jobs)) {
-    return [];
-  }
-  return payload.jobs;
-};
+const jobsEndpointUrl = () => buildStartupJobsEndpoint({ limit: STARTUP_JOBS_LIMIT });
 
 const normalizeForSearch = (value?: string | null): string => {
   if (!value) return '';
@@ -246,7 +139,7 @@ const parseSearchQuery = (query: string): ParsedSearch => {
 
 const extractCompanyDomain = (value?: string | null): string => {
   if (!value) return '';
-  const resolved = resolveCtaUrl(value);
+  const resolved = resolveStartupJobCtaUrl(value);
   if (!resolved) return '';
   try {
     const hostname = new URL(resolved).hostname.toLowerCase();
@@ -367,29 +260,6 @@ const calculateAdvancedSearchScore = (job: StartupJob, parsed: ParsedSearch): nu
   }
 
   return score;
-};
-
-const resolveCtaUrl = (rawUrl?: string | null): string | null => {
-  if (!rawUrl) return null;
-  const value = rawUrl.trim();
-  if (!value) return null;
-
-  if (/^https?:\/\//i.test(value)) {
-    return value;
-  }
-
-  if (value.startsWith('//')) {
-    return `https:${value}`;
-  }
-
-  const origin = getApiOrigin();
-  if (value.startsWith('/')) {
-    if (!origin) return null;
-    return `${origin}${value}`;
-  }
-
-  // If backend sends a host/path without scheme, default to https.
-  return `https://${value}`;
 };
 
 export default function StartupScreen() {
@@ -540,8 +410,18 @@ export default function StartupScreen() {
 
   const shownCount = filteredJobs.length;
 
+  const openJobDetails = (job: StartupJob) => {
+    router.push({
+      pathname: '/jobs/[jobId]',
+      params: {
+        jobId: job.id,
+        payload: serializeStartupJob(job),
+      },
+    });
+  };
+
   const openJobLink = async (url?: string | null) => {
-    const resolvedUrl = resolveCtaUrl(url);
+    const resolvedUrl = resolveStartupJobCtaUrl(url);
     if (!resolvedUrl) {
       setJobsActionError(t('startupJobsOpenLinkFailed'));
       return;
@@ -701,10 +581,30 @@ export default function StartupScreen() {
 
         {shouldShowJobsSection
           ? filteredJobs.map((job) => (
-              <View key={job.id} style={[styles.card, { backgroundColor: theme.surfaceElevated, borderColor: theme.border }]}>
+              <TouchableOpacity
+                key={job.id}
+                activeOpacity={0.9}
+                onPress={() => openJobDetails(job)}
+                style={[styles.card, { backgroundColor: theme.surfaceElevated, borderColor: theme.border }]}
+              >
                 <View style={[styles.cardAccent, { backgroundColor: theme.primary }]} />
                 <View style={styles.cardBodyWrap}>
-                  <Text style={[styles.cardTitle, { color: theme.textPrimary }]}>{job.title}</Text>
+                  {job.companyName ? (
+                    <View
+                      style={[
+                        styles.companyBadge,
+                        { backgroundColor: theme.surface, borderColor: theme.borderSoft },
+                      ]}
+                    >
+                      <Text style={[styles.companyBadgeText, { color: theme.textSecondary }]}>
+                        {job.companyName}
+                      </Text>
+                    </View>
+                  ) : null}
+                  <View style={styles.cardTitleRow}>
+                    <Text style={[styles.cardTitle, { color: theme.textPrimary }]}>{job.title}</Text>
+                    <Ionicons name="chevron-forward" size={16} color={theme.textSecondary} />
+                  </View>
                   {job.summary ? (
                     <Text numberOfLines={2} style={[styles.cardSummary, { color: theme.textSecondary }]}>
                       {job.summary}
@@ -745,19 +645,18 @@ export default function StartupScreen() {
                       </View>
                     ) : null}
                   </View>
-
-                  {job.ctaUrl ? (
-                    <TouchableOpacity
-                      onPress={() => openJobLink(job.ctaUrl)}
-                      activeOpacity={0.85}
-                      style={[styles.applyButton, { backgroundColor: theme.primary }]}
-                    >
-                      <Text style={styles.applyButtonText}>{job.ctaLabel?.trim() || t('startupJobsApplyNow')}</Text>
-                      <Ionicons name="arrow-forward" size={14} color="#fff" />
-                    </TouchableOpacity>
-                  ) : null}
+                  <View style={styles.cardFooterRow}>
+                    <Text style={[styles.cardFooterText, { color: theme.primary }]}>
+                      {t('startupJobsViewDetails')}
+                    </Text>
+                    {job.ctaUrl ? (
+                      <Text style={[styles.cardFooterHint, { color: theme.textSecondary }]}>
+                        {t('startupJobsApplyFromDetails')}
+                      </Text>
+                    ) : null}
+                  </View>
                 </View>
-              </View>
+              </TouchableOpacity>
             ))
           : null}
 
@@ -949,10 +848,28 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 14,
   },
+  companyBadge: {
+    alignSelf: 'flex-start',
+    borderWidth: 1,
+    borderRadius: 999,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    marginBottom: 8,
+  },
+  companyBadgeText: {
+    fontSize: 11,
+    fontWeight: '700',
+  },
+  cardTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
   cardTitle: {
     fontSize: 16,
     fontWeight: '700',
     marginBottom: 4,
+    flex: 1,
   },
   cardSummary: {
     fontSize: 14,
@@ -971,6 +888,22 @@ const styles = StyleSheet.create({
     fontSize: 14,
     flex: 1,
   },
+  cardFooterRow: {
+    marginTop: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 10,
+  },
+  cardFooterText: {
+    fontSize: 13,
+    fontWeight: '800',
+  },
+  cardFooterHint: {
+    fontSize: 12,
+    flex: 1,
+    textAlign: 'right',
+  },
   metaMapButton: {
     width: 24,
     height: 24,
@@ -978,22 +911,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
-  },
-  applyButton: {
-    marginTop: 10,
-    borderRadius: 10,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    alignSelf: 'flex-start',
-  },
-  applyButtonText: {
-    color: '#fff',
-    fontSize: 14,
-    fontWeight: '700',
   },
   authNextStepCard: {
     marginTop: 10,

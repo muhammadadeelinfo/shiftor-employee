@@ -435,6 +435,18 @@ export const deTranslations = {
     startupJobsLoading: 'Startup-Jobs werden geladen...',
     startupJobsNoMatches: 'Keine passenden Jobs.',
     startupJobsApplyNow: 'Jetzt bewerben',
+    startupJobsViewDetails: 'Details ansehen',
+    startupJobsApplyFromDetails: 'Bewerbung in Details',
+    startupJobDetailsBack: 'Zurück zu Jobs',
+    startupJobDetailsOverview: 'Jobdetails',
+    startupJobDetailsLoading: 'Jobdetails werden geladen...',
+    startupJobDetailsNoDescription: 'Für diese Stelle wurden keine weiteren Details hinterlegt.',
+    startupJobDetailsMissingTitle: 'Jobdetails nicht verfügbar',
+    startupJobDetailsMissingBody:
+      'Dieser Job konnte nicht geladen werden. Kehre zur Jobliste zurück und versuche es erneut.',
+    startupJobDetailsRetry: 'Erneut versuchen',
+    startupJobDetailsShowingCached:
+      'Es werden zwischengespeicherte Details angezeigt, weil Live-Daten gerade nicht aktualisiert werden konnten.',
     commonCancel: 'Abbrechen',
     commonContinue: 'Weiter',
     startupJobsOpenLinkFailed: 'Der Job-Link konnte nicht geöffnet werden.',
