@@ -620,11 +620,9 @@ export default function StartupScreen() {
                     <Text style={[styles.cardFooterText, { color: theme.primary }]}>
                       {t('startupJobsViewDetails')}
                     </Text>
-                    {job.ctaUrl ? (
-                      <Text style={[styles.cardFooterHint, { color: theme.textSecondary }]}>
-                        {t('startupJobsApplyFromDetails')}
-                      </Text>
-                    ) : null}
+                    <Text style={[styles.cardFooterHint, { color: theme.textSecondary }]}>
+                      {t('startupJobsApplyFromDetails')}
+                    </Text>
                   </View>
                 </View>
               </TouchableOpacity>

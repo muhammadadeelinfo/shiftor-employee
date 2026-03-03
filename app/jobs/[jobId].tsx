@@ -1,4 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import * as DocumentPicker from 'expo-document-picker';
+import * as FileSystem from 'expo-file-system/legacy';
 import {
   ActivityIndicator,
   Alert,
@@ -7,6 +9,7 @@ import {
   ScrollView,
   StyleSheet,
   Text,
+  TextInput,
   TouchableOpacity,
   View,
 } from 'react-native';
@@ -19,6 +22,7 @@ import { useTheme } from '@shared/themeContext';
 import { openAddressInMaps } from '@shared/utils/maps';
 import { useAuth } from '@hooks/useSupabaseAuth';
 import {
+  buildStartupJobApplyEndpoint,
   buildStartupJobsEndpoint,
   deserializeStartupJob,
   normalizeStartupJobs,
@@ -82,6 +86,18 @@ export default function JobDetailsScreen() {
   const [isLoading, setIsLoading] = useState(!initialJob && !!requestedJobId);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
+  const [email, setEmail] = useState('');
+  const [mobile, setMobile] = useState('');
+  const [message, setMessage] = useState('');
+  const [isSubmittingApplication, setIsSubmittingApplication] = useState(false);
+  const [selectedCv, setSelectedCv] = useState<{
+    fileName: string;
+    contentType: string;
+    sizeBytes: number;
+    base64Content: string;
+  } | null>(null);
   const companyDomain = useMemo(() => extractDomainLabel(job?.ctaUrl), [job?.ctaUrl]);
   const publishedLabel = useMemo(
     () =>
@@ -204,6 +220,22 @@ export default function JobDetailsScreen() {
     loadJob();
   }, [loadJob]);
 
+  useEffect(() => {
+    const metadata = (session?.user?.user_metadata ?? {}) as Record<string, unknown>;
+    const first =
+      (typeof metadata.firstName === 'string' && metadata.firstName) ||
+      (typeof metadata.first_name === 'string' && metadata.first_name) ||
+      '';
+    const last =
+      (typeof metadata.lastName === 'string' && metadata.lastName) ||
+      (typeof metadata.last_name === 'string' && metadata.last_name) ||
+      '';
+
+    setFirstName((prev) => prev || first);
+    setLastName((prev) => prev || last);
+    setEmail((prev) => prev || session?.user?.email || '');
+  }, [session?.user?.email, session?.user?.user_metadata]);
+
   const openJobLink = async () => {
     const resolvedUrl = resolveStartupJobCtaUrl(job?.ctaUrl);
     if (!resolvedUrl) {
@@ -238,6 +270,104 @@ export default function JobDetailsScreen() {
       Alert.alert(t('startupJobDetailsTranslate'), t('startupJobDetailsTranslateFailed'));
     }
   }, [job, language, t]);
+
+  const pickCv = useCallback(async () => {
+    try {
+      const result = await DocumentPicker.getDocumentAsync({
+        copyToCacheDirectory: true,
+        multiple: false,
+        type: ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'],
+      });
+
+      if (result.canceled || !result.assets?.length) {
+        return;
+      }
+
+      const asset = result.assets[0];
+      const base64Content = await FileSystem.readAsStringAsync(asset.uri, {
+        encoding: FileSystem.EncodingType.Base64,
+      });
+      const sizeBytes = asset.size || Math.floor((base64Content.length * 3) / 4);
+
+      if (sizeBytes > 5 * 1024 * 1024) {
+        Alert.alert(t('startupJobDetailsApplication'), t('startupJobDetailsCvTooLarge'));
+        return;
+      }
+
+      setSelectedCv({
+        fileName: asset.name || 'cv',
+        contentType: asset.mimeType || 'application/octet-stream',
+        sizeBytes,
+        base64Content,
+      });
+    } catch {
+      Alert.alert(t('startupJobDetailsApplication'), t('startupJobDetailsApplyFailed'));
+    }
+  }, [t]);
+
+  const submitApplication = useCallback(async () => {
+    if (!job) {
+      return;
+    }
+
+    const nextFirstName = firstName.trim();
+    const nextLastName = lastName.trim();
+    const nextEmail = email.trim().toLowerCase();
+
+    if (!nextFirstName || !nextLastName || !nextEmail) {
+      Alert.alert(t('startupJobDetailsApplication'), t('startupJobDetailsApplyMissingFields'));
+      return;
+    }
+
+    const endpoint = buildStartupJobApplyEndpoint();
+    if (!endpoint) {
+      Alert.alert(t('startupJobDetailsApplication'), t('startupJobsMissingApiBaseUrl'));
+      return;
+    }
+
+    setIsSubmittingApplication(true);
+
+    try {
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+        Accept: 'application/json',
+      };
+
+      if (session?.access_token) {
+        headers.Authorization = `Bearer ${session.access_token}`;
+      }
+
+      const response = await fetch(endpoint, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({
+          jobId: job.id,
+          firstName: nextFirstName,
+          lastName: nextLastName,
+          email: nextEmail,
+          mobile: mobile.trim() || undefined,
+          message: message.trim() || undefined,
+          cv: selectedCv || undefined,
+        }),
+      });
+
+      const payload = (await response.json()) as { message?: string; error?: string };
+      if (!response.ok) {
+        throw new Error(payload.error || t('startupJobDetailsApplyFailed'));
+      }
+
+      Alert.alert(t('startupJobDetailsApplication'), payload.message || t('startupJobDetailsApplySuccess'));
+      setMessage('');
+      setSelectedCv(null);
+    } catch (error) {
+      Alert.alert(
+        t('startupJobDetailsApplication'),
+        error instanceof Error ? error.message : t('startupJobDetailsApplyFailed')
+      );
+    } finally {
+      setIsSubmittingApplication(false);
+    }
+  }, [email, firstName, job, message, mobile, selectedCv, session?.access_token, t, lastName]);
 
   if (isLoading) {
     return (
@@ -467,20 +597,95 @@ export default function JobDetailsScreen() {
         </View>
       ) : null}
 
-      {job.ctaUrl ? (
-        <View style={[styles.sectionCard, { backgroundColor: theme.surfaceElevated, borderColor: theme.border }]}>
-          <Text style={[styles.sectionTitle, { color: theme.textPrimary }]}>{t('startupJobDetailsApplication')}</Text>
-          <Text style={[styles.applyHint, { color: theme.textSecondary }]}>{t('startupJobDetailsApplyHint')}</Text>
+      <View style={[styles.sectionCard, { backgroundColor: theme.surfaceElevated, borderColor: theme.border }]}>
+        <Text style={[styles.sectionTitle, { color: theme.textPrimary }]}>{t('startupJobDetailsApplication')}</Text>
+        <Text style={[styles.applyHint, { color: theme.textSecondary }]}>{t('startupJobDetailsApplyHint')}</Text>
+        <Text style={[styles.translateHint, { color: theme.textSecondary }]}>{t('startupJobDetailsApplyIntro')}</Text>
+
+        <View style={styles.applyForm}>
+          <TextInput
+            value={firstName}
+            onChangeText={setFirstName}
+            placeholder={t('startupJobDetailsFirstName')}
+            placeholderTextColor={theme.textSecondary}
+            autoCapitalize="words"
+            style={[styles.input, { backgroundColor: theme.surface, borderColor: theme.border, color: theme.textPrimary }]}
+          />
+          <TextInput
+            value={lastName}
+            onChangeText={setLastName}
+            placeholder={t('startupJobDetailsLastName')}
+            placeholderTextColor={theme.textSecondary}
+            autoCapitalize="words"
+            style={[styles.input, { backgroundColor: theme.surface, borderColor: theme.border, color: theme.textPrimary }]}
+          />
+          <TextInput
+            value={email}
+            onChangeText={setEmail}
+            placeholder={t('startupJobDetailsEmail')}
+            placeholderTextColor={theme.textSecondary}
+            autoCapitalize="none"
+            keyboardType="email-address"
+            style={[styles.input, { backgroundColor: theme.surface, borderColor: theme.border, color: theme.textPrimary }]}
+          />
+          <TextInput
+            value={mobile}
+            onChangeText={setMobile}
+            placeholder={t('startupJobDetailsMobile')}
+            placeholderTextColor={theme.textSecondary}
+            keyboardType="phone-pad"
+            style={[styles.input, { backgroundColor: theme.surface, borderColor: theme.border, color: theme.textPrimary }]}
+          />
+          <TextInput
+            value={message}
+            onChangeText={setMessage}
+            placeholder={t('startupJobDetailsMessage')}
+            placeholderTextColor={theme.textSecondary}
+            multiline
+            textAlignVertical="top"
+            style={[
+              styles.input,
+              styles.messageInput,
+              { backgroundColor: theme.surface, borderColor: theme.border, color: theme.textPrimary },
+            ]}
+          />
           <TouchableOpacity
-            onPress={openJobLink}
+            onPress={pickCv}
             activeOpacity={0.85}
-            style={[styles.applyButton, { backgroundColor: theme.primary }]}
+            style={[styles.secondaryButton, { backgroundColor: theme.surface, borderColor: theme.border }]}
           >
-            <Text style={styles.applyButtonText}>{job.ctaLabel?.trim() || t('startupJobsApplyNow')}</Text>
-            <Ionicons name="arrow-forward" size={16} color="#fff" />
+            <Text style={[styles.secondaryButtonText, { color: theme.textPrimary }]}>
+              {selectedCv
+                ? t('startupJobDetailsCvAttached', { fileName: selectedCv.fileName })
+                : t('startupJobDetailsAttachCv')}
+            </Text>
+            <Ionicons name="attach-outline" size={16} color={theme.textPrimary} />
           </TouchableOpacity>
+          <TouchableOpacity
+            onPress={submitApplication}
+            disabled={isSubmittingApplication}
+            activeOpacity={0.85}
+            style={[styles.applyButton, { backgroundColor: theme.primary, opacity: isSubmittingApplication ? 0.7 : 1 }]}
+          >
+            <Text style={styles.applyButtonText}>
+              {isSubmittingApplication ? t('startupJobDetailsApplying') : t('startupJobDetailsSubmit')}
+            </Text>
+            <Ionicons name="send-outline" size={16} color="#fff" />
+          </TouchableOpacity>
+          {job.ctaUrl ? (
+            <TouchableOpacity
+              onPress={openJobLink}
+              activeOpacity={0.85}
+              style={[styles.secondaryButton, { backgroundColor: theme.surface, borderColor: theme.border }]}
+            >
+              <Text style={[styles.secondaryButtonText, { color: theme.textPrimary }]}>
+                {t('startupJobDetailsVisitCompany')}
+              </Text>
+              <Ionicons name="open-outline" size={16} color={theme.textPrimary} />
+            </TouchableOpacity>
+          ) : null}
         </View>
-      ) : null}
+      </View>
     </ScrollView>
   );
 }
@@ -683,6 +888,19 @@ const styles = StyleSheet.create({
   applyHint: {
     fontSize: 14,
     lineHeight: 21,
+  },
+  applyForm: {
+    gap: 10,
+  },
+  input: {
+    borderWidth: 1,
+    borderRadius: 14,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    fontSize: 14,
+  },
+  messageInput: {
+    minHeight: 110,
   },
   applyButtonText: {
     color: '#fff',

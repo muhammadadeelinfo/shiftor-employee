@@ -5,6 +5,8 @@ export type StartupJob = {
   id: string;
   companyId: string;
   companyName?: string | null;
+  companyNameSnapshot?: string | null;
+  companyLogoUrlSnapshot?: string | null;
   title: string;
   summary: string | null;
   description: string | null;
@@ -164,13 +166,27 @@ export const buildStartupJobsEndpoint = (
   return `${origin}/api/jobs/list?${params.toString()}`;
 };
 
+export const buildStartupJobApplyEndpoint = (): string | null => {
+  const origin = getApiOrigin();
+  if (origin === null) {
+    return null;
+  }
+
+  return `${origin}/api/jobs/apply`;
+};
+
 export const normalizeStartupJobs = (payload: StartupJobsResponse): StartupJob[] => {
   if (!Array.isArray(payload.jobs)) {
     return [];
   }
 
   // Hide seeded demo/test jobs from the public jobs surfaces.
-  return payload.jobs.filter((job) => !isLikelyDemoJob(job));
+  return payload.jobs
+    .map((job) => ({
+      ...job,
+      companyName: job.companyName ?? job.companyNameSnapshot ?? null,
+    }))
+    .filter((job) => !isLikelyDemoJob(job));
 };
 
 export const resolveStartupJobCtaUrl = (rawUrl?: string | null): string | null => {
