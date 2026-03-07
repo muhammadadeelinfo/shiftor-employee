@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import * as DocumentPicker from 'expo-document-picker';
 import * as FileSystem from 'expo-file-system/legacy';
 import {
   ActivityIndicator,
@@ -14,6 +13,7 @@ import {
   View,
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
+import { NativeModulesProxy } from 'expo-modules-core';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -73,6 +73,18 @@ const buildJobTranslationUrl = (job: StartupJob | null, targetLanguage: 'en' | '
   return url.toString();
 };
 
+const getDocumentPickerModule = (): typeof import('expo-document-picker') | null => {
+  if (!NativeModulesProxy.ExpoDocumentPicker) {
+    return null;
+  }
+
+  try {
+    return require('expo-document-picker') as typeof import('expo-document-picker');
+  } catch {
+    return null;
+  }
+};
+
 export default function JobDetailsScreen() {
   const { theme } = useTheme();
   const { language, t } = useLanguage();
@@ -80,6 +92,7 @@ export default function JobDetailsScreen() {
   const insets = useSafeAreaInsets();
   const { session } = useAuth();
   const params = useLocalSearchParams<{ jobId?: string; payload?: string }>();
+  const topContentPadding = 12;
   const initialJob = useMemo(() => deserializeStartupJob(params.payload), [params.payload]);
   const requestedJobId = Array.isArray(params.jobId) ? params.jobId[0] : params.jobId;
   const [job, setJob] = useState<StartupJob | null>(initialJob);
@@ -273,7 +286,13 @@ export default function JobDetailsScreen() {
 
   const pickCv = useCallback(async () => {
     try {
-      const result = await DocumentPicker.getDocumentAsync({
+      const documentPicker = getDocumentPickerModule();
+      if (!documentPicker) {
+        Alert.alert(t('startupJobDetailsApplication'), t('startupJobDetailsApplyFailed'));
+        return;
+      }
+
+      const result = await documentPicker.getDocumentAsync({
         copyToCacheDirectory: true,
         multiple: false,
         type: ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'],
@@ -351,9 +370,56 @@ export default function JobDetailsScreen() {
         }),
       });
 
-      const payload = (await response.json()) as { message?: string; error?: string };
+      const responseText = await response.text();
+      let payload: { message?: string; error?: string } = {};
+
+      if (responseText.trim()) {
+        try {
+          payload = JSON.parse(responseText) as { message?: string; error?: string };
+        } catch {
+          payload = {};
+        }
+      }
+
       if (!response.ok) {
-        throw new Error(payload.error || t('startupJobDetailsApplyFailed'));
+        const normalizedResponseText = responseText.trim();
+        const fallbackDetail = normalizedResponseText
+          ? normalizedResponseText.replace(/\s+/g, ' ').slice(0, 180)
+          : null;
+
+        console.warn('Job application request failed.', {
+          endpoint,
+          status: response.status,
+          body: fallbackDetail,
+        });
+
+        if (response.status === 405) {
+          const fallbackUrl = resolveStartupJobCtaUrl(job.ctaUrl);
+
+          if (fallbackUrl) {
+            Alert.alert(
+              t('startupJobDetailsApplication'),
+              t('startupJobDetailsApplyFallbackExternal'),
+              [
+                { text: t('commonCancel'), style: 'cancel' },
+                {
+                  text: t('startupJobDetailsOpenExternalApply'),
+                  onPress: () => {
+                    void openJobLink();
+                  },
+                },
+              ]
+            );
+            return;
+          }
+        }
+
+        throw new Error(
+          payload.error ||
+            (fallbackDetail
+              ? `${t('startupJobDetailsApplyFailed')} (${response.status}): ${fallbackDetail}`
+              : `${t('startupJobDetailsApplyFailed')} (${response.status})`)
+        );
       }
 
       Alert.alert(t('startupJobDetailsApplication'), payload.message || t('startupJobDetailsApplySuccess'));
@@ -371,7 +437,7 @@ export default function JobDetailsScreen() {
 
   if (isLoading) {
     return (
-      <View style={[styles.emptyRoot, { backgroundColor: theme.background, paddingTop: insets.top + 2 }]}>
+      <View style={[styles.emptyRoot, { backgroundColor: theme.background, paddingTop: topContentPadding }]}>
         <TouchableOpacity
           onPress={() => router.replace('/jobs')}
           activeOpacity={0.8}
@@ -390,7 +456,7 @@ export default function JobDetailsScreen() {
 
   if (!job) {
     return (
-      <View style={[styles.emptyRoot, { backgroundColor: theme.background, paddingTop: insets.top + 2 }]}>
+      <View style={[styles.emptyRoot, { backgroundColor: theme.background, paddingTop: topContentPadding }]}>
         <TouchableOpacity
           onPress={() => router.replace('/jobs')}
           activeOpacity={0.8}
@@ -420,7 +486,11 @@ export default function JobDetailsScreen() {
     <ScrollView
       contentContainerStyle={[
         styles.container,
-        { backgroundColor: theme.background, paddingTop: insets.top + 2, paddingBottom: insets.bottom + 32 },
+        {
+          backgroundColor: theme.background,
+          paddingTop: topContentPadding,
+          paddingBottom: insets.bottom + 32,
+        },
       ]}
       showsVerticalScrollIndicator={false}
       refreshControl={

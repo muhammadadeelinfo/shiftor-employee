@@ -247,7 +247,7 @@ export default function LoginScreen() {
           }
         }
       }
-      router.replace('(tabs)/my-shifts');
+      router.replace('/my-shifts');
     } catch (error) {
       console.warn('Sign-in failed', error);
       Alert.alert(
