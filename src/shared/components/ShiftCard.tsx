@@ -181,7 +181,7 @@ export const ShiftCard = ({
                 colors={phaseGradientColors}
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 0 }}
-                style={styles.phaseBadge}
+                style={[styles.phaseBadge, { backgroundColor: phaseMetadata.color }]}
               >
                 <Ionicons
                   name={phaseMetadata.icon as ComponentProps<typeof Ionicons>['name']}
@@ -197,7 +197,7 @@ export const ShiftCard = ({
             colors={statusGradientColors}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 1 }}
-            style={[styles.statusBadge, { borderColor: statusColor }]}
+            style={[styles.statusBadge, { borderColor: statusColor, backgroundColor: statusColor }]}
           >
             {statusIcon ? (
               <Ionicons name={statusIcon} size={14} color="#fff" style={styles.statusIcon} />

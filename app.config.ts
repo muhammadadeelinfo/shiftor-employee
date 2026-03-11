@@ -63,7 +63,9 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
           calendarPermission:
             process.env.IOS_CALENDAR_USAGE_DESCRIPTION ??
             'Calendar access lets you import shifts and sync your schedule.',
-          remindersPermission: false,
+          remindersPermission:
+            process.env.IOS_REMINDERS_USAGE_DESCRIPTION ??
+            'Reminders access lets you optionally create shift reminder entries.',
         },
       ] as [string, Record<string, unknown>],
       [
@@ -118,6 +120,9 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
       NSCalendarsWriteOnlyAccessUsageDescription:
         process.env.IOS_CALENDAR_USAGE_DESCRIPTION ??
         'Calendar access lets you import shifts and sync your schedule.',
+      NSRemindersUsageDescription:
+        process.env.IOS_REMINDERS_USAGE_DESCRIPTION ??
+        'Reminders access lets you optionally create shift reminder entries.',
       NSUserNotificationsUsageDescription:
         process.env.IOS_NOTIFICATIONS_USAGE_DESCRIPTION ??
         'Notifications keep you updated about shifts and schedule changes.',

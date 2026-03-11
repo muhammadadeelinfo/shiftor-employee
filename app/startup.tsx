@@ -552,80 +552,84 @@ export default function StartupScreen() {
 
         {shouldShowJobsSection
           ? filteredJobs.map((job) => (
-              <TouchableOpacity
+              <View
                 key={job.id}
-                activeOpacity={0.9}
-                onPress={() => openJobDetails(job)}
-                style={[styles.card, { backgroundColor: theme.surfaceElevated, borderColor: theme.border }]}
+                style={[styles.cardShadow, { backgroundColor: theme.surfaceElevated, borderColor: theme.border }]}
               >
-                <View style={[styles.cardAccent, { backgroundColor: theme.primary }]} />
-                <View style={styles.cardBodyWrap}>
-                  {job.companyName ? (
-                    <View
-                      style={[
-                        styles.companyBadge,
-                        { backgroundColor: theme.surface, borderColor: theme.borderSoft },
-                      ]}
-                    >
-                      <Text style={[styles.companyBadgeText, { color: theme.textSecondary }]}>
-                        {job.companyName}
+                <TouchableOpacity
+                  activeOpacity={0.9}
+                  onPress={() => openJobDetails(job)}
+                  style={[styles.card, { borderColor: theme.border }]}
+                >
+                  <View style={[styles.cardAccent, { backgroundColor: theme.primary }]} />
+                  <View style={styles.cardBodyWrap}>
+                    {job.companyName ? (
+                      <View
+                        style={[
+                          styles.companyBadge,
+                          { backgroundColor: theme.surface, borderColor: theme.borderSoft },
+                        ]}
+                      >
+                        <Text style={[styles.companyBadgeText, { color: theme.textSecondary }]}>
+                          {job.companyName}
+                        </Text>
+                      </View>
+                    ) : null}
+                    <View style={styles.cardTitleRow}>
+                      <Text style={[styles.cardTitle, { color: theme.textPrimary }]}>{job.title}</Text>
+                      <Ionicons name="chevron-forward" size={16} color={theme.textSecondary} />
+                    </View>
+                    {job.summary ? (
+                      <Text numberOfLines={2} style={[styles.cardSummary, { color: theme.textSecondary }]}>
+                        {job.summary}
+                      </Text>
+                    ) : null}
+
+                    <View style={styles.metaWrap}>
+                      {job.location ? (
+                        <View style={styles.cardMetaRow}>
+                          <Ionicons name="location-outline" size={14} color={theme.textSecondary} />
+                          <Text style={[styles.cardBody, { color: theme.textSecondary }]}>{job.location}</Text>
+                          <TouchableOpacity
+                            onPress={() => openAddressInMaps(job.location)}
+                            accessibilityRole="button"
+                            accessibilityLabel={t('openInMaps')}
+                            style={[
+                              styles.metaMapButton,
+                              {
+                                backgroundColor: theme.surface,
+                                borderColor: theme.borderSoft,
+                              },
+                            ]}
+                          >
+                            <Ionicons name="map-outline" size={14} color={theme.info} />
+                          </TouchableOpacity>
+                        </View>
+                      ) : null}
+                      {job.employmentType ? (
+                        <View style={styles.cardMetaRow}>
+                          <Ionicons name="time-outline" size={14} color={theme.textSecondary} />
+                          <Text style={[styles.cardBody, { color: theme.textSecondary }]}>{job.employmentType}</Text>
+                        </View>
+                      ) : null}
+                      {job.salaryText ? (
+                        <View style={styles.cardMetaRow}>
+                          <Ionicons name="cash-outline" size={14} color={theme.textSecondary} />
+                          <Text style={[styles.cardBody, { color: theme.textSecondary }]}>{job.salaryText}</Text>
+                        </View>
+                      ) : null}
+                    </View>
+                    <View style={styles.cardFooterRow}>
+                      <Text style={[styles.cardFooterText, { color: theme.primary }]}>
+                        {t('startupJobsViewDetails')}
+                      </Text>
+                      <Text style={[styles.cardFooterHint, { color: theme.textSecondary }]}>
+                        {t('startupJobsApplyFromDetails')}
                       </Text>
                     </View>
-                  ) : null}
-                  <View style={styles.cardTitleRow}>
-                    <Text style={[styles.cardTitle, { color: theme.textPrimary }]}>{job.title}</Text>
-                    <Ionicons name="chevron-forward" size={16} color={theme.textSecondary} />
                   </View>
-                  {job.summary ? (
-                    <Text numberOfLines={2} style={[styles.cardSummary, { color: theme.textSecondary }]}>
-                      {job.summary}
-                    </Text>
-                  ) : null}
-
-                  <View style={styles.metaWrap}>
-                    {job.location ? (
-                      <View style={styles.cardMetaRow}>
-                        <Ionicons name="location-outline" size={14} color={theme.textSecondary} />
-                        <Text style={[styles.cardBody, { color: theme.textSecondary }]}>{job.location}</Text>
-                        <TouchableOpacity
-                          onPress={() => openAddressInMaps(job.location)}
-                          accessibilityRole="button"
-                          accessibilityLabel={t('openInMaps')}
-                          style={[
-                            styles.metaMapButton,
-                            {
-                              backgroundColor: theme.surface,
-                              borderColor: theme.borderSoft,
-                            },
-                          ]}
-                        >
-                          <Ionicons name="map-outline" size={14} color={theme.info} />
-                        </TouchableOpacity>
-                      </View>
-                    ) : null}
-                    {job.employmentType ? (
-                      <View style={styles.cardMetaRow}>
-                        <Ionicons name="time-outline" size={14} color={theme.textSecondary} />
-                        <Text style={[styles.cardBody, { color: theme.textSecondary }]}>{job.employmentType}</Text>
-                      </View>
-                    ) : null}
-                    {job.salaryText ? (
-                      <View style={styles.cardMetaRow}>
-                        <Ionicons name="cash-outline" size={14} color={theme.textSecondary} />
-                        <Text style={[styles.cardBody, { color: theme.textSecondary }]}>{job.salaryText}</Text>
-                      </View>
-                    ) : null}
-                  </View>
-                  <View style={styles.cardFooterRow}>
-                    <Text style={[styles.cardFooterText, { color: theme.primary }]}>
-                      {t('startupJobsViewDetails')}
-                    </Text>
-                    <Text style={[styles.cardFooterHint, { color: theme.textSecondary }]}>
-                      {t('startupJobsApplyFromDetails')}
-                    </Text>
-                  </View>
-                </View>
-              </TouchableOpacity>
+                </TouchableOpacity>
+              </View>
             ))
           : null}
 
@@ -763,19 +767,23 @@ const styles = StyleSheet.create({
     marginLeft: 6,
     marginBottom: 2,
   },
-  card: {
-    borderWidth: 1,
+  cardShadow: {
     borderRadius: 16,
-    padding: 0,
     marginBottom: 10,
     shadowColor: '#030819',
     shadowOpacity: 0.35,
     shadowOffset: { width: 0, height: 8 },
     shadowRadius: 18,
     elevation: 3,
+    borderWidth: 1,
+  },
+  card: {
+    borderRadius: 16,
+    padding: 0,
     flexDirection: 'row',
     alignItems: 'stretch',
     overflow: 'hidden',
+    borderWidth: 1,
   },
   cardAccent: {
     width: 4,
