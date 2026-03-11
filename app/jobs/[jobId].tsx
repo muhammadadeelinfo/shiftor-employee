@@ -4,6 +4,7 @@ import {
   ActivityIndicator,
   Alert,
   Linking,
+  Platform,
   RefreshControl,
   ScrollView,
   StyleSheet,
@@ -89,6 +90,7 @@ export default function JobDetailsScreen() {
   const { theme } = useTheme();
   const { language, t } = useLanguage();
   const router = useRouter();
+  const isIOS = Platform.OS === 'ios';
   const insets = useSafeAreaInsets();
   const { session } = useAuth();
   const params = useLocalSearchParams<{ jobId?: string; payload?: string }>();
@@ -393,7 +395,7 @@ export default function JobDetailsScreen() {
           body: fallbackDetail,
         });
 
-        if (response.status === 405) {
+        if (response.status === 405 && !isIOS) {
           const fallbackUrl = resolveStartupJobCtaUrl(job.ctaUrl);
 
           if (fallbackUrl) {
@@ -433,7 +435,7 @@ export default function JobDetailsScreen() {
     } finally {
       setIsSubmittingApplication(false);
     }
-  }, [email, firstName, job, message, mobile, selectedCv, session?.access_token, t, lastName]);
+  }, [email, firstName, job, message, mobile, selectedCv, session?.access_token, t, lastName, isIOS]);
 
   if (isLoading) {
     return (
@@ -619,7 +621,7 @@ export default function JobDetailsScreen() {
               <Text style={[styles.companyMetaText, { color: theme.textSecondary }]}>{companyDomain}</Text>
             </View>
           ) : null}
-          {job.ctaUrl ? (
+          {!isIOS && job.ctaUrl ? (
             <TouchableOpacity
               onPress={openJobLink}
               activeOpacity={0.85}
@@ -742,7 +744,7 @@ export default function JobDetailsScreen() {
             </Text>
             <Ionicons name="send-outline" size={16} color="#fff" />
           </TouchableOpacity>
-          {job.ctaUrl ? (
+          {!isIOS && job.ctaUrl ? (
             <TouchableOpacity
               onPress={openJobLink}
               activeOpacity={0.85}

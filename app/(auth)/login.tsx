@@ -20,9 +20,8 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { LinearGradient } from 'expo-linear-gradient';
 import Constants from 'expo-constants';
 import { PrimaryButton } from '@shared/components/PrimaryButton';
-import { User } from '@supabase/supabase-js';
 import { supabase } from '@lib/supabaseClient';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useRouter } from 'expo-router';
 import { useLanguage } from '@shared/context/LanguageContext';
 import {
   buildSupportMailto,
@@ -33,64 +32,12 @@ import { getUserFacingErrorMessage } from '@shared/utils/userFacingError';
 
 const REMEMBER_KEY = 'employee-portal-remember-me';
 const EMAIL_KEY = 'employee-portal-remembered-email';
-const MIN_PASSWORD_LENGTH = 8;
 const SUPPORT_BASE_URL = 'https://shiftorapp.com';
-
-const getStringMetadataField = (user: User, field: string): string | null => {
-  const metadata = user.user_metadata;
-  if (!metadata || typeof metadata !== 'object') return null;
-  const value = (metadata as Record<string, unknown>)[field];
-  return typeof value === 'string' && value.trim() ? value.trim() : null;
-};
-
-const isRpcSignatureMismatchError = (error: unknown) => {
-  if (!error || typeof error !== 'object') return false;
-  const code = 'code' in error ? String((error as { code?: unknown }).code ?? '') : '';
-  const message = 'message' in error ? String((error as { message?: unknown }).message ?? '') : '';
-  return (
-    code === 'PGRST202' ||
-    code === '42883' ||
-    /Could not find the function/i.test(message) ||
-    /request_employee_company_link/i.test(message)
-  );
-};
-
-const requestCompanyLink = async (joinCode: string, fullName?: string | null) => {
-  if (!supabase) {
-    throw new Error('Supabase client not configured');
-  }
-
-  const normalizedCode = joinCode.trim().toUpperCase();
-  const normalizedName = (fullName ?? '').trim();
-  const attempts: Array<Record<string, unknown>> = [
-    { join_code: normalizedCode, full_name: normalizedName || null },
-    { join_code: normalizedCode },
-  ];
-
-  let lastSignatureError: unknown = null;
-  for (const params of attempts) {
-    const { data, error } = await supabase.rpc('request_employee_company_link', params);
-    if (!error) {
-      return data;
-    }
-    if (isRpcSignatureMismatchError(error)) {
-      lastSignatureError = error;
-      continue;
-    }
-    throw error;
-  }
-
-  if (lastSignatureError) {
-    throw lastSignatureError;
-  }
-  throw new Error('Failed to request company link.');
-};
 
 export default function LoginScreen() {
   const router = useRouter();
-  const params = useLocalSearchParams<{ mode?: string }>();
   const { t } = useLanguage();
-  const [mode, setMode] = useState<'signin' | 'signup'>(params.mode === 'signup' ? 'signup' : 'signin');
+  const isIOS = Platform.OS === 'ios';
   const loginTitle = t('loginTitle');
   const titleParts = loginTitle.split(' ');
   const [titleFirstWord, ...titleRestWords] = titleParts;
@@ -104,23 +51,6 @@ export default function LoginScreen() {
   const [emailError, setEmailError] = useState<string | null>(null);
   const [passwordError, setPasswordError] = useState<string | null>(null);
   const passwordInputRef = useRef<TextInput>(null);
-  const [confirmPassword, setConfirmPassword] = useState('');
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const confirmPasswordInputRef = useRef<TextInput>(null);
-  const signupPasswordHasMinLength = password.length >= MIN_PASSWORD_LENGTH;
-  const signupPasswordsMatch = Boolean(confirmPassword) && password === confirmPassword;
-  const signupPasswordRules = [
-    {
-      key: 'min-length',
-      done: signupPasswordHasMinLength,
-      label: t('authPasswordRuleMinLength'),
-    },
-    {
-      key: 'match',
-      done: signupPasswordsMatch,
-      label: t('authPasswordRuleMatch'),
-    },
-  ];
 
   useEffect(() => {
     (async () => {
@@ -131,38 +61,16 @@ export default function LoginScreen() {
       const storedEmail = await AsyncStorage.getItem(EMAIL_KEY);
       if (storedEmail) {
         setRememberedEmail(storedEmail);
-        if (params.mode !== 'signup') {
-          setEmail(storedEmail);
-        }
+        setEmail(storedEmail);
       }
     })();
-  }, [params.mode]);
+  }, []);
 
   useEffect(() => {
-    if (params.mode === 'signup') {
-      setMode('signup');
-    } else if (params.mode === 'signin') {
-      setMode('signin');
-    }
-  }, [params.mode]);
-
-  useEffect(() => {
-    if (mode === 'signup') {
-      setEmail('');
-    }
-    setEmailError(null);
-    setPasswordError(null);
-    setPassword('');
-    setConfirmPassword('');
-    setShowPassword(false);
-    setShowConfirmPassword(false);
-  }, [mode]);
-
-  useEffect(() => {
-    if (mode === 'signin' && rememberMe && rememberedEmail) {
+    if (rememberMe && rememberedEmail) {
       setEmail((current) => (current.trim() ? current : rememberedEmail));
     }
-  }, [mode, rememberMe, rememberedEmail]);
+  }, [rememberMe, rememberedEmail]);
 
   const handleAuthenticate = async () => {
     const trimmedEmail = email.trim();
@@ -203,50 +111,6 @@ export default function LoginScreen() {
         throw error;
       }
 
-      const authedUser = data.user;
-      if (authedUser) {
-        const requestedCompanyCode = getStringMetadataField(authedUser, 'requested_company_code');
-        const requestedFullName = getStringMetadataField(authedUser, 'full_name');
-
-        if (requestedCompanyCode) {
-          try {
-            const linkData = await requestCompanyLink(requestedCompanyCode, requestedFullName);
-            const payload =
-              linkData && typeof linkData === 'object' ? (linkData as Record<string, unknown>) : {};
-            const status = typeof payload.status === 'string' ? payload.status : null;
-            const requestedAction =
-              typeof payload.requestedAction === 'string' ? payload.requestedAction : 'join';
-            const ok = payload.ok === true;
-
-            if (status === 'invalid_code') {
-              Alert.alert(t('companyLinkTitle'), t('companyLinkInvalidCodeBody'));
-            } else if (status === 'active') {
-              Alert.alert(t('companyLinkTitle'), t('companyLinkAlreadyActiveBody'));
-            } else if (status === 'code_expired') {
-              Alert.alert(t('companyLinkTitle'), t('companyLinkCodeExpiredBody'));
-            } else if (status === 'code_exhausted') {
-              Alert.alert(t('companyLinkTitle'), t('companyLinkCodeExhaustedBody'));
-            } else if (status === 'rate_limited') {
-              Alert.alert(t('companyLinkTitle'), t('companyLinkRateLimitedBody'));
-            } else if (ok) {
-              Alert.alert(
-                t('companyLinkTitle'),
-                requestedAction === 'switch'
-                  ? t('companyLinkSwitchRequestedBody')
-                  : t('companyLinkRequestedBody')
-              );
-                await supabase.auth.updateUser({
-                  data: {
-                    ...(authedUser.user_metadata ?? {}),
-                    requested_company_code: null,
-                  },
-                });
-            }
-          } catch (linkError) {
-            console.warn('Failed to link account to company', linkError);
-          }
-        }
-      }
       router.replace('/my-shifts');
     } catch (error) {
       console.warn('Sign-in failed', error);
@@ -263,65 +127,6 @@ export default function LoginScreen() {
     }
   };
 
-  const handleSignup = async () => {
-    const trimmedEmail = email.trim();
-
-    if (!trimmedEmail || !password || !confirmPassword) {
-      Alert.alert(t('authEmailPasswordRequiredTitle'), t('authEmailPasswordRequiredBody'));
-      return;
-    }
-
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmedEmail)) {
-      Alert.alert(t('authFailedTitle'), t('authInvalidEmailBody'));
-      return;
-    }
-
-    if (password.length < MIN_PASSWORD_LENGTH) {
-      Alert.alert(t('authFailedTitle'), t('authPasswordMinLengthBody'));
-      return;
-    }
-
-    if (password !== confirmPassword) {
-      Alert.alert(t('authFailedTitle'), t('authPasswordMismatchBody'));
-      return;
-    }
-
-    if (!supabase) {
-      Alert.alert(t('authConfigurationMissingTitle'), t('authConfigurationMissingBody'));
-      return;
-    }
-
-    const authRedirectUrl = (Constants.expoConfig?.extra?.authRedirectUrl as string | undefined)?.trim();
-
-    try {
-      setLoading(true);
-      const { error } = await supabase.auth.signUp({
-        email: trimmedEmail,
-        password,
-        options: {
-          emailRedirectTo: authRedirectUrl || undefined,
-        },
-      });
-
-      if (error) {
-        throw error;
-      }
-
-      Alert.alert(t('authVerifyEmailTitle'), t('authVerifyEmailBody'));
-      setMode('signin');
-    } catch (error) {
-      console.warn('Sign-up failed', error);
-      Alert.alert(
-        t('authFailedTitle'),
-        getUserFacingErrorMessage(error, {
-          fallback: t('authUnableSignIn'),
-        })
-      );
-    } finally {
-      setLoading(false);
-    }
-  };
-
   const handleSupportEmail = async () => {
     const supportUrl = buildSupportMailto('Help request');
     try {
@@ -330,10 +135,12 @@ export default function LoginScreen() {
         await Linking.openURL(supportUrl);
         return;
       }
-      const fallbackSupported = await Linking.canOpenURL(SUPPORT_FALLBACK_URL);
-      if (fallbackSupported) {
-        await Linking.openURL(SUPPORT_FALLBACK_URL);
-        return;
+      if (!isIOS) {
+        const fallbackSupported = await Linking.canOpenURL(SUPPORT_FALLBACK_URL);
+        if (fallbackSupported) {
+          await Linking.openURL(SUPPORT_FALLBACK_URL);
+          return;
+        }
       }
       Alert.alert(t('supportHelpCenter'), `${t('unableOpenLinkDevice')}\n${SUPPORT_EMAIL}`);
     } catch {
@@ -394,8 +201,7 @@ export default function LoginScreen() {
   };
 
   const { width } = useWindowDimensions();
-  const isSigninMode = mode === 'signin';
-  const disablePrimaryAction = loading || !email.trim() || !password || (!isSigninMode && !confirmPassword);
+  const disablePrimaryAction = loading || !email.trim() || !password;
 
   return (
     <LinearGradient
@@ -406,6 +212,21 @@ export default function LoginScreen() {
       <View style={styles.accentCircleLarge} />
       <View style={styles.accentCircleSmall} />
       <SafeAreaView style={styles.safeArea}>
+        <TouchableOpacity
+          onPress={() => {
+            if (router.canGoBack()) {
+              router.back();
+              return;
+            }
+            router.replace('/jobs');
+          }}
+          disabled={loading}
+          activeOpacity={0.75}
+          style={styles.pageBackButton}
+        >
+          <Ionicons name="chevron-back" size={17} color="#e2e8f0" />
+          <Text style={styles.pageBackButtonText}>{t('loginBackToJobs')}</Text>
+        </TouchableOpacity>
         <KeyboardAvoidingView
           behavior={Platform.OS === 'ios' ? 'padding' : undefined}
           style={styles.keyboardContainer}
@@ -421,29 +242,7 @@ export default function LoginScreen() {
             <Text style={styles.titleAccent}>{titleFirstWord ?? loginTitle}</Text>
             {titleRest ? ` ${titleRest}` : ''}
           </Text>
-          <View style={styles.segmentRow}>
-            <TouchableOpacity
-              style={[styles.segmentButton, mode === 'signin' && styles.segmentButtonActive]}
-              onPress={() => setMode('signin')}
-              activeOpacity={0.8}
-              disabled={loading}
-            >
-              <Text style={[styles.segmentText, mode === 'signin' && styles.segmentTextActive]}>
-                {t('loginSignInButton')}
-              </Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.segmentButton, mode === 'signup' && styles.segmentButtonActive]}
-              onPress={() => setMode('signup')}
-              activeOpacity={0.8}
-              disabled={loading}
-            >
-              <Text style={[styles.segmentText, mode === 'signup' && styles.segmentTextActive]}>
-                {t('signupCreateButton')}
-              </Text>
-            </TouchableOpacity>
-          </View>
-          <Text style={styles.subtitle}>{mode === 'signin' ? t('loginSignInSubtitle') : t('signupSubtitle')}</Text>
+          <Text style={styles.subtitle}>{t('loginSignInSubtitle')}</Text>
           <View style={styles.emailField}>
             <TextInput
               style={styles.emailInput}
@@ -485,7 +284,7 @@ export default function LoginScreen() {
               secureTextEntry={!showPassword}
               autoCapitalize="none"
               autoCorrect={false}
-              autoComplete={mode === 'signup' ? 'new-password' : 'current-password'}
+              autoComplete="current-password"
               placeholder={t('loginPasswordPlaceholder')}
               placeholderTextColor="#a4b3cf"
               value={password}
@@ -495,12 +294,10 @@ export default function LoginScreen() {
                   setPasswordError(null);
                 }
               }}
-              textContentType={mode === 'signup' ? 'newPassword' : 'password'}
+              textContentType="password"
               ref={passwordInputRef}
-              returnKeyType={mode === 'signup' ? 'next' : 'done'}
-              onSubmitEditing={() =>
-                mode === 'signup' ? confirmPasswordInputRef.current?.focus() : handleAuthenticate()
-              }
+              returnKeyType="done"
+              onSubmitEditing={handleAuthenticate}
               editable={!loading}
             />
             <Pressable
@@ -520,89 +317,30 @@ export default function LoginScreen() {
             </Pressable>
           </View>
           {passwordError ? <Text style={styles.errorText}>{passwordError}</Text> : null}
-          {mode === 'signup' ? (
-            <>
-              <View style={styles.passwordField}>
-                <TextInput
-                  style={styles.passwordInput}
-                  secureTextEntry={!showConfirmPassword}
-                  autoCapitalize="none"
-                  autoCorrect={false}
-                  autoComplete="new-password"
-                  placeholder={t('signupConfirmPasswordPlaceholder')}
-                  placeholderTextColor="#a4b3cf"
-                  value={confirmPassword}
-                  onChangeText={setConfirmPassword}
-                  textContentType="newPassword"
-                  ref={confirmPasswordInputRef}
-                  returnKeyType="done"
-                  onSubmitEditing={handleSignup}
-                  editable={!loading}
-                  importantForAutofill="yes"
-                />
-                <Pressable
-                  onPress={() => setShowConfirmPassword((prev) => !prev)}
-                  accessibilityRole="button"
-                  accessibilityLabel={
-                    showConfirmPassword ? t('loginHidePassword') : t('loginShowPassword')
-                  }
-                  style={styles.passwordToggle}
-                  disabled={loading}
-                >
-                  <Ionicons
-                    name={showConfirmPassword ? 'eye-off-outline' : 'eye-outline'}
-                    size={20}
-                    color="#cbd5f5"
-                  />
-                </Pressable>
-              </View>
-              <View style={styles.passwordRulesWrap}>
-                <Text style={styles.passwordRulesTitle}>{t('authPasswordRulesTitle')}</Text>
-                {signupPasswordRules.map((rule) => (
-                  <View key={rule.key} style={styles.passwordRuleRow}>
-                    <Ionicons
-                      name={rule.done ? 'checkmark-circle' : 'ellipse'}
-                      size={14}
-                      color={rule.done ? '#22c55e' : '#475569'}
-                    />
-                    <Text
-                      style={[
-                        styles.passwordRuleText,
-                        { color: rule.done ? '#86efac' : '#9aa7bf' },
-                      ]}
-                    >
-                      {rule.label}
-                    </Text>
-                  </View>
-                ))}
-              </View>
-            </>
-          ) : (
-            <View style={styles.rememberRow}>
-              <Text style={styles.rememberLabel}>{t('keepSignedIn')}</Text>
-              <View style={styles.signinUtilityRight}>
-                <TouchableOpacity
-                  onPress={() => void handleForgotPassword()}
-                  disabled={loading}
-                  activeOpacity={0.75}
-                  style={styles.forgotPasswordBtn}
-                >
-                  <Text style={styles.forgotPasswordText}>{t('loginForgotPassword')}</Text>
-                </TouchableOpacity>
-                <Switch
-                  value={rememberMe}
-                  onValueChange={setRememberMe}
-                  disabled={loading}
-                  trackColor={{ false: '#334155', true: '#2563eb' }}
-                  thumbColor={rememberMe ? '#f8fafc' : '#cbd5f5'}
-                  ios_backgroundColor="#334155"
-                />
-              </View>
+          <View style={styles.rememberRow}>
+            <Text style={styles.rememberLabel}>{t('keepSignedIn')}</Text>
+            <View style={styles.signinUtilityRight}>
+              <TouchableOpacity
+                onPress={() => void handleForgotPassword()}
+                disabled={loading}
+                activeOpacity={0.75}
+                style={styles.forgotPasswordBtn}
+              >
+                <Text style={styles.forgotPasswordText}>{t('loginForgotPassword')}</Text>
+              </TouchableOpacity>
+              <Switch
+                value={rememberMe}
+                onValueChange={setRememberMe}
+                disabled={loading}
+                trackColor={{ false: '#334155', true: '#2563eb' }}
+                thumbColor={rememberMe ? '#f8fafc' : '#cbd5f5'}
+                ios_backgroundColor="#334155"
+              />
             </View>
-          )}
+          </View>
           <PrimaryButton
-            title={mode === 'signin' ? t('loginSignInButton') : t('signupCreateButton')}
-            onPress={mode === 'signin' ? handleAuthenticate : handleSignup}
+            title={t('loginSignInButton')}
+            onPress={handleAuthenticate}
             loading={loading}
             disabled={disablePrimaryAction}
           />
@@ -616,32 +354,34 @@ export default function LoginScreen() {
               <Ionicons name="help-circle-outline" size={18} color="#60a5fa" />
               <Text style={styles.supportText}>{t('loginSupportText')}</Text>
             </TouchableOpacity>
-            <View style={styles.footerRow}>
-              <TouchableOpacity
-                activeOpacity={0.75}
-                style={styles.footerLinkChip}
-                onPress={() => void openExternalUrl(t('aboutPrivacyPolicy'), privacyPolicyUrl)}
-                disabled={loading}
-              >
-                <Text style={styles.footerLink}>{t('aboutPrivacyPolicy')}</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                activeOpacity={0.75}
-                style={styles.footerLinkChip}
-                onPress={() => void openExternalUrl(t('aboutTerms'), termsUrl)}
-                disabled={loading}
-              >
-                <Text style={styles.footerLink}>{t('aboutTerms')}</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                activeOpacity={0.75}
-                style={styles.footerLinkChip}
-                onPress={() => void openExternalUrl(t('supportHelpCenter'), helpCenterUrl)}
-                disabled={loading}
-              >
-                <Text style={styles.footerLink}>{t('supportHelpCenter')}</Text>
-              </TouchableOpacity>
-            </View>
+            {!isIOS ? (
+              <View style={styles.footerRow}>
+                <TouchableOpacity
+                  activeOpacity={0.75}
+                  style={styles.footerLinkChip}
+                  onPress={() => void openExternalUrl(t('aboutPrivacyPolicy'), privacyPolicyUrl)}
+                  disabled={loading}
+                >
+                  <Text style={styles.footerLink}>{t('aboutPrivacyPolicy')}</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  activeOpacity={0.75}
+                  style={styles.footerLinkChip}
+                  onPress={() => void openExternalUrl(t('aboutTerms'), termsUrl)}
+                  disabled={loading}
+                >
+                  <Text style={styles.footerLink}>{t('aboutTerms')}</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  activeOpacity={0.75}
+                  style={styles.footerLinkChip}
+                  onPress={() => void openExternalUrl(t('supportHelpCenter'), helpCenterUrl)}
+                  disabled={loading}
+                >
+                  <Text style={styles.footerLink}>{t('supportHelpCenter')}</Text>
+                </TouchableOpacity>
+              </View>
+            ) : null}
           </>
         </View>
           </ScrollView>
@@ -658,9 +398,31 @@ const styles = StyleSheet.create({
   },
   safeArea: {
     flex: 1,
-    alignItems: 'center',
+    alignItems: 'stretch',
     justifyContent: 'center',
     padding: 16,
+  },
+  pageBackButton: {
+    position: 'absolute',
+    top: 12,
+    left: 16,
+    zIndex: 20,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: 'rgba(148,163,184,0.22)',
+    backgroundColor: 'rgba(15,23,42,0.44)',
+    paddingHorizontal: 10,
+    minHeight: 34,
+  },
+  pageBackButtonText: {
+    color: '#cbd5e1',
+    fontSize: 10,
+    fontWeight: '700',
+    letterSpacing: 0.3,
+    textTransform: 'uppercase',
   },
   keyboardContainer: {
     width: '100%',
@@ -697,34 +459,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#94a3b8',
     marginBottom: 14,
-  },
-  segmentRow: {
-    flexDirection: 'row',
-    backgroundColor: '#111629',
-    borderRadius: 999,
-    borderWidth: 1,
-    borderColor: '#1f2937',
-    padding: 4,
-    marginBottom: 14,
-  },
-  segmentButton: {
-    flex: 1,
-    borderRadius: 999,
-    minHeight: 44,
-    paddingVertical: 8,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  segmentButtonActive: {
-    backgroundColor: '#2563eb',
-  },
-  segmentText: {
-    fontSize: 12,
-    color: '#94a3b8',
-    fontWeight: '700',
-  },
-  segmentTextActive: {
-    color: '#f8fafc',
   },
   titleAccent: {
     color: '#60a5fa',
@@ -855,26 +589,5 @@ const styles = StyleSheet.create({
     fontSize: 11,
     color: '#5ab7ee',
     fontWeight: '600',
-  },
-  passwordRulesWrap: {
-    marginTop: -4,
-    marginBottom: 12,
-    paddingHorizontal: 2,
-  },
-  passwordRulesTitle: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: '#8ea0bf',
-    marginBottom: 4,
-  },
-  passwordRuleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    marginTop: 4,
-  },
-  passwordRuleText: {
-    fontSize: 12,
-    fontWeight: '500',
   },
 });

@@ -13,23 +13,23 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLanguage } from '@shared/context/LanguageContext';
 import { useTheme } from '@shared/themeContext';
-import { SUPPORT_FALLBACK_URL } from '@shared/utils/support';
+import { SUPPORT_EMAIL, SUPPORT_FALLBACK_URL } from '@shared/utils/support';
 import { getLegalLinks, openExternalUrlWithFallback } from '@shared/utils/legalLinks';
 
 export default function AboutScreen() {
+  const isIOS = Platform.OS === 'ios';
   const insets = useSafeAreaInsets();
   const { theme } = useTheme();
   const { t } = useLanguage();
-  const configuredAndroidVersionCode = Constants.expoConfig?.android?.versionCode;
-  const configuredIosBuildNumber = Constants.expoConfig?.ios?.buildNumber;
-  const appVersion = Constants.expoConfig?.version || Constants.nativeAppVersion || '1.0.0';
-  const appBuild =
-    Platform.OS === 'android'
-      ? (configuredAndroidVersionCode ? String(configuredAndroidVersionCode) : null)
-      : Platform.OS === 'ios'
-        ? configuredIosBuildNumber || null
-        : null;
-  const versionLabel = appBuild ? `${appVersion} (${appBuild})` : appVersion;
+  const nativeAppVersion =
+    typeof Constants.nativeAppVersion === 'string' ? Constants.nativeAppVersion.trim() : '';
+  const nativeBuildVersion =
+    typeof Constants.nativeBuildVersion === 'string' ? Constants.nativeBuildVersion.trim() : '';
+  const versionLabel = nativeAppVersion
+    ? nativeBuildVersion
+      ? `${nativeAppVersion} (${nativeBuildVersion})`
+      : nativeAppVersion
+    : t('notProvided');
   const { privacyPolicyUrl, termsUrl, supportPageUrl } = getLegalLinks();
 
   const previewBullets = useMemo(
@@ -102,51 +102,60 @@ export default function AboutScreen() {
 
       <View style={[styles.sectionCard, { backgroundColor: theme.surfaceElevated, borderColor: theme.border }]}>
         <Text style={[styles.sectionTitle, { color: theme.textPrimary }]}>{t('supportSectionTitle')}</Text>
-        <TouchableOpacity
-          onPress={() =>
-            void openExternalUrlWithFallback({
-              title: t('supportHelpCenter'),
-              url: supportPageUrl,
-              fallbackUrl: SUPPORT_FALLBACK_URL,
-              unableToOpenMessage: t('unableOpenLinkDevice'),
-            })
-          }
-          activeOpacity={0.85}
-          style={[styles.linkButton, { backgroundColor: theme.surface, borderColor: theme.borderSoft }]}
-        >
-          <Text style={[styles.linkButtonText, { color: theme.textPrimary }]}>{t('supportHelpCenter')}</Text>
-          <Ionicons name="open-outline" size={16} color={theme.textPrimary} />
-        </TouchableOpacity>
-        <TouchableOpacity
-          onPress={() =>
-            void openExternalUrlWithFallback({
-              title: t('aboutPrivacyPolicy'),
-              url: privacyPolicyUrl,
-              fallbackUrl: SUPPORT_FALLBACK_URL,
-              unableToOpenMessage: t('unableOpenLinkDevice'),
-            })
-          }
-          activeOpacity={0.85}
-          style={[styles.linkButton, { backgroundColor: theme.surface, borderColor: theme.borderSoft }]}
-        >
-          <Text style={[styles.linkButtonText, { color: theme.textPrimary }]}>{t('aboutPrivacyPolicy')}</Text>
-          <Ionicons name="open-outline" size={16} color={theme.textPrimary} />
-        </TouchableOpacity>
-        <TouchableOpacity
-          onPress={() =>
-            void openExternalUrlWithFallback({
-              title: t('aboutTerms'),
-              url: termsUrl,
-              fallbackUrl: SUPPORT_FALLBACK_URL,
-              unableToOpenMessage: t('unableOpenLinkDevice'),
-            })
-          }
-          activeOpacity={0.85}
-          style={[styles.linkButton, { backgroundColor: theme.surface, borderColor: theme.borderSoft }]}
-        >
-          <Text style={[styles.linkButtonText, { color: theme.textPrimary }]}>{t('aboutTerms')}</Text>
-          <Ionicons name="open-outline" size={16} color={theme.textPrimary} />
-        </TouchableOpacity>
+        {!isIOS ? (
+          <>
+          <TouchableOpacity
+            onPress={() =>
+              void openExternalUrlWithFallback({
+                title: t('supportHelpCenter'),
+                url: supportPageUrl,
+                fallbackUrl: SUPPORT_FALLBACK_URL,
+                unableToOpenMessage: t('unableOpenLinkDevice'),
+              })
+            }
+            activeOpacity={0.85}
+            style={[styles.linkButton, { backgroundColor: theme.surface, borderColor: theme.borderSoft }]}
+          >
+            <Text style={[styles.linkButtonText, { color: theme.textPrimary }]}>{t('supportHelpCenter')}</Text>
+            <Ionicons name="open-outline" size={16} color={theme.textPrimary} />
+          </TouchableOpacity>
+          <TouchableOpacity
+            onPress={() =>
+              void openExternalUrlWithFallback({
+                title: t('aboutPrivacyPolicy'),
+                url: privacyPolicyUrl,
+                fallbackUrl: SUPPORT_FALLBACK_URL,
+                unableToOpenMessage: t('unableOpenLinkDevice'),
+              })
+            }
+            activeOpacity={0.85}
+            style={[styles.linkButton, { backgroundColor: theme.surface, borderColor: theme.borderSoft }]}
+          >
+            <Text style={[styles.linkButtonText, { color: theme.textPrimary }]}>{t('aboutPrivacyPolicy')}</Text>
+            <Ionicons name="open-outline" size={16} color={theme.textPrimary} />
+          </TouchableOpacity>
+          <TouchableOpacity
+            onPress={() =>
+              void openExternalUrlWithFallback({
+                title: t('aboutTerms'),
+                url: termsUrl,
+                fallbackUrl: SUPPORT_FALLBACK_URL,
+                unableToOpenMessage: t('unableOpenLinkDevice'),
+              })
+            }
+            activeOpacity={0.85}
+            style={[styles.linkButton, { backgroundColor: theme.surface, borderColor: theme.borderSoft }]}
+          >
+            <Text style={[styles.linkButtonText, { color: theme.textPrimary }]}>{t('aboutTerms')}</Text>
+            <Ionicons name="open-outline" size={16} color={theme.textPrimary} />
+          </TouchableOpacity>
+          </>
+        ) : (
+          <View style={[styles.iosInfoCard, { backgroundColor: theme.surface, borderColor: theme.borderSoft }]}>
+            <Text style={[styles.iosInfoText, { color: theme.textSecondary }]}>{t('loginSupportText')}</Text>
+            <Text style={[styles.iosInfoEmail, { color: theme.textPrimary }]}>{SUPPORT_EMAIL}</Text>
+          </View>
+        )}
       </View>
     </ScrollView>
   );
@@ -243,6 +252,21 @@ const styles = StyleSheet.create({
   linkButtonText: {
     flex: 1,
     fontSize: 14,
+    fontWeight: '700',
+  },
+  iosInfoCard: {
+    borderWidth: 1,
+    borderRadius: 14,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    gap: 4,
+  },
+  iosInfoText: {
+    fontSize: 13,
+    lineHeight: 18,
+  },
+  iosInfoEmail: {
+    fontSize: 13,
     fontWeight: '700',
   },
 });

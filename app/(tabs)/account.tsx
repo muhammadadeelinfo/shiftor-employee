@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   Alert,
   FlatList,
@@ -6,13 +6,12 @@ import {
   Platform,
   StyleSheet,
   Text,
-  TextInput,
   TouchableOpacity,
   useWindowDimensions,
   View,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import { PrimaryButton } from '@shared/components/PrimaryButton';
 import { useTheme } from '@shared/themeContext';
 import { useAuth } from '@hooks/useSupabaseAuth';
@@ -22,7 +21,7 @@ import { languageDefinitions } from '@shared/utils/languageUtils';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { LinearGradient } from 'expo-linear-gradient';
-import { getPublicSupabaseClient, supabase, supabaseStorageBucket } from '@lib/supabaseClient';
+import { supabase, supabaseStorageBucket } from '@lib/supabaseClient';
 import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
 import { layoutTokens } from '@shared/theme/layout';
 import { useRouter } from 'expo-router';
@@ -31,15 +30,11 @@ import {
   shouldStackForCompactWidth,
 } from '@shared/utils/responsiveLayout';
 import {
-  buildSupportMailto,
+  SUPPORT_EMAIL,
   SUPPORT_FALLBACK_URL,
 } from '@shared/utils/support';
 import Constants from 'expo-constants';
 import { formatAddress } from '@shared/utils/address';
-import {
-  getLinkedCompanyIdFromSources,
-  resolveCompanyDisplaySnapshot,
-} from '@shared/utils/companyDisplay';
 import { getUserFacingErrorMessage } from '@shared/utils/userFacingError';
 import { getLegalLinks, openExternalUrlWithFallback } from '@shared/utils/legalLinks';
 
@@ -53,7 +48,6 @@ const capitalizeFirstLetter = (value: string) => {
 };
 
 type EmployeeProfile = Record<string, unknown>;
-type CompanySummary = Record<string, unknown>;
 const getProfilePhotoCacheKey = (userId: string) => `employee-profile-photo:${userId}`;
 const getCanonicalPublicStorageUrl = (baseUrl: string, bucket: string, path: string) =>
   `${baseUrl.replace(/\/+$/, '')}/storage/v1/object/public/${encodeURIComponent(bucket)}/${path
@@ -88,25 +82,6 @@ const isMissingColumnError = (error: unknown) =>
   error !== null &&
   'code' in error &&
   (error as { code?: string }).code === '42703';
-
-const isMissingFunctionError = (error: unknown) => {
-  if (!error || typeof error !== 'object') return false;
-  const code = 'code' in error ? String((error as { code?: unknown }).code ?? '') : '';
-  const message = 'message' in error ? String((error as { message?: unknown }).message ?? '') : '';
-  return code === '42883' || code === 'PGRST202' || /function .* does not exist/i.test(message);
-};
-
-const isRpcSignatureMismatchError = (error: unknown) => {
-  if (!error || typeof error !== 'object') return false;
-  const code = 'code' in error ? String((error as { code?: unknown }).code ?? '') : '';
-  const message = 'message' in error ? String((error as { message?: unknown }).message ?? '') : '';
-  return (
-    code === 'PGRST202' ||
-    code === '42883' ||
-    /Could not find the function/i.test(message) ||
-    /request_employee_company_link/i.test(message)
-  );
-};
 
 const fetchEmployeeProfile = async (
   employeeId: string,
@@ -171,133 +146,6 @@ const fetchEmployeeProfile = async (
   }
 
   return null;
-};
-
-const fetchCompanySummary = async (
-  companyId: string,
-  options?: { accessToken?: string | null; apiBaseUrl?: string | null }
-): Promise<CompanySummary | null> => {
-  if (!supabase) {
-    return null;
-  }
-  let diagnosticError: string | null = null;
-  const normalizedApiBaseUrl = options?.apiBaseUrl?.trim()
-    ? options.apiBaseUrl.trim().replace(/\/+$/, '')
-    : '';
-
-  if (normalizedApiBaseUrl && options?.accessToken) {
-    try {
-      const response = await fetch(`${normalizedApiBaseUrl}/api/company-access/current-company`, {
-        headers: {
-          Authorization: `Bearer ${options.accessToken}`,
-        },
-      });
-      const payload = (await response.json().catch(() => ({}))) as {
-        company?: {
-          id?: string;
-          name?: string | null;
-          address?: string | null;
-        };
-        error?: string;
-      };
-
-      if (response.ok && payload.company?.id === companyId) {
-        return {
-          id: payload.company.id,
-          name: payload.company.name ?? null,
-          address: payload.company.address ?? null,
-        } as CompanySummary;
-      }
-      if (!response.ok && typeof payload.error === 'string' && payload.error.trim()) {
-        diagnosticError = payload.error.trim();
-      }
-    } catch (error) {
-      console.warn('Failed to load company summary via backend API', error);
-      diagnosticError = 'Failed to reach company service.';
-    }
-  }
-
-  const loadWithPublicClient = async (): Promise<CompanySummary | null> => {
-    const publicSupabase = getPublicSupabaseClient();
-    if (!publicSupabase) {
-      return null;
-    }
-    const { data: publicData, error: publicError } = await publicSupabase
-      .from('companies')
-      .select('*')
-      .eq('id', companyId)
-      .limit(1)
-      .maybeSingle();
-
-    if (publicError) {
-      if (!isMissingColumnError(publicError)) {
-        console.warn('Failed to load company summary via public client', publicError);
-      }
-      return diagnosticError ? ({ _diagnosticError: diagnosticError } as CompanySummary) : null;
-    }
-    if (!publicData || typeof publicData !== 'object') {
-      return diagnosticError ? ({ _diagnosticError: diagnosticError } as CompanySummary) : null;
-    }
-    return publicData as CompanySummary;
-  };
-
-  const { data: rpcData, error: rpcError } = await supabase.rpc(
-    'get_employee_current_company_profile',
-    { target_company_id: companyId }
-  );
-  if (!rpcError && rpcData && typeof rpcData === 'object' && !Array.isArray(rpcData)) {
-    return rpcData as CompanySummary;
-  }
-  if (rpcError && !isMissingFunctionError(rpcError)) {
-    console.warn('Failed to load company summary via RPC', rpcError);
-  }
-
-  const { data, error } = await supabase
-    .from('companies')
-    .select('*')
-    .eq('id', companyId)
-    .limit(1)
-    .maybeSingle();
-
-  if (error) {
-    if (isMissingColumnError(error)) {
-      return loadWithPublicClient();
-    }
-    console.warn('Failed to load company summary', error);
-    return loadWithPublicClient();
-  }
-  if (!data || typeof data !== 'object') {
-    return loadWithPublicClient();
-  }
-  return data as CompanySummary;
-};
-
-const requestCompanyLink = async (joinCode: string, fullName: string) => {
-  if (!supabase) {
-    throw new Error('Supabase client not configured');
-  }
-  const attempts: Array<Record<string, unknown>> = [
-    { join_code: joinCode, full_name: fullName },
-    { join_code: joinCode },
-  ];
-
-  let lastSignatureError: unknown = null;
-  for (const params of attempts) {
-    const { data, error } = await supabase.rpc('request_employee_company_link', params);
-    if (!error) {
-      return data;
-    }
-    if (isRpcSignatureMismatchError(error)) {
-      lastSignatureError = error;
-      continue;
-    }
-    throw error;
-  }
-
-  if (lastSignatureError) {
-    throw lastSignatureError;
-  }
-  throw new Error('Failed to request company link.');
 };
 
 const getStringField = (source?: Record<string, unknown>, key?: string) => {
@@ -448,10 +296,7 @@ const shiftStatus = (metadata?: Record<string, unknown> | null) => {
 
 export default function AccountScreen() {
   const router = useRouter();
-  const apiBaseUrlValue = (Constants.expoConfig?.extra?.apiBaseUrl as string | undefined)?.trim();
-  const apiBaseUrl = apiBaseUrlValue ? apiBaseUrlValue.replace(/\/+$/, '') : '';
-  const queryClient = useQueryClient();
-  const { user, session, signOut } = useAuth();
+  const { user, signOut } = useAuth();
   const { unreadCount } = useNotifications();
   const { theme } = useTheme();
   const { t, language, setLanguage } = useLanguage();
@@ -525,56 +370,7 @@ export default function AccountScreen() {
     getMetadataPhoneDeep(metadata);
   const contactAddress =
     normalizeContactString(getProfileAddress(employeeRecord)) ?? getMetadataAddressDeep(metadata);
-  const linkedCompanyId = getLinkedCompanyIdFromSources(employeeRecord, mergedMetadataRecord);
-  const { data: companySummary } = useQuery({
-    queryKey: ['companySummary', linkedCompanyId],
-    queryFn: () =>
-      linkedCompanyId
-        ? fetchCompanySummary(linkedCompanyId, {
-            accessToken: session?.access_token ?? null,
-            apiBaseUrl,
-          })
-        : null,
-    enabled: Boolean(linkedCompanyId),
-    staleTime: 0,
-    refetchOnMount: 'always',
-  });
-  const companyDisplay = useMemo(
-    () =>
-      resolveCompanyDisplaySnapshot({
-        companySummary: companySummary ?? undefined,
-        employeeRecord: employeeRecord ?? undefined,
-        metadata: mergedMetadataRecord,
-        fallbackName: t('companyUnknownName'),
-        fallbackAddress: t('notProvided'),
-      }),
-    [companySummary, employeeRecord, mergedMetadataRecord, t]
-  );
-  const requestedCompanyCode = getStringField(mergedMetadataRecord, 'requested_company_code');
-  const [joinCode, setJoinCode] = useState(requestedCompanyCode ?? '');
-  const hasEditedJoinCode = useRef(false);
-  const joinCodeInputRef = useRef<TextInput | null>(null);
-  const [linkingCompany, setLinkingCompany] = useState(false);
-  const canRequestCompanyAccess = Boolean(user?.id);
-  const isSwitchFlow = Boolean(linkedCompanyId);
-  const currentCompanyName = companyDisplay.name;
-  const currentCompanyLogoUrl = companyDisplay.logoUrl;
-  const currentCompanyAddress = companyDisplay.address;
-  const currentCompanyDiagnostic = getStringField(companySummary ?? undefined, '_diagnosticError');
-  const currentCompanyAddressParts = formatAddress(currentCompanyAddress);
-  const currentCompanyInitials = currentCompanyName
-    .split(' ')
-    .filter(Boolean)
-    .map((part) => part[0])
-    .slice(0, 2)
-    .join('')
-    .toUpperCase();
-  useEffect(() => {
-    if (hasEditedJoinCode.current) {
-      return;
-    }
-    setJoinCode(requestedCompanyCode ?? '');
-  }, [requestedCompanyCode]);
+  const [deletingAccount, setDeletingAccount] = useState(false);
   const handleSignOut = () => {
     signOut();
   };
@@ -667,108 +463,55 @@ export default function AccountScreen() {
       unableToOpenMessage: t('unableOpenLinkDevice'),
     });
   };
-  const confirmCompanySwitch = () =>
-    new Promise<boolean>((resolve) => {
+  const handleDeleteAccount = async () => {
+    if (!supabase) {
+      Alert.alert(t('supportDeleteAccount'), t('authClientUnavailable'));
+      return;
+    }
+    const confirmed = await new Promise<boolean>((resolve) => {
       Alert.alert(
-        t('companySwitchConfirmTitle'),
-        t('companySwitchConfirmBody'),
+        t('accountDeletionConfirmTitle'),
+        t('accountDeletionConfirmBody'),
         [
           { text: t('commonCancel') || 'Cancel', style: 'cancel', onPress: () => resolve(false) },
-          { text: t('commonContinue') || 'Continue', onPress: () => resolve(true) },
+          {
+            text: t('accountDeletionConfirmAction'),
+            style: 'destructive',
+            onPress: () => resolve(true),
+          },
         ],
         { cancelable: true, onDismiss: () => resolve(false) }
       );
     });
-  const handleRequestCompanyAccess = async () => {
-    const normalizedJoinCode = joinCode.trim().toUpperCase();
-    if (!normalizedJoinCode) {
-      Alert.alert(t('companyLinkTitle'), t('companyLinkEnterCodeBody'));
+    if (!confirmed) {
       return;
-    }
-    if (!supabase) {
-      Alert.alert(t('companyLinkTitle'), t('authClientUnavailable'));
-      return;
-    }
-    if (isSwitchFlow) {
-      const confirmed = await confirmCompanySwitch();
-      if (!confirmed) {
-        return;
-      }
     }
 
     try {
-      setLinkingCompany(true);
-      const fullName = getStringField(mergedMetadataRecord, 'full_name') ?? profileName(user);
-      const data = await requestCompanyLink(normalizedJoinCode, fullName);
-      const refreshAfterAlert = () => {
-        hasEditedJoinCode.current = false;
-        setJoinCode('');
-        void queryClient.invalidateQueries({ queryKey: ['employeeProfile'] });
-        void queryClient.invalidateQueries({ queryKey: ['companySummary'] });
-      };
-
+      setDeletingAccount(true);
+      const { data, error } = await supabase.rpc('request_employee_account_deletion');
+      if (error) {
+        throw error;
+      }
       const payload = data && typeof data === 'object' ? (data as Record<string, unknown>) : {};
-      const status = typeof payload.status === 'string' ? payload.status : null;
-      const requestedAction =
-        typeof payload.requestedAction === 'string' ? payload.requestedAction : 'join';
-      const ok = payload.ok === true;
-      const showLinkAlert = (message: string) =>
-        Alert.alert(t('companyLinkTitle'), message, [
-          { text: 'OK', onPress: refreshAfterAlert },
-        ]);
+      const status = typeof payload.status === 'string' ? payload.status : '';
+      const successMessage =
+        status === 'already_pending'
+          ? t('accountDeletionAlreadyPendingBody')
+          : t('accountDeletionRequestedBody');
 
-      if (status === 'invalid_code') {
-        showLinkAlert(t('companyLinkInvalidCodeBody'));
-        return;
-      }
-      if (status === 'active') {
-        showLinkAlert(t('companyLinkAlreadyActiveBody'));
-        return;
-      }
-      if (status === 'code_expired') {
-        showLinkAlert(t('companyLinkCodeExpiredBody'));
-        return;
-      }
-      if (status === 'code_exhausted') {
-        showLinkAlert(t('companyLinkCodeExhaustedBody'));
-        return;
-      }
-      if (status === 'rate_limited') {
-        showLinkAlert(t('companyLinkRateLimitedBody'));
-        return;
-      }
-
-      if (ok) {
-        showLinkAlert(
-          requestedAction === 'switch'
-            ? t('companyLinkSwitchRequestedBody')
-            : t('companyLinkRequestedBody')
-        );
-      }
+      Alert.alert(t('supportDeleteAccount'), successMessage);
+      await signOut();
+      router.replace('/login');
     } catch (error) {
-      console.warn('Company link request failed', error);
+      console.warn('Account deletion request failed', error);
       Alert.alert(
-        t('companyLinkTitle'),
-        getUserFacingErrorMessage(error, {
-          fallback: t('companyLinkRequestFailedBody'),
-        }),
-        [{ text: 'OK', onPress: () => setJoinCode('') }]
+        t('supportDeleteAccount'),
+        getUserFacingErrorMessage(error, { fallback: t('accountDeletionRequestFailedBody') })
       );
     } finally {
-      setLinkingCompany(false);
+      setDeletingAccount(false);
     }
-  };
-  const handleDeleteAccount = async () => {
-    const email = user?.email?.trim() || '';
-    await openExternalUrlWithFallback({
-      title: t('supportDeleteAccount'),
-      url: buildSupportMailto(
-        'Delete my account',
-        `Please delete my account${email ? ` for ${email}` : ''}.`
-      ),
-      fallbackUrl: SUPPORT_FALLBACK_URL,
-      unableToOpenMessage: t('unableOpenLinkDevice'),
-    });
   };
   const contentContainerStyle = [
     styles.content,
@@ -802,18 +545,13 @@ export default function AccountScreen() {
     ((Constants.expoConfig?.name as string | undefined)?.trim() || 'Shiftor Employee');
   const nativeAppVersion =
     typeof Constants.nativeAppVersion === 'string' ? Constants.nativeAppVersion.trim() : '';
-  const configAppVersion = ((Constants.expoConfig?.version as string | undefined)?.trim() || '');
-  const appVersion = nativeAppVersion || configAppVersion || '1.0.0';
   const nativeBuildVersion =
     typeof Constants.nativeBuildVersion === 'string' ? Constants.nativeBuildVersion.trim() : '';
-  const configIosBuildNumber =
-    ((Constants.expoConfig?.ios?.buildNumber as string | undefined)?.trim() || '');
-  const configAndroidBuildCode =
-    typeof Constants.expoConfig?.android?.versionCode === 'number'
-      ? String(Constants.expoConfig.android.versionCode)
-      : '';
-  const appBuild = nativeBuildVersion || configIosBuildNumber || configAndroidBuildCode;
-  const appVersionLabel = appBuild ? `${appVersion} (${appBuild})` : appVersion;
+  const appVersionLabel = nativeAppVersion
+    ? nativeBuildVersion
+      ? `${nativeAppVersion} (${nativeBuildVersion})`
+      : nativeAppVersion
+    : t('notProvided');
   const initials = profileName(user)
     .split(' ')
     .filter(Boolean)
@@ -1130,134 +868,9 @@ export default function AccountScreen() {
                     onPress={() => router.push('/login')}
                     style={styles.guestAuthPrimary}
                   />
-                  <TouchableOpacity
-                    style={[styles.guestAuthSecondary, { borderColor: theme.borderSoft }]}
-                    onPress={() => router.push('/login?mode=signup')}
-                    accessibilityRole="button"
-                  >
-                    <Text style={[styles.guestAuthSecondaryText, { color: theme.primary }]}>
-                      {t('signupCreateButton')}
-                    </Text>
-                  </TouchableOpacity>
                 </View>
               ) : null}
             </View>
-            {canRequestCompanyAccess ? (
-              <View
-                style={[
-                  styles.sectionCard,
-                  { backgroundColor: theme.surface, borderColor: theme.borderSoft },
-                  isIOS && styles.sectionCardIOS,
-                ]}
-              >
-                <Text style={[styles.sectionHeading, { color: theme.textPrimary }]}>
-                  {isSwitchFlow ? t('companySwitchSectionTitle') : t('companyJoinSectionTitle')}
-                </Text>
-                {isSwitchFlow ? (
-                  <View>
-                    <Text style={[styles.contactSectionTitle, { color: theme.textSecondary }]}>
-                      {t('companyCurrentInfoLabel')}
-                    </Text>
-                    <View
-                      style={[
-                        styles.companyInfoCard,
-                        { backgroundColor: theme.surfaceMuted, borderColor: theme.borderSoft },
-                      ]}
-                    >
-                      <View style={[styles.companyProfileTop, { borderColor: theme.borderSoft }]}>
-                        <View style={[styles.companyLogoFrame, { borderColor: theme.borderSoft }]}>
-                          {currentCompanyLogoUrl ? (
-                            <Image
-                              source={{ uri: currentCompanyLogoUrl }}
-                              style={styles.companyLogoPreview}
-                              resizeMode="contain"
-                            />
-                          ) : (
-                            <Text style={[styles.companyLogoFallbackText, { color: theme.textPrimary }]}>
-                              {currentCompanyInitials || 'CO'}
-                            </Text>
-                          )}
-                        </View>
-                        <View style={styles.companyProfileBody}>
-                          <Text style={[styles.companyProfileLabel, { color: theme.textSecondary }]}>
-                            {t('companyCurrentNameLabel')}
-                          </Text>
-                          <Text style={[styles.companyProfileName, { color: theme.textPrimary }]}>
-                            {currentCompanyName}
-                          </Text>
-                        </View>
-                      </View>
-                      <View style={[styles.companyAddressRow, { borderColor: theme.borderSoft }]}>
-                        <Text style={[styles.companyProfileLabel, { color: theme.textSecondary }]}>
-                          {t('companyCurrentAddressLabel')}
-                        </Text>
-                        {currentCompanyAddressParts ? (
-                          <View>
-                            <Text style={[styles.companyAddressValue, { color: theme.textPrimary }]}>
-                              {currentCompanyAddressParts.label}
-                            </Text>
-                            {currentCompanyAddressParts.meta ? (
-                              <Text style={[styles.companyAddressValueSecondary, { color: theme.textSecondary }]}>
-                                {currentCompanyAddressParts.meta}
-                              </Text>
-                            ) : null}
-                          </View>
-                        ) : (
-                          <Text style={[styles.companyAddressValue, { color: theme.textPrimary }]}>
-                            {currentCompanyAddress}
-                          </Text>
-                        )}
-                      </View>
-                      {currentCompanyDiagnostic ? (
-                        <Text style={[styles.sectionHint, { color: theme.fail }]}>
-                          {currentCompanyDiagnostic}
-                        </Text>
-                      ) : null}
-                    </View>
-                  </View>
-                ) : null}
-                <Text style={[styles.sectionHint, { color: theme.textSecondary }]}>
-                  {isSwitchFlow ? t('companySwitchSectionHint') : t('companyJoinSectionHint')}
-                </Text>
-                <TouchableOpacity
-                  activeOpacity={1}
-                  onPress={() => joinCodeInputRef.current?.focus()}
-                  disabled={linkingCompany}
-                  style={[
-                    styles.companyJoinInputWrap,
-                    { backgroundColor: theme.surfaceMuted, borderColor: theme.borderSoft },
-                  ]}
-                >
-                  <TextInput
-                        ref={joinCodeInputRef}
-                        value={joinCode}
-                        onChangeText={(value) => {
-                          hasEditedJoinCode.current = true;
-                          setJoinCode(value);
-                        }}
-                    placeholder={t('companyJoinCodePlaceholder')}
-                    placeholderTextColor={theme.textPlaceholder}
-                    autoCapitalize="characters"
-                    autoCorrect={false}
-                    autoComplete="off"
-                    editable={!linkingCompany}
-                    returnKeyType="done"
-                    style={[styles.companyJoinInput, { color: theme.textPrimary }]}
-                  />
-                </TouchableOpacity>
-                {requestedCompanyCode ? (
-                  <Text style={[styles.companyJoinPendingText, { color: theme.textSecondary }]}>
-                    {t('companyJoinPendingHint')}
-                  </Text>
-                ) : null}
-                <PrimaryButton
-                  title={isSwitchFlow ? t('companySwitchRequestButton') : t('companyJoinRequestButton')}
-                  onPress={() => void handleRequestCompanyAccess()}
-                  loading={linkingCompany}
-                />
-              </View>
-            ) : null}
-
             <View
               style={[
                 styles.sectionCard,
@@ -1386,20 +999,34 @@ export default function AccountScreen() {
                 <Text style={[styles.sectionHeading, { color: theme.textPrimary }]}>
                   {t('supportSectionTitle')}
                 </Text>
-                <View style={styles.toolsList}>
-                  <TouchableOpacity
-                    style={[styles.toolsRow, { borderColor: theme.borderSoft }]}
-                    onPress={() => void handleHelpCenter()}
+                {!isIOS ? (
+                  <View style={styles.toolsList}>
+                    <TouchableOpacity
+                      style={[styles.toolsRow, { borderColor: theme.borderSoft }]}
+                      onPress={() => void handleHelpCenter()}
+                    >
+                      <View style={[styles.toolsIconWrap, { backgroundColor: theme.surfaceMuted }]}>
+                        <Ionicons name="help-circle-outline" size={16} color={theme.primary} />
+                      </View>
+                      <Text style={[styles.toolsLabel, { color: theme.textPrimary }]}>
+                        {t('supportHelpCenter')}
+                      </Text>
+                      <Ionicons name="chevron-forward" size={16} color={theme.textSecondary} />
+                    </TouchableOpacity>
+                  </View>
+                ) : (
+                  <View
+                    style={[
+                      styles.iOSSupportCard,
+                      { backgroundColor: theme.surfaceMuted, borderColor: theme.borderSoft },
+                    ]}
                   >
-                    <View style={[styles.toolsIconWrap, { backgroundColor: theme.surfaceMuted }]}>
-                      <Ionicons name="help-circle-outline" size={16} color={theme.primary} />
-                    </View>
-                    <Text style={[styles.toolsLabel, { color: theme.textPrimary }]}>
-                      {t('supportHelpCenter')}
+                    <Text style={[styles.sectionHint, { color: theme.textSecondary }]}>
+                      {t('loginSupportText')}
                     </Text>
-                    <Ionicons name="chevron-forward" size={16} color={theme.textSecondary} />
-                  </TouchableOpacity>
-                </View>
+                    <Text style={[styles.iOSSupportEmail, { color: theme.textPrimary }]}>{SUPPORT_EMAIL}</Text>
+                  </View>
+                )}
               </View>
             ) : null}
 
@@ -1428,32 +1055,34 @@ export default function AccountScreen() {
                     </View>
                   ))}
                 </View>
-                <View style={styles.toolsList}>
-                  <TouchableOpacity
-                    style={[styles.toolsRow, { borderColor: theme.borderSoft }]}
-                    onPress={() => void handlePrivacyPolicy()}
-                  >
-                    <View style={[styles.toolsIconWrap, { backgroundColor: theme.surfaceMuted }]}>
-                      <Ionicons name="shield-outline" size={16} color={theme.primary} />
-                    </View>
-                    <Text style={[styles.toolsLabel, { color: theme.textPrimary }]}>
-                      {t('aboutPrivacyPolicy')}
-                    </Text>
-                    <Ionicons name="chevron-forward" size={16} color={theme.textSecondary} />
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    style={[styles.toolsRow, { borderColor: theme.borderSoft }]}
-                    onPress={() => void handleTerms()}
-                  >
-                    <View style={[styles.toolsIconWrap, { backgroundColor: theme.surfaceMuted }]}>
-                      <Ionicons name="document-text-outline" size={16} color={theme.primary} />
-                    </View>
-                    <Text style={[styles.toolsLabel, { color: theme.textPrimary }]}>
-                      {t('aboutTerms')}
-                    </Text>
-                    <Ionicons name="chevron-forward" size={16} color={theme.textSecondary} />
-                  </TouchableOpacity>
-                </View>
+                {!isIOS ? (
+                  <View style={styles.toolsList}>
+                    <TouchableOpacity
+                      style={[styles.toolsRow, { borderColor: theme.borderSoft }]}
+                      onPress={() => void handlePrivacyPolicy()}
+                    >
+                      <View style={[styles.toolsIconWrap, { backgroundColor: theme.surfaceMuted }]}>
+                        <Ionicons name="shield-outline" size={16} color={theme.primary} />
+                      </View>
+                      <Text style={[styles.toolsLabel, { color: theme.textPrimary }]}>
+                        {t('aboutPrivacyPolicy')}
+                      </Text>
+                      <Ionicons name="chevron-forward" size={16} color={theme.textSecondary} />
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={[styles.toolsRow, { borderColor: theme.borderSoft }]}
+                      onPress={() => void handleTerms()}
+                    >
+                      <View style={[styles.toolsIconWrap, { backgroundColor: theme.surfaceMuted }]}>
+                        <Ionicons name="document-text-outline" size={16} color={theme.primary} />
+                      </View>
+                      <Text style={[styles.toolsLabel, { color: theme.textPrimary }]}>
+                        {t('aboutTerms')}
+                      </Text>
+                      <Ionicons name="chevron-forward" size={16} color={theme.textSecondary} />
+                    </TouchableOpacity>
+                  </View>
+                ) : null}
               </View>
             ) : null}
 
@@ -1511,7 +1140,11 @@ export default function AccountScreen() {
                   onPress={handleSignOut}
                   style={[styles.button, isIOS && styles.buttonIOS]}
                 />
-                <TouchableOpacity onPress={() => void handleDeleteAccount()}>
+                <TouchableOpacity
+                  onPress={() => void handleDeleteAccount()}
+                  disabled={deletingAccount}
+                  accessibilityRole="button"
+                >
                   <Text style={[styles.link, styles.destructiveLink, { color: theme.fail }]}>
                     {t('supportDeleteAccount')}
                   </Text>
@@ -1761,6 +1394,18 @@ const styles = StyleSheet.create({
   toolsList: {
     marginTop: 2,
   },
+  iOSSupportCard: {
+    borderWidth: 1,
+    borderRadius: 14,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    marginTop: 6,
+    gap: 4,
+  },
+  iOSSupportEmail: {
+    fontSize: 13,
+    fontWeight: '700',
+  },
   toolsRow: {
     minHeight: 46,
     borderWidth: 1,
@@ -1843,19 +1488,6 @@ const styles = StyleSheet.create({
   },
   guestAuthPrimary: {
     marginTop: 0,
-  },
-  guestAuthSecondary: {
-    minHeight: 44,
-    borderWidth: 1,
-    borderRadius: 12,
-    marginTop: 10,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 12,
-  },
-  guestAuthSecondaryText: {
-    fontSize: 14,
-    fontWeight: '700',
   },
   contactSectionTitle: {
     fontSize: 11,
