@@ -48,6 +48,30 @@ const capitalizeFirstLetter = (value: string) => {
 };
 
 type EmployeeProfile = Record<string, unknown>;
+type MonthlyHoursSummary = {
+  month: string;
+  plannedMinutes: number;
+  workedMinutes: number;
+  deltaMinutes: number;
+  shiftsCount: number;
+  completeCount: number;
+  openCount: number;
+  missingCount: number;
+  scheduledCount: number;
+};
+
+type MonthlyHoursResponse = {
+  employee: {
+    id: string;
+    companyId: string;
+    firstName: string | null;
+    lastName: string | null;
+    email: string | null;
+  };
+  summary: MonthlyHoursSummary;
+  objectTotals: Array<unknown>;
+};
+
 const getProfilePhotoCacheKey = (userId: string) => `employee-profile-photo:${userId}`;
 const getCanonicalPublicStorageUrl = (baseUrl: string, bucket: string, path: string) =>
   `${baseUrl.replace(/\/+$/, '')}/storage/v1/object/public/${encodeURIComponent(bucket)}/${path
@@ -294,9 +318,39 @@ const shiftStatus = (metadata?: Record<string, unknown> | null) => {
   return 'Active';
 };
 
+const formatMonthKey = (value: Date) =>
+  `${value.getUTCFullYear()}-${String(value.getUTCMonth() + 1).padStart(2, '0')}`;
+
+const formatMinutesLabel = (
+  totalMinutes: number,
+  t: ReturnType<typeof useLanguage>['t']
+) => {
+  const absoluteMinutes = Math.max(0, Math.round(Math.abs(totalMinutes)));
+  const hours = Math.floor(absoluteMinutes / 60);
+  const minutes = absoluteMinutes % 60;
+  if (hours <= 0) {
+    return t('qrClockOutWorkedMinutes', { minutes: absoluteMinutes });
+  }
+  if (minutes === 0) {
+    return t('qrClockOutWorkedHours', { hours });
+  }
+  return t('qrClockOutWorkedHoursMinutes', { hours, minutes });
+};
+
+const formatSignedMinutesLabel = (
+  totalMinutes: number,
+  t: ReturnType<typeof useLanguage>['t']
+) => {
+  if (totalMinutes === 0) {
+    return t('accountMonthlyHoursOnTrack');
+  }
+  const prefix = totalMinutes > 0 ? '+' : '-';
+  return `${prefix}${formatMinutesLabel(totalMinutes, t)}`;
+};
+
 export default function AccountScreen() {
   const router = useRouter();
-  const { user, signOut } = useAuth();
+  const { user, session, signOut } = useAuth();
   const { unreadCount } = useNotifications();
   const { theme } = useTheme();
   const { t, language, setLanguage } = useLanguage();
@@ -310,6 +364,9 @@ export default function AccountScreen() {
   const greetingLineHeight = Math.round(greetingFontSize * 1.12);
   const isGuest = !user;
   const employeeId = user?.id;
+  const apiBaseUrlValue = (Constants.expoConfig?.extra?.apiBaseUrl as string | undefined)?.trim();
+  const apiBaseUrl = apiBaseUrlValue ? apiBaseUrlValue.replace(/\/+$/, '') : '';
+  const currentMonthKey = useMemo(() => formatMonthKey(new Date()), []);
   const metadata = user?.user_metadata;
   const appMetadata = user?.app_metadata;
   const metadataRecord =
@@ -360,6 +417,34 @@ export default function AccountScreen() {
     queryFn: () =>
       employeeId ? fetchEmployeeProfile(employeeId, user?.email, mergedMetadataRecord) : null,
     enabled: !!employeeId,
+    staleTime: 60_000,
+  });
+  const {
+    data: monthlyHours,
+    error: monthlyHoursError,
+    isLoading: monthlyHoursLoading,
+  } = useQuery({
+    queryKey: ['employeeMonthlyHours', user?.id, currentMonthKey, apiBaseUrl],
+    queryFn: async (): Promise<MonthlyHoursResponse> => {
+      const headers: Record<string, string> = {
+        Accept: 'application/json',
+      };
+      if (session?.access_token) {
+        headers.Authorization = `Bearer ${session.access_token}`;
+      }
+      const response = await fetch(
+        `${apiBaseUrl}/api/employee/monthly-hours?month=${encodeURIComponent(currentMonthKey)}`,
+        {
+          method: 'GET',
+          headers,
+        }
+      );
+      if (!response.ok) {
+        throw new Error(t('accountMonthlyHoursLoadFailed'));
+      }
+      return (await response.json()) as MonthlyHoursResponse;
+    },
+    enabled: Boolean(user?.id && session?.access_token && apiBaseUrl),
     staleTime: 60_000,
   });
   const status = shiftStatus(user?.user_metadata);
@@ -518,6 +603,65 @@ export default function AccountScreen() {
     { paddingBottom: 28 + insets.bottom + tabBarHeight },
   ];
   const noValueLabel = t('notProvided');
+  const monthlyHoursMonthLabel = useMemo(() => {
+    const [yearRaw, monthRaw] = (monthlyHours?.summary.month ?? currentMonthKey).split('-');
+    const year = Number(yearRaw);
+    const month = Number(monthRaw);
+    if (!Number.isFinite(year) || !Number.isFinite(month) || month < 1 || month > 12) {
+      return monthlyHours?.summary.month ?? currentMonthKey;
+    }
+    return new Intl.DateTimeFormat(language === 'de' ? 'de-DE' : 'en-US', {
+      month: 'long',
+      year: 'numeric',
+      timeZone: 'UTC',
+    }).format(new Date(Date.UTC(year, month - 1, 1)));
+  }, [currentMonthKey, language, monthlyHours?.summary.month]);
+  const monthlyHoursStats = monthlyHours?.summary
+    ? [
+        {
+          label: t('accountMonthlyHoursWorked'),
+          value: formatMinutesLabel(monthlyHours.summary.workedMinutes, t),
+          tone: theme.primary,
+        },
+        {
+          label: t('accountMonthlyHoursPlanned'),
+          value: formatMinutesLabel(monthlyHours.summary.plannedMinutes, t),
+          tone: theme.info,
+        },
+        {
+          label: t('accountMonthlyHoursBalance'),
+          value: formatSignedMinutesLabel(monthlyHours.summary.deltaMinutes, t),
+          tone:
+            monthlyHours.summary.deltaMinutes < 0
+              ? theme.fail
+              : monthlyHours.summary.deltaMinutes > 0
+                ? theme.success
+                : theme.textPrimary,
+        },
+      ]
+    : [];
+  const monthlyHoursProgress = monthlyHours?.summary
+    ? Math.max(
+        0,
+        Math.min(
+          1,
+          monthlyHours.summary.plannedMinutes > 0
+            ? monthlyHours.summary.workedMinutes / monthlyHours.summary.plannedMinutes
+            : 0
+        )
+      )
+    : 0;
+  const monthlyHoursProgressPercent: `${number}%` = `${Math.round(monthlyHoursProgress * 100)}%`;
+  const monthlyHoursBalanceTone = monthlyHours?.summary
+    ? monthlyHours.summary.deltaMinutes < 0
+      ? theme.fail
+      : monthlyHours.summary.deltaMinutes > 0
+        ? theme.success
+        : theme.textPrimary
+    : theme.textPrimary;
+  const monthlyHoursBalanceLabel = monthlyHours?.summary
+    ? formatSignedMinutesLabel(monthlyHours.summary.deltaMinutes, t)
+    : null;
   const addressParts = formatAddress(contactAddress);
   const contactFields: Array<{
     label: string;
@@ -799,6 +943,134 @@ export default function AccountScreen() {
                   </View>
                 ))}
               </View>
+              {!isGuest ? (
+                <View
+                  style={[
+                    styles.monthlyHoursCard,
+                    { borderColor: theme.borderSoft },
+                  ]}
+                >
+                  <LinearGradient
+                    colors={['rgba(129, 140, 248, 0.18)', 'rgba(56, 189, 248, 0.08)', 'rgba(12, 19, 37, 0.08)']}
+                    start={[0, 0]}
+                    end={[1, 1]}
+                    style={styles.monthlyHoursGradient}
+                  >
+                    <View style={styles.monthlyHoursHeader}>
+                      <View style={styles.monthlyHoursHeadingWrap}>
+                        <Text style={[styles.contactSectionTitle, styles.monthlyHoursEyebrow, { color: theme.textSecondary }]}>
+                          {t('accountMonthlyHoursTitle')}
+                        </Text>
+                        <Text style={[styles.monthlyHoursMonth, { color: theme.textPrimary }]}>
+                          {monthlyHoursMonthLabel}
+                        </Text>
+                      </View>
+                      {monthlyHours?.summary ? (
+                        <View
+                          style={[
+                            styles.monthlyHoursShiftBadge,
+                            { backgroundColor: 'rgba(12, 19, 37, 0.42)', borderColor: 'rgba(255,255,255,0.12)' },
+                          ]}
+                        >
+                          <Text style={[styles.monthlyHoursShiftBadgeText, { color: theme.textPrimary }]}>
+                            {t('accountMonthlyHoursShiftCount', { count: monthlyHours.summary.shiftsCount })}
+                          </Text>
+                        </View>
+                      ) : null}
+                    </View>
+                    {monthlyHoursLoading ? (
+                      <Text style={[styles.sectionHint, styles.monthlyHoursStateText, { color: theme.textSecondary }]}>
+                        {t('accountMonthlyHoursLoading')}
+                      </Text>
+                    ) : monthlyHours?.summary ? (
+                      <>
+                        <View style={styles.monthlyHoursHeroRow}>
+                          <View style={styles.monthlyHoursHeroMetric}>
+                            <Text style={[styles.monthlyHoursHeroLabel, { color: theme.textSecondary }]}>
+                              {t('accountMonthlyHoursWorked')}
+                            </Text>
+                            <Text style={[styles.monthlyHoursHeroValue, { color: theme.textPrimary }]}>
+                              {formatMinutesLabel(monthlyHours.summary.workedMinutes, t)}
+                            </Text>
+                          </View>
+                          <View
+                            style={[
+                              styles.monthlyHoursBalanceBadge,
+                              {
+                                backgroundColor:
+                                  monthlyHours.summary.deltaMinutes < 0
+                                    ? 'rgba(239, 68, 68, 0.14)'
+                                    : monthlyHours.summary.deltaMinutes > 0
+                                      ? 'rgba(34, 197, 94, 0.14)'
+                                      : 'rgba(255,255,255,0.08)',
+                                borderColor:
+                                  monthlyHours.summary.deltaMinutes < 0
+                                    ? 'rgba(239, 68, 68, 0.34)'
+                                    : monthlyHours.summary.deltaMinutes > 0
+                                      ? 'rgba(34, 197, 94, 0.32)'
+                                      : 'rgba(255,255,255,0.12)',
+                              },
+                            ]}
+                          >
+                            <Text style={[styles.monthlyHoursBalanceLabel, { color: theme.textSecondary }]}>
+                              {t('accountMonthlyHoursBalance')}
+                            </Text>
+                            <Text style={[styles.monthlyHoursBalanceValue, { color: monthlyHoursBalanceTone }]}>
+                              {monthlyHoursBalanceLabel}
+                            </Text>
+                          </View>
+                        </View>
+                        <View style={styles.monthlyHoursProgressWrap}>
+                          <View style={[styles.monthlyHoursProgressTrack, { backgroundColor: 'rgba(255,255,255,0.08)' }]}>
+                            <LinearGradient
+                              colors={[theme.primary, theme.info]}
+                              start={[0, 0]}
+                              end={[1, 0]}
+                              style={[
+                                styles.monthlyHoursProgressFill,
+                                {
+                                  width: monthlyHoursProgressPercent,
+                                  minWidth: monthlyHoursProgress > 0 ? 10 : 0,
+                                },
+                              ]}
+                            />
+                          </View>
+                          <View style={styles.monthlyHoursProgressMeta}>
+                            <Text style={[styles.monthlyHoursProgressLabel, { color: theme.textSecondary }]}>
+                              {t('accountMonthlyHoursPlanned')}: {formatMinutesLabel(monthlyHours.summary.plannedMinutes, t)}
+                            </Text>
+                            <Text style={[styles.monthlyHoursProgressValue, { color: theme.textPrimary }]}>
+                              {monthlyHoursProgressPercent}
+                            </Text>
+                          </View>
+                        </View>
+                        <View style={styles.monthlyHoursStatsGrid}>
+                          {monthlyHoursStats.map((stat) => (
+                            <View
+                              key={stat.label}
+                              style={[
+                                styles.monthlyHoursStatCard,
+                                { backgroundColor: 'rgba(12, 19, 37, 0.42)', borderColor: 'rgba(255,255,255,0.08)' },
+                              ]}
+                            >
+                              <Text style={[styles.infoLabel, { color: theme.textSecondary }]}>{stat.label}</Text>
+                              <Text style={[styles.monthlyHoursStatValue, { color: stat.tone }]}>{stat.value}</Text>
+                            </View>
+                          ))}
+                        </View>
+                      </>
+                    ) : (
+                      <Text style={[styles.sectionHint, styles.monthlyHoursStateText, { color: theme.textSecondary }]}>
+                        {apiBaseUrl
+                          ? monthlyHoursError instanceof Error
+                            ? monthlyHoursError.message
+                            : t('accountMonthlyHoursUnavailable')
+                          : t('accountMonthlyHoursUnavailable')}
+                      </Text>
+                    )}
+                  </LinearGradient>
+                </View>
+              ) : null}
               <View style={styles.contactList}>
                 <Text style={[styles.contactSectionTitle, { color: theme.textSecondary }]}>{t('contactInformation')}</Text>
                 {contactFields.map((field) => (
@@ -1470,6 +1742,130 @@ const styles = StyleSheet.create({
   },
   contactList: {
     marginTop: 10,
+  },
+  monthlyHoursCard: {
+    marginTop: 14,
+    borderWidth: 1,
+    borderRadius: 22,
+    overflow: 'hidden',
+  },
+  monthlyHoursGradient: {
+    padding: 14,
+    gap: 14,
+  },
+  monthlyHoursHeader: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+    gap: 12,
+  },
+  monthlyHoursHeadingWrap: {
+    flex: 1,
+    minWidth: 0,
+  },
+  monthlyHoursEyebrow: {
+    marginBottom: 4,
+  },
+  monthlyHoursMonth: {
+    fontSize: 18,
+    fontWeight: '700',
+    letterSpacing: -0.2,
+  },
+  monthlyHoursHeroRow: {
+    flexDirection: 'row',
+    alignItems: 'stretch',
+    gap: 12,
+  },
+  monthlyHoursHeroMetric: {
+    flex: 1,
+    minWidth: 0,
+  },
+  monthlyHoursHeroLabel: {
+    fontSize: 12,
+    fontWeight: '600',
+    letterSpacing: 0.2,
+    marginBottom: 6,
+  },
+  monthlyHoursHeroValue: {
+    fontSize: 28,
+    fontWeight: '800',
+    letterSpacing: -0.8,
+  },
+  monthlyHoursShiftBadge: {
+    borderWidth: 1,
+    borderRadius: 999,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+  },
+  monthlyHoursShiftBadgeText: {
+    fontSize: 11,
+    fontWeight: '700',
+  },
+  monthlyHoursBalanceBadge: {
+    minWidth: 104,
+    borderWidth: 1,
+    borderRadius: 18,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    justifyContent: 'center',
+  },
+  monthlyHoursBalanceLabel: {
+    fontSize: 11,
+    fontWeight: '600',
+    marginBottom: 4,
+  },
+  monthlyHoursBalanceValue: {
+    fontSize: 16,
+    fontWeight: '800',
+    letterSpacing: -0.3,
+  },
+  monthlyHoursProgressWrap: {
+    gap: 8,
+  },
+  monthlyHoursProgressTrack: {
+    height: 10,
+    borderRadius: 999,
+    overflow: 'hidden',
+  },
+  monthlyHoursProgressFill: {
+    height: '100%',
+    borderRadius: 999,
+  },
+  monthlyHoursProgressMeta: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 12,
+  },
+  monthlyHoursProgressLabel: {
+    flex: 1,
+    fontSize: 12,
+    fontWeight: '500',
+  },
+  monthlyHoursProgressValue: {
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  monthlyHoursStatsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
+  },
+  monthlyHoursStatCard: {
+    flex: 1,
+    minWidth: '30%',
+    borderWidth: 1,
+    borderRadius: 16,
+    padding: 12,
+  },
+  monthlyHoursStatValue: {
+    marginTop: 4,
+    fontSize: 18,
+    fontWeight: '800',
+    letterSpacing: -0.2,
+  },
+  monthlyHoursStateText: {
+    marginBottom: 0,
   },
   guestAuthCard: {
     marginTop: 14,
