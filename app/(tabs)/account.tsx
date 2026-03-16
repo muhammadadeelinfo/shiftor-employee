@@ -549,12 +549,19 @@ export default function AccountScreen() {
     () => formatMonthlyHoursMonthLabel(monthlyHours?.summary.month ?? currentMonthKey, language),
     [currentMonthKey, language, monthlyHours?.summary.month]
   );
-  const monthlyHoursStats = monthlyHours?.summary
+  const monthlyHoursBalanceTone = monthlyHours?.summary
+    ? monthlyHours.summary.deltaMinutes < 0
+      ? theme.fail
+      : monthlyHours.summary.deltaMinutes > 0
+        ? theme.success
+        : theme.textPrimary
+    : theme.textPrimary;
+  const monthlyHoursPreviewStats = monthlyHours?.summary
     ? [
         {
           label: t('accountMonthlyHoursWorked'),
           value: formatMinutesLabel(monthlyHours.summary.workedMinutes, t),
-          tone: theme.primary,
+          tone: theme.textPrimary,
         },
         {
           label: t('accountMonthlyHoursPlanned'),
@@ -564,25 +571,10 @@ export default function AccountScreen() {
         {
           label: t('accountMonthlyHoursBalance'),
           value: formatSignedMinutesLabel(monthlyHours.summary.deltaMinutes, t),
-          tone:
-            monthlyHours.summary.deltaMinutes < 0
-              ? theme.fail
-              : monthlyHours.summary.deltaMinutes > 0
-                ? theme.success
-                : theme.textPrimary,
+          tone: monthlyHoursBalanceTone,
         },
       ]
     : [];
-  const monthlyHoursBalanceTone = monthlyHours?.summary
-    ? monthlyHours.summary.deltaMinutes < 0
-      ? theme.fail
-      : monthlyHours.summary.deltaMinutes > 0
-        ? theme.success
-        : theme.textPrimary
-    : theme.textPrimary;
-  const monthlyHoursBalanceLabel = monthlyHours?.summary
-    ? formatSignedMinutesLabel(monthlyHours.summary.deltaMinutes, t)
-    : null;
   const addressParts = formatAddress(contactAddress);
   const contactFields: Array<{
     label: string;
@@ -917,45 +909,15 @@ export default function AccountScreen() {
                       </Text>
                     ) : monthlyHours?.summary ? (
                       <>
-                        <View style={styles.monthlyHoursHeroRow}>
-                          <View style={styles.monthlyHoursHeroMetric}>
-                            <Text style={[styles.monthlyHoursHeroLabel, { color: theme.textSecondary }]}>
-                              {t('accountMonthlyHoursWorked')}
-                            </Text>
-                            <Text style={[styles.monthlyHoursHeroValue, { color: theme.textPrimary }]}>
-                              {formatMinutesLabel(monthlyHours.summary.workedMinutes, t)}
-                            </Text>
-                          </View>
-                          <View
-                            style={[
-                              styles.monthlyHoursBalanceBadge,
-                              {
-                                backgroundColor:
-                                  monthlyHours.summary.deltaMinutes < 0
-                                    ? 'rgba(239, 68, 68, 0.14)'
-                                    : monthlyHours.summary.deltaMinutes > 0
-                                      ? 'rgba(34, 197, 94, 0.14)'
-                                      : 'rgba(255,255,255,0.08)',
-                                borderColor:
-                                  monthlyHours.summary.deltaMinutes < 0
-                                    ? 'rgba(239, 68, 68, 0.34)'
-                                    : monthlyHours.summary.deltaMinutes > 0
-                                      ? 'rgba(34, 197, 94, 0.32)'
-                                      : 'rgba(255,255,255,0.12)',
-                              },
-                            ]}
-                          >
-                            <Text style={[styles.monthlyHoursBalanceLabel, { color: theme.textSecondary }]}>
-                              {t('accountMonthlyHoursBalance')}
-                            </Text>
-                            <Text style={[styles.monthlyHoursBalanceValue, { color: monthlyHoursBalanceTone }]}>
-                              {monthlyHoursBalanceLabel}
-                            </Text>
-                          </View>
-                        </View>
                         <View style={styles.monthlyHoursSummaryRow}>
-                          {monthlyHoursStats.slice(1).map((stat) => (
-                            <View key={stat.label} style={styles.monthlyHoursSummaryMetric}>
+                          {monthlyHoursPreviewStats.map((stat) => (
+                            <View
+                              key={stat.label}
+                              style={[
+                                styles.monthlyHoursSummaryMetric,
+                                { backgroundColor: 'rgba(12, 19, 37, 0.28)', borderColor: 'rgba(255,255,255,0.1)' },
+                              ]}
+                            >
                               <Text style={[styles.monthlyHoursSummaryLabel, { color: theme.textSecondary }]}>
                                 {stat.label}
                               </Text>
@@ -1685,26 +1647,6 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     letterSpacing: -0.2,
   },
-  monthlyHoursHeroRow: {
-    flexDirection: 'row',
-    alignItems: 'stretch',
-    gap: 12,
-  },
-  monthlyHoursHeroMetric: {
-    flex: 1,
-    minWidth: 0,
-  },
-  monthlyHoursHeroLabel: {
-    fontSize: 12,
-    fontWeight: '600',
-    letterSpacing: 0.2,
-    marginBottom: 6,
-  },
-  monthlyHoursHeroValue: {
-    fontSize: 28,
-    fontWeight: '800',
-    letterSpacing: -0.8,
-  },
   monthlyHoursShiftBadge: {
     borderWidth: 1,
     borderRadius: 999,
@@ -1723,32 +1665,17 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  monthlyHoursBalanceBadge: {
-    minWidth: 104,
-    borderWidth: 1,
-    borderRadius: 18,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    justifyContent: 'center',
-  },
-  monthlyHoursBalanceLabel: {
-    fontSize: 11,
-    fontWeight: '600',
-    marginBottom: 4,
-  },
-  monthlyHoursBalanceValue: {
-    fontSize: 16,
-    fontWeight: '800',
-    letterSpacing: -0.3,
-  },
   monthlyHoursSummaryRow: {
     flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    alignItems: 'stretch',
     gap: 12,
   },
   monthlyHoursSummaryMetric: {
     flex: 1,
+    borderWidth: 1,
+    borderRadius: 16,
+    paddingHorizontal: 12,
+    paddingVertical: 12,
     gap: 4,
   },
   monthlyHoursSummaryLabel: {
