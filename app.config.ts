@@ -47,6 +47,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     const plugins: ConfigPluginEntry[] = [
       ...(config.plugins ?? []),
       'expo-router',
+      'expo-dev-client',
       [
         'expo-camera',
         {
