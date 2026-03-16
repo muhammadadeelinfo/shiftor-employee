@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   ScrollView,
@@ -10,6 +10,9 @@ import {
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { LinearGradient } from 'expo-linear-gradient';
+import * as Print from 'expo-print';
+import * as Sharing from 'expo-sharing';
+import * as FileSystem from 'expo-file-system/legacy';
 import { useRouter } from 'expo-router';
 import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '@hooks/useSupabaseAuth';
@@ -37,6 +40,14 @@ const getObjectTotals = (value: unknown): ObjectTotal[] => {
   return value.filter((entry): entry is ObjectTotal => Boolean(entry) && typeof entry === 'object');
 };
 
+const escapeHtml = (value: string) =>
+  value
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+
 const shiftMonthKey = (monthKey: string, offset: number) => {
   const [yearRaw, monthRaw] = monthKey.split('-');
   const year = Number(yearRaw);
@@ -58,6 +69,12 @@ export default function MonthlyHoursScreen() {
   const apiBaseUrl = getEmployeeApiBaseUrl();
   const currentMonthKey = useMemo(() => formatMonthKey(new Date()), []);
   const [selectedMonthKey, setSelectedMonthKey] = useState(currentMonthKey);
+  const [isExportingPdf, setIsExportingPdf] = useState(false);
+  const [exportNotice, setExportNotice] = useState<{
+    title: string;
+    body: string;
+    tone: 'success' | 'error';
+  } | null>(null);
   const canGoToNextMonth = selectedMonthKey < currentMonthKey;
 
   const { data, error, isLoading } = useQuery({
@@ -122,6 +139,187 @@ export default function MonthlyHoursScreen() {
     : [];
   const objectTotals = getObjectTotals(data?.objectTotals);
 
+  const presentExportNotice = (
+    title: string,
+    body: string,
+    tone: 'success' | 'error'
+  ) => {
+    setExportNotice({ title, body, tone });
+  };
+
+  useEffect(() => {
+    if (!exportNotice) return;
+    const timeoutId = setTimeout(() => {
+      setExportNotice(null);
+    }, 3600);
+    return () => clearTimeout(timeoutId);
+  }, [exportNotice]);
+
+  const handleExportPdf = async () => {
+    if (!summary || isExportingPdf) return;
+    setIsExportingPdf(true);
+
+    try {
+      const statusHtml = statusCards
+        .map(
+          (item) => `
+            <div class="stat-box">
+              <div class="stat-value" style="color:${item.tone}">${item.value}</div>
+              <div class="stat-label">${escapeHtml(item.label)}</div>
+            </div>
+          `
+        )
+        .join('');
+
+      const locationsHtml =
+        objectTotals.length > 0
+          ? objectTotals
+              .map(
+                (item) => `
+                  <div class="location-row">
+                    <div class="location-head">
+                      <div>
+                        <div class="location-title">${escapeHtml(item.objectTitle?.trim() || t('notProvided'))}</div>
+                        <div class="location-meta">${escapeHtml(
+                          t('accountMonthlyHoursShiftCount', { count: item.shiftsCount ?? 0 })
+                        )}</div>
+                      </div>
+                      <div class="worked-pill">${escapeHtml(
+                        formatMinutesLabel(item.workedMinutes ?? 0, t)
+                      )}</div>
+                    </div>
+                    <div class="location-foot">
+                      <span>${escapeHtml(
+                        `${t('accountMonthlyHoursPlanned')}: ${formatMinutesLabel(item.plannedMinutes ?? 0, t)}`
+                      )}</span>
+                      <strong>${escapeHtml(
+                        item.plannedMinutes && item.plannedMinutes > 0
+                          ? `${Math.round(((item.workedMinutes ?? 0) / item.plannedMinutes) * 100)}%`
+                          : progressPercent
+                      )}</strong>
+                    </div>
+                  </div>
+                `
+              )
+              .join('')
+          : `<p class="empty">${escapeHtml(t('accountMonthlyHoursNoLocations'))}</p>`;
+
+      const html = `
+        <html>
+          <head>
+            <meta charset="utf-8" />
+            <style>
+              body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; color: #0f172a; padding: 28px; }
+              .hero { background: linear-gradient(135deg, #0f2746, #172554 55%, #1e3a5f); color: white; border-radius: 24px; padding: 24px; }
+              .eyebrow { font-size: 12px; text-transform: uppercase; letter-spacing: 1.2px; opacity: 0.72; margin-bottom: 8px; }
+              .title { font-size: 34px; font-weight: 800; margin: 0 0 10px; }
+              .meta { font-size: 14px; opacity: 0.82; margin-bottom: 20px; }
+              .summary { display: table; width: 100%; }
+              .summary-cell { display: table-cell; vertical-align: top; }
+              .metric-label { font-size: 13px; opacity: 0.76; margin-bottom: 6px; }
+              .metric-value { font-size: 40px; font-weight: 800; }
+              .balance-card { border: 1px solid #334155; border-radius: 18px; padding: 16px; background: rgba(15, 23, 42, 0.28); text-align: right; }
+              .progress { margin-top: 22px; }
+              .track { height: 12px; border-radius: 999px; background: rgba(255,255,255,0.14); overflow: hidden; }
+              .fill { height: 100%; width: ${progressPercent}; background: linear-gradient(90deg, #818cf8, #38bdf8); }
+              .progress-meta { margin-top: 10px; display: table; width: 100%; font-size: 13px; opacity: 0.88; }
+              .progress-meta span:last-child { display: table-cell; text-align: right; }
+              .section { margin-top: 24px; border: 1px solid #dbe4f0; border-radius: 22px; padding: 20px; }
+              .section-title { font-size: 20px; font-weight: 800; margin: 0 0 16px; color: #0f172a; }
+              .stats-grid { display: table; width: 100%; border-spacing: 12px 12px; margin: -12px; }
+              .stat-box { display: inline-block; width: calc(50% - 12px); box-sizing: border-box; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 18px; padding: 16px; margin: 12px 12px 0 0; }
+              .stat-value { font-size: 28px; font-weight: 800; margin-bottom: 6px; }
+              .stat-label { font-size: 13px; color: #475569; }
+              .location-row { border-top: 1px solid #e2e8f0; padding-top: 14px; margin-top: 14px; }
+              .location-row:first-child { border-top: none; padding-top: 0; margin-top: 0; }
+              .location-head, .location-foot { display: table; width: 100%; }
+              .location-title { font-size: 18px; font-weight: 700; color: #0f172a; }
+              .location-meta { font-size: 13px; color: #64748b; margin-top: 4px; }
+              .worked-pill { display: table-cell; text-align: right; font-size: 15px; font-weight: 800; color: #2563eb; }
+              .location-foot { margin-top: 10px; font-size: 13px; color: #475569; }
+              .location-foot strong { display: table-cell; text-align: right; color: #0f172a; }
+              .empty { color: #64748b; margin: 0; }
+            </style>
+          </head>
+          <body>
+            <div class="hero">
+              <div class="eyebrow">${escapeHtml(t('accountMonthlyHoursTitle'))}</div>
+              <h1 class="title">${escapeHtml(monthLabel)}</h1>
+              <div class="meta">${escapeHtml(t('accountMonthlyHoursShiftCount', { count: summary.shiftsCount }))}</div>
+              <div class="summary">
+                <div class="summary-cell">
+                  <div class="metric-label">${escapeHtml(t('accountMonthlyHoursWorked'))}</div>
+                  <div class="metric-value">${escapeHtml(formatMinutesLabel(summary.workedMinutes, t))}</div>
+                </div>
+                <div class="summary-cell">
+                  <div class="balance-card">
+                    <div class="metric-label">${escapeHtml(t('accountMonthlyHoursBalance'))}</div>
+                    <div class="metric-value" style="font-size:32px;color:${balanceTone}">
+                      ${escapeHtml(formatSignedMinutesLabel(summary.deltaMinutes, t))}
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div class="progress">
+                <div class="track"><div class="fill"></div></div>
+                <div class="progress-meta">
+                  <span>${escapeHtml(
+                    `${t('accountMonthlyHoursPlanned')}: ${formatMinutesLabel(summary.plannedMinutes, t)}`
+                  )}</span>
+                  <span>${escapeHtml(progressPercent)}</span>
+                </div>
+              </div>
+            </div>
+            <div class="section">
+              <h2 class="section-title">${escapeHtml(t('accountMonthlyHoursBreakdownTitle'))}</h2>
+              ${statusHtml}
+            </div>
+            <div class="section">
+              <h2 class="section-title">${escapeHtml(t('accountMonthlyHoursLocationsTitle'))}</h2>
+              ${locationsHtml}
+            </div>
+          </body>
+        </html>
+      `;
+
+      const { uri } = await Print.printToFileAsync({ html });
+      const shareTitle = t('reportGeneratePdf');
+      const fileName = `shiftor-monthly-hours-${selectedMonthKey}.pdf`;
+      const target = `${FileSystem.documentDirectory ?? ''}${fileName}`;
+      let savedUri: string | null = null;
+
+      if (FileSystem.documentDirectory) {
+        try {
+          await FileSystem.copyAsync({ from: uri, to: target });
+          savedUri = target;
+        } catch {
+          savedUri = null;
+        }
+      }
+
+      if (savedUri) {
+        const relative = savedUri.replace(FileSystem.documentDirectory ?? '', 'Files/');
+        presentExportNotice(
+          t('reportDownloadedTitle'),
+          t('reportDownloadedBody', { path: relative }),
+          'success'
+        );
+      } else if (await Sharing.isAvailableAsync()) {
+        await Sharing.shareAsync(uri, {
+          mimeType: 'application/pdf',
+          dialogTitle: shareTitle,
+        });
+      } else {
+        presentExportNotice(t('reportFailedTitle'), t('reportFailedBody'), 'error');
+      }
+    } catch (pdfError) {
+      console.error('Failed to export monthly hours PDF', pdfError);
+      presentExportNotice(t('reportFailedTitle'), t('reportFailedBody'), 'error');
+    } finally {
+      setIsExportingPdf(false);
+    }
+  };
+
   return (
     <SafeAreaView style={[styles.safeArea, { backgroundColor: theme.background }]} edges={['top', 'left', 'right']}>
       <ScrollView
@@ -146,6 +344,19 @@ export default function MonthlyHoursScreen() {
               {t('accountMonthlyHoursPageHint')}
             </Text>
           </View>
+          <TouchableOpacity
+            accessibilityRole="button"
+            accessibilityLabel={t('reportGeneratePdf')}
+            style={[
+              styles.exportButton,
+              { backgroundColor: theme.surfaceMuted, borderColor: theme.borderSoft },
+              isExportingPdf && styles.exportButtonDisabled,
+            ]}
+            onPress={() => void handleExportPdf()}
+            disabled={!summary || isExportingPdf}
+          >
+            <Ionicons name={isExportingPdf ? 'hourglass-outline' : 'download-outline'} size={16} color={theme.primary} />
+          </TouchableOpacity>
         </View>
 
         <View style={styles.monthSwitcherWrap}>
@@ -423,6 +634,59 @@ export default function MonthlyHoursScreen() {
           )}
         </View>
       </ScrollView>
+      {exportNotice ? (
+        <View pointerEvents="box-none" style={[styles.noticeLayer, { bottom: insets.bottom + 18 }]}>
+          <LinearGradient
+            colors={
+              exportNotice.tone === 'success'
+                ? ['rgba(22, 101, 52, 0.96)', 'rgba(15, 23, 42, 0.99)']
+                : ['rgba(127, 29, 29, 0.96)', 'rgba(15, 23, 42, 0.99)']
+            }
+            start={[0, 0]}
+            end={[1, 1]}
+            style={[
+              styles.noticeToast,
+              {
+                borderColor: exportNotice.tone === 'success' ? 'rgba(34, 197, 94, 0.38)' : 'rgba(239, 68, 68, 0.38)',
+                shadowColor: exportNotice.tone === 'success' ? theme.success : theme.fail,
+              },
+            ]}
+          >
+            <View
+              style={[
+                styles.noticeIconWrap,
+                styles.noticeIconWrapCompact,
+                {
+                  backgroundColor:
+                    exportNotice.tone === 'success'
+                      ? 'rgba(34, 197, 94, 0.16)'
+                      : 'rgba(239, 68, 68, 0.16)',
+                },
+              ]}
+            >
+              <Ionicons
+                name={exportNotice.tone === 'success' ? 'checkmark' : 'alert'}
+                size={18}
+                color={exportNotice.tone === 'success' ? theme.success : theme.fail}
+              />
+            </View>
+            <View style={styles.noticeCopy}>
+              <Text style={[styles.noticeTitle, styles.noticeTitleCompact, { color: theme.textPrimary }]}>
+                {exportNotice.title}
+              </Text>
+              <Text
+                numberOfLines={3}
+                style={[styles.noticeBody, styles.noticeBodyCompact, { color: theme.textSecondary }]}
+              >
+                {exportNotice.body}
+              </Text>
+            </View>
+            <TouchableOpacity style={styles.noticeClose} onPress={() => setExportNotice(null)}>
+              <Ionicons name="close" size={18} color={theme.textSecondary} />
+            </TouchableOpacity>
+          </LinearGradient>
+        </View>
+      ) : null}
     </SafeAreaView>
   );
 }
@@ -433,6 +697,68 @@ const styles = StyleSheet.create({
   },
   container: {
     flex: 1,
+  },
+  noticeLayer: {
+    position: 'absolute',
+    left: 16,
+    right: 16,
+  },
+  noticeToast: {
+    borderWidth: 1,
+    borderRadius: 22,
+    padding: 14,
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 12,
+    shadowOpacity: 0.22,
+    shadowOffset: { width: 0, height: 16 },
+    shadowRadius: 28,
+    elevation: 14,
+  },
+  noticeIconWrap: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 16,
+  },
+  noticeIconWrapCompact: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    marginBottom: 0,
+    flexShrink: 0,
+  },
+  noticeCopy: {
+    flex: 1,
+    minWidth: 0,
+  },
+  noticeTitle: {
+    fontSize: 28,
+    fontWeight: '800',
+    letterSpacing: -0.8,
+  },
+  noticeTitleCompact: {
+    fontSize: 18,
+    letterSpacing: -0.3,
+  },
+  noticeBody: {
+    marginTop: 10,
+    fontSize: 16,
+    lineHeight: 24,
+  },
+  noticeBodyCompact: {
+    marginTop: 4,
+    fontSize: 13,
+    lineHeight: 18,
+  },
+  noticeClose: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   content: {
     padding: 16,
@@ -453,6 +779,17 @@ const styles = StyleSheet.create({
   },
   headerCopy: {
     flex: 1,
+  },
+  exportButton: {
+    width: 40,
+    height: 40,
+    borderWidth: 1,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  exportButtonDisabled: {
+    opacity: 0.55,
   },
   headerTitle: {
     fontSize: 20,
