@@ -95,6 +95,10 @@ export default function AboutScreen() {
           <Text style={[styles.metaValue, { color: theme.textPrimary }]}>Shiftor Employee</Text>
         </View>
         <View style={styles.metaRow}>
+          <Text style={[styles.metaLabel, { color: theme.textSecondary }]}>Developer</Text>
+          <Text style={[styles.metaValue, { color: theme.textPrimary }]}>Goi Labs</Text>
+        </View>
+        <View style={styles.metaRow}>
           <Text style={[styles.metaLabel, { color: theme.textSecondary }]}>{t('aboutVersion')}</Text>
           <Text style={[styles.metaValue, { color: theme.textPrimary }]}>{versionLabel}</Text>
         </View>
