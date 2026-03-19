@@ -9,10 +9,10 @@ export const getLegalLinks = () => {
   return {
     privacyPolicyUrl:
       ((Constants.expoConfig?.extra?.legalPrivacyUrl as string | undefined)?.trim() ||
-        `${baseSiteUrl}/privacy#mobile`),
+        `${baseSiteUrl}/privacy?product=${encodeURIComponent('Shiftor Employee')}#mobile`),
     termsUrl:
       ((Constants.expoConfig?.extra?.legalTermsUrl as string | undefined)?.trim() ||
-        `${baseSiteUrl}/terms#mobile`),
+        `${baseSiteUrl}/terms?product=${encodeURIComponent('Shiftor Employee')}#mobile`),
     supportPageUrl:
       ((Constants.expoConfig?.extra?.legalSupportUrl as string | undefined)?.trim() ||
         supportPageUrl),
