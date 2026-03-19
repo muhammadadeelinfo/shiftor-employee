@@ -4,6 +4,7 @@ import { SUPPORT_EMAIL, SUPPORT_FALLBACK_URL } from '@shared/utils/support';
 
 export const getLegalLinks = () => {
   const baseSiteUrl = SUPPORT_FALLBACK_URL.replace(/\/+$/, '');
+  const supportPageUrl = `${baseSiteUrl}/support?product=${encodeURIComponent('Shiftor Employee')}#mobile`;
 
   return {
     privacyPolicyUrl:
@@ -14,7 +15,7 @@ export const getLegalLinks = () => {
         `${baseSiteUrl}/terms#mobile`),
     supportPageUrl:
       ((Constants.expoConfig?.extra?.legalSupportUrl as string | undefined)?.trim() ||
-        `${baseSiteUrl}/support#mobile`),
+        supportPageUrl),
   };
 };
 

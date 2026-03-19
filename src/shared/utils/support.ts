@@ -1,5 +1,5 @@
-export const SUPPORT_EMAIL = 'support@shiftorapp.com';
-export const SUPPORT_FALLBACK_URL = 'https://shiftorapp.com';
+export const SUPPORT_EMAIL = 'support@goilabs.com';
+export const SUPPORT_FALLBACK_URL = 'https://goilabs.com';
 
 export const buildSupportMailto = (subject: string, body?: string) => {
   const query = new URLSearchParams();

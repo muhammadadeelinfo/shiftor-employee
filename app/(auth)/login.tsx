@@ -32,7 +32,7 @@ import { getUserFacingErrorMessage } from '@shared/utils/userFacingError';
 
 const REMEMBER_KEY = 'employee-portal-remember-me';
 const EMAIL_KEY = 'employee-portal-remembered-email';
-const SUPPORT_BASE_URL = 'https://shiftorapp.com';
+const SUPPORT_BASE_URL = 'https://goilabs.com';
 
 export default function LoginScreen() {
   const router = useRouter();
@@ -186,7 +186,7 @@ export default function LoginScreen() {
     ((Constants.expoConfig?.extra?.legalTermsUrl as string | undefined)?.trim() || `${baseSiteUrl}/terms#mobile`);
   const helpCenterUrl =
     ((Constants.expoConfig?.extra?.legalSupportUrl as string | undefined)?.trim() ||
-      `${baseSiteUrl}/support#mobile`);
+      `${baseSiteUrl}/support?product=${encodeURIComponent('Shiftor Employee')}#mobile`);
   const openExternalUrl = async (title: string, url: string) => {
     try {
       const supported = await Linking.canOpenURL(url);
