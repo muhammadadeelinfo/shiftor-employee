@@ -168,6 +168,7 @@ export const enTranslations = {
     emailNotificationsAutoSave: 'Preferences are saved automatically.',
     preferencesLanguageHint: 'Choose your app language.',
     preferencesCalendarHint: 'Adjust calendar sync defaults.',
+    accountBrowseJobs: 'Browse open jobs',
     preferencesReplayOnboarding: 'Replay onboarding',
     aboutSectionTitle: 'About',
     aboutSectionHint: 'App details, privacy, and legal information.',

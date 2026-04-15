@@ -1091,6 +1091,18 @@ export default function AccountScreen() {
               <View style={styles.toolsList}>
                 <TouchableOpacity
                   style={[styles.toolsRow, { borderColor: theme.borderSoft }]}
+                  onPress={() => router.push('/jobs')}
+                >
+                  <View style={[styles.toolsIconWrap, { backgroundColor: theme.surfaceMuted }]}>
+                    <Ionicons name="briefcase-outline" size={16} color={theme.primary} />
+                  </View>
+                  <Text style={[styles.toolsLabel, { color: theme.textPrimary }]}>
+                    {t('accountBrowseJobs')}
+                  </Text>
+                  <Ionicons name="chevron-forward" size={16} color={theme.textSecondary} />
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.toolsRow, { borderColor: theme.borderSoft }]}
                   onPress={() => router.push('/calendar-settings')}
                 >
                   <View style={[styles.toolsIconWrap, { backgroundColor: theme.surfaceMuted }]}>

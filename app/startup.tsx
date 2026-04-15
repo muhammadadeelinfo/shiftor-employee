@@ -451,6 +451,17 @@ export default function StartupScreen() {
               <Text style={[styles.title, { color: theme.textPrimary }]}>{t('startupJobsTitle')}</Text>
               <Text style={[styles.heroSubtitle, { color: theme.textSecondary }]}>{t('welcomePublicNote')}</Text>
             </View>
+            {!user ? (
+              <TouchableOpacity
+                style={[styles.loginChip, { backgroundColor: theme.surface, borderColor: theme.borderSoft }]}
+                onPress={() => router.push('/login')}
+              >
+                <Ionicons name="log-in-outline" size={15} color={theme.primary} />
+                <Text style={[styles.loginChipText, { color: theme.textPrimary }]}>
+                  {t('startupJobsGoToLogin')}
+                </Text>
+              </TouchableOpacity>
+            ) : null}
           </View>
 
           <View style={styles.statRow}>
@@ -680,11 +691,25 @@ const styles = StyleSheet.create({
   heroTopActions: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
+    alignItems: 'flex-start',
+    gap: 12,
   },
   heroTitleWrap: {
-    flexShrink: 1,
+    flex: 1,
     paddingRight: 8,
+  },
+  loginChip: {
+    borderWidth: 1,
+    borderRadius: 999,
+    paddingHorizontal: 12,
+    paddingVertical: 9,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  loginChipText: {
+    fontSize: 13,
+    fontWeight: '700',
   },
   title: {
     fontSize: 30,

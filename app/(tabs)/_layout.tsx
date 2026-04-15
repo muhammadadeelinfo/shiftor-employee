@@ -1,12 +1,10 @@
-import { Redirect, Tabs, usePathname, useRouter } from 'expo-router';
+import { Redirect, Tabs } from 'expo-router';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '@shared/themeContext';
 import { useLanguage, type TranslationKey } from '@shared/context/LanguageContext';
 import { useWindowDimensions } from 'react-native';
-import { useEffect } from 'react';
 import { useAuth } from '@hooks/useSupabaseAuth';
-import { useStartupJobsAvailability } from '@features/jobs/useStartupJobsAvailability';
 
 const iconConfig: Record<
   string,
@@ -27,11 +25,6 @@ const iconConfig: Record<
     inactive: 'qr-code-outline',
     labelKey: 'tabQrClockIn',
   },
-  jobs: {
-    active: 'briefcase',
-    inactive: 'briefcase-outline',
-    labelKey: 'startupJobsTitle',
-  },
   account: {
     active: 'person-circle',
     inactive: 'person-circle-outline',
@@ -50,24 +43,11 @@ export default function TabsLayout() {
 }
 
 function ThemeAwareTabs({ insets }: { insets: ReturnType<typeof useSafeAreaInsets> }) {
-  const router = useRouter();
-  const pathname = usePathname();
   const { theme } = useTheme();
   const { t } = useLanguage();
   const { user, loading: authLoading } = useAuth();
-  const { hasJobs, loading: jobsAvailabilityLoading } = useStartupJobsAvailability();
   const { width } = useWindowDimensions();
   const isTablet = width >= 768;
-  const jobsTabVisible = jobsAvailabilityLoading || hasJobs;
-
-  useEffect(() => {
-    if (!user) {
-      return;
-    }
-    if (!jobsTabVisible && pathname === '/jobs') {
-      router.replace('/calendar');
-    }
-  }, [jobsTabVisible, pathname, router, user]);
 
   if (authLoading) {
     return null;
@@ -119,7 +99,7 @@ function ThemeAwareTabs({ insets }: { insets: ReturnType<typeof useSafeAreaInset
         };
       }}
     >
-      <Tabs.Screen name="jobs" options={{ href: jobsTabVisible ? undefined : null }} />
+      <Tabs.Screen name="jobs" options={{ href: null }} />
       <Tabs.Screen name="my-shifts" />
       <Tabs.Screen name="calendar" />
       <Tabs.Screen name="about" options={{ href: null }} />

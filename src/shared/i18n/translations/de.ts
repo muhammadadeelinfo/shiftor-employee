@@ -170,6 +170,7 @@ export const deTranslations = {
     emailNotificationsAutoSave: 'Einstellungen werden automatisch gespeichert.',
     preferencesLanguageHint: 'Wähle deine App-Sprache.',
     preferencesCalendarHint: 'Standardwerte für Kalendersynchronisierung anpassen.',
+    accountBrowseJobs: 'Offene Jobs ansehen',
     preferencesReplayOnboarding: 'Onboarding erneut ansehen',
     aboutSectionTitle: 'Über die App',
     aboutSectionHint: 'App-Details, Datenschutz und rechtliche Informationen.',

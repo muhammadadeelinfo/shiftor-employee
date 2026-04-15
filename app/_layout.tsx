@@ -141,7 +141,8 @@ function LayoutContentInner() {
   const includedShiftSet = useMemo(() => new Set(includedShiftKeys), [includedShiftKeys]);
   const { user, loading } = useAuth();
   const isAuthRoute = pathname === '/login' || pathname === '/signup';
-  const isPublicRoute = isAuthRoute || pathname === '/onboarding';
+  const isJobsRoute = pathname === '/jobs' || pathname.startsWith('/jobs/');
+  const isPublicRoute = isAuthRoute || pathname === '/onboarding' || pathname === '/startup' || isJobsRoute;
   const userId = user?.id;
   const { data: quickShifts = [] } = useQuery({
     queryKey: ['quickActionsShifts', userId],
