@@ -20,6 +20,7 @@ const statusColors: Record<string, string> = {
   'in-progress': '#059669',
   completed: '#6b7280',
   blocked: '#dc2626',
+  confirmed: '#16a34a',
 };
 
 const statusIconMap: Record<string, ComponentProps<typeof Ionicons>['name']> = {
@@ -27,6 +28,7 @@ const statusIconMap: Record<string, ComponentProps<typeof Ionicons>['name']> = {
   'in-progress': 'play-outline',
   completed: 'checkmark-done-outline',
   blocked: 'alert-circle-outline',
+  confirmed: 'checkmark-circle-outline',
 };
 
 const statusLabelTranslationKeys: Record<string, TranslationKey | undefined> = {
@@ -34,6 +36,7 @@ const statusLabelTranslationKeys: Record<string, TranslationKey | undefined> = {
   'in-progress': 'statusInProgress',
   completed: 'statusCompleted',
   blocked: 'statusBlocked',
+  confirmed: 'confirmed',
 };
 
 const formatTime = (iso: string) => {
@@ -100,10 +103,16 @@ export const ShiftCard = ({
   const [showFullAddress, setShowFullAddress] = useState(false);
   const { theme } = useTheme();
   const { t } = useLanguage();
+  const normalizedConfirmationStatus = normalizeShiftConfirmationStatus(shift.confirmationStatus);
+  const isConfirmed =
+    normalizedConfirmationStatus === 'confirmed' ||
+    normalizedConfirmationStatus === 'confirmed by employee';
+  const confirmationLabel = getShiftConfirmationStatusLabel(normalizedConfirmationStatus);
   const gradientColors: [string, string] = [theme.heroGradientStart, theme.heroGradientEnd];
-  const statusColor = statusColors[shift.status] ?? '#1d4ed8';
-  const statusTranslationKey = statusLabelTranslationKeys[shift.status];
-  const statusLabel = statusTranslationKey ? t(statusTranslationKey) : shift.status;
+  const displayStatus = isConfirmed ? 'confirmed' : shift.status;
+  const statusColor = statusColors[displayStatus] ?? '#1d4ed8';
+  const statusTranslationKey = statusLabelTranslationKeys[displayStatus];
+  const statusLabel = statusTranslationKey ? t(statusTranslationKey) : displayStatus;
   const locationLabel = shift.objectName ?? shift.location ?? 'TBD';
   const locationSubtext = shift.objectAddress ?? shift.location;
   const displayedAddress = locationSubtext
@@ -111,11 +120,6 @@ export const ShiftCard = ({
       ? locationSubtext
       : truncateText(simplifyAddress(locationSubtext), 50)
     : t('locationTbd');
-  const normalizedConfirmationStatus = normalizeShiftConfirmationStatus(shift.confirmationStatus);
-  const isConfirmed =
-    normalizedConfirmationStatus === 'confirmed' ||
-    normalizedConfirmationStatus === 'confirmed by employee';
-  const confirmationLabel = getShiftConfirmationStatusLabel(normalizedConfirmationStatus);
   const shiftPhase = getShiftPhase(shift.start, shift.end);
   const phaseMetadata = phaseMeta[shiftPhase];
   const phaseGradientColors: [string, string, ...string[]] = [
@@ -130,7 +134,7 @@ export const ShiftCard = ({
     `${statusColor}99`,
     statusColor,
   ];
-  const statusIcon = statusIconMap[shift.status];
+  const statusIcon = statusIconMap[displayStatus];
   const handleOpenMaps = (event: GestureResponderEvent) => {
     event.stopPropagation();
     openAddressInMaps(locationSubtext);
@@ -275,10 +279,6 @@ export const ShiftCard = ({
         <Text style={[styles.description, { color: theme.textSecondary }]}>{shift.description ?? t('beOnTime')}</Text>
 
         <View style={styles.confirmSection}>
-          <View>
-            <Text style={[styles.confirmInstruction, { color: theme.textSecondary }]}>{t('beOnTime')}</Text>
-            <Text style={[styles.confirmSubLabel, { color: theme.textPrimary }]}>{t('confirmShift')}</Text>
-          </View>
           {isConfirmed ? (
             <Text style={[styles.confirmedTextOption, { color: theme.success }]}>{confirmationLabel}</Text>
           ) : (
@@ -508,22 +508,10 @@ const styles = StyleSheet.create({
   },
   confirmSection: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
+    justifyContent: 'flex-end',
     alignItems: 'center',
     marginTop: 14,
     paddingBottom: 2,
-  },
-  confirmInstruction: {
-    textTransform: 'uppercase',
-    color: '#475569',
-    fontSize: 12,
-    fontWeight: '600',
-    letterSpacing: 0.4,
-  },
-  confirmSubLabel: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: '#1f2937',
   },
   confirmedTextOption: {
     fontSize: 14,

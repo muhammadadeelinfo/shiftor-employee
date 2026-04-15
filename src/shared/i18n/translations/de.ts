@@ -71,6 +71,12 @@ export const deTranslations = {
     confirmAllShiftsShort: 'Alle bestätigen',
     confirmAllPendingCount: '{count} ausstehende Bestätigungen',
     confirmAllShiftsHint: 'Bestätigung für alle veröffentlichten Schichten übernehmen',
+    confirmAllShiftsResultTitle: 'Schichtbestätigungen',
+    confirmAllShiftsResultSuccessBody: '{count} Schichten wurden erfolgreich bestätigt.',
+    confirmAllShiftsResultPartialBody:
+      '{successCount} Schichten wurden bestätigt, aber {failedCount} sind fehlgeschlagen. Bitte versuche es erneut.',
+    confirmAllShiftsResultFailureBody:
+      'Deine Schichten konnten gerade nicht bestätigt werden. Bitte versuche es erneut.',
     phasePast: 'Vergangene Schicht',
     phaseLive: 'Jetzt live',
     phaseUpcoming: 'Kommend',

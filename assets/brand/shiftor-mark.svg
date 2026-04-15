@@ -1,22 +1,24 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 420 360" role="img" aria-labelledby="title desc">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 420 420" role="img" aria-labelledby="title desc">
   <title id="title">Shiftor mark</title>
-  <desc id="desc">Blue and green geometric mark with a widened diagonal gap.</desc>
-  <defs>
-    <linearGradient id="shiftorBlue" x1="87" y1="58" x2="365" y2="278" gradientUnits="userSpaceOnUse">
-      <stop offset="0" stop-color="#2F7DF2" />
-      <stop offset="1" stop-color="#2467D8" />
-    </linearGradient>
-    <linearGradient id="shiftorGreen" x1="93" y1="334" x2="360" y2="120" gradientUnits="userSpaceOnUse">
-      <stop offset="0" stop-color="#2D9A56" />
-      <stop offset="1" stop-color="#4BC355" />
-    </linearGradient>
-  </defs>
-  <path
-    d="M115 58h275c5 0 8 5 4 9L161 262c-11 10-27 17-45 17-31 0-55-24-55-55V113c0-31 24-55 54-55Z"
-    fill="url(#shiftorBlue)"
-  />
-  <path
-    d="M53 334h222c53 0 92-39 92-92v-84c0-30-24-54-54-54-14 0-27 5-37 14L53 334Z"
-    fill="url(#shiftorGreen)"
-  />
+  <desc id="desc">Blue and green geometric mark with square-balanced spacing around the S.</desc>
+  <svg x="48" y="48" width="324" height="324" viewBox="48 48 252 252" preserveAspectRatio="xMidYMid meet">
+    <defs>
+      <linearGradient id="shiftorBlue" x1="87" y1="58" x2="365" y2="278" gradientUnits="userSpaceOnUse">
+        <stop offset="0" stop-color="#2F7DF2" />
+        <stop offset="1" stop-color="#2467D8" />
+      </linearGradient>
+      <linearGradient id="shiftorGreen" x1="93" y1="334" x2="360" y2="120" gradientUnits="userSpaceOnUse">
+        <stop offset="0" stop-color="#2D9A56" />
+        <stop offset="1" stop-color="#4BC355" />
+      </linearGradient>
+    </defs>
+    <path
+      d="M48 100c0-29 23-52 52-52h192c10 0 15 12 8 19L183 184c-15 15-36 24-57 24h-26c-29 0-52-23-52-52v-56Z"
+      fill="url(#shiftorBlue)"
+    />
+    <path
+      d="M48 300l117-117c15-15 36-24 57-24h26c29 0 52 23 52 52v37c0 29-23 52-52 52H48Z"
+      fill="url(#shiftorGreen)"
+    />
+  </svg>
 </svg>

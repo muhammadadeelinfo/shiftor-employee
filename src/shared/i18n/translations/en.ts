@@ -71,6 +71,12 @@ export const enTranslations = {
     confirmAllShiftsShort: 'Confirm all',
     confirmAllPendingCount: '{count} pending confirmations',
     confirmAllShiftsHint: 'Apply confirmation to every published shift',
+    confirmAllShiftsResultTitle: 'Shift confirmations',
+    confirmAllShiftsResultSuccessBody: '{count} shifts were confirmed successfully.',
+    confirmAllShiftsResultPartialBody:
+      '{successCount} shifts were confirmed, but {failedCount} failed. Please try again.',
+    confirmAllShiftsResultFailureBody:
+      'We could not confirm your shifts right now. Please try again.',
     phasePast: 'Past shift',
     phaseLive: 'Live now',
     phaseUpcoming: 'Upcoming',

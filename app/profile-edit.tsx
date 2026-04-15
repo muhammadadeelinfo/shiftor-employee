@@ -28,6 +28,7 @@ import { useAuth } from '@hooks/useSupabaseAuth';
 import { useTheme } from '@shared/themeContext';
 import { useLanguage } from '@shared/context/LanguageContext';
 import { PrimaryButton } from '@shared/components/PrimaryButton';
+import { layoutTokens } from '@shared/theme/layout';
 import { splitAddressIntoLabelMeta } from '@shared/utils/address';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { getUserFacingErrorMessage } from '@shared/utils/userFacingError';
@@ -1071,7 +1072,7 @@ const styles = StyleSheet.create({
   },
   content: {
     paddingHorizontal: 16,
-    paddingTop: 12,
+    paddingTop: layoutTokens.screenTop,
   },
   card: {
     borderWidth: 1,

@@ -1,23 +1,24 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" role="img" aria-labelledby="title desc">
   <title id="title">Shiftor adaptive icon foreground</title>
   <desc id="desc">Centered foreground mark for Android adaptive icons.</desc>
-  <defs>
-    <linearGradient id="iconBlue" x1="336" y1="300" x2="736" y2="640" gradientUnits="userSpaceOnUse">
-      <stop offset="0" stop-color="#2F7DF2" />
-      <stop offset="1" stop-color="#2467D8" />
-    </linearGradient>
-    <linearGradient id="iconGreen" x1="346" y1="764" x2="766" y2="420" gradientUnits="userSpaceOnUse">
-      <stop offset="0" stop-color="#2D9A56" />
-      <stop offset="1" stop-color="#4BC355" />
-    </linearGradient>
-  </defs>
-
-  <path
-    d="M336 286h438c8 0 12 8 6 14L409 612c-18 15-42 26-70 26-50 0-90-40-90-90V376c0-50 40-90 87-90Z"
-    fill="url(#iconBlue)"
-  />
-  <path
-    d="M237 737h354c85 0 147-62 147-147V456c0-48-39-87-87-87-22 0-42 8-58 22L237 737Z"
-    fill="url(#iconGreen)"
-  />
+  <svg x="142" y="142" width="740" height="740" viewBox="48 48 252 252" preserveAspectRatio="xMidYMid meet">
+    <defs>
+      <linearGradient id="iconBlue" x1="87" y1="58" x2="365" y2="278" gradientUnits="userSpaceOnUse">
+        <stop offset="0" stop-color="#2F7DF2" />
+        <stop offset="1" stop-color="#2467D8" />
+      </linearGradient>
+      <linearGradient id="iconGreen" x1="93" y1="334" x2="360" y2="120" gradientUnits="userSpaceOnUse">
+        <stop offset="0" stop-color="#2D9A56" />
+        <stop offset="1" stop-color="#4BC355" />
+      </linearGradient>
+    </defs>
+    <path
+      d="M48 100c0-29 23-52 52-52h192c10 0 15 12 8 19L183 184c-15 15-36 24-57 24h-26c-29 0-52-23-52-52v-56Z"
+      fill="url(#iconBlue)"
+    />
+    <path
+      d="M48 300l117-117c15-15 36-24 57-24h26c29 0 52 23 52 52v37c0 29-23 52-52 52H48Z"
+      fill="url(#iconGreen)"
+    />
+  </svg>
 </svg>

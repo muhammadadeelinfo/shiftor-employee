@@ -1,4 +1,5 @@
 import {
+  Alert,
   ActivityIndicator,
   LayoutChangeEvent,
   RefreshControl,
@@ -199,6 +200,7 @@ export default function MyShiftsScreen() {
       const results = await Promise.allSettled(
         pendingAssignmentIds.map((assignmentId) => confirmShiftAssignment(assignmentId))
       );
+      const succeeded = results.filter((result) => result.status === 'fulfilled').length;
       const rejected = results.filter((result) => result.status === 'rejected');
       if (rejected.length) {
         console.error('Confirm all shifts failed', {
@@ -207,10 +209,29 @@ export default function MyShiftsScreen() {
         });
       }
       await refetch();
+      if (!rejected.length) {
+        Alert.alert(
+          t('confirmAllShiftsResultTitle'),
+          t('confirmAllShiftsResultSuccessBody', { count: succeeded })
+        );
+      } else if (succeeded > 0) {
+        Alert.alert(
+          t('confirmAllShiftsResultTitle'),
+          t('confirmAllShiftsResultPartialBody', {
+            successCount: succeeded,
+            failedCount: rejected.length,
+          })
+        );
+      } else {
+        Alert.alert(
+          t('confirmAllShiftsResultTitle'),
+          t('confirmAllShiftsResultFailureBody')
+        );
+      }
     } finally {
       setConfirmingAll(false);
     }
-  }, [confirmingAll, pendingAssignmentIds, refetch]);
+  }, [confirmingAll, pendingAssignmentIds, refetch, t]);
 
   useEffect(() => {
     shiftLayouts.current.clear();

@@ -17,6 +17,7 @@ import { useRouter } from 'expo-router';
 import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '@hooks/useSupabaseAuth';
 import { useLanguage } from '@shared/context/LanguageContext';
+import { layoutTokens } from '@shared/theme/layout';
 import { useTheme } from '@shared/themeContext';
 import {
   fetchMonthlyHours,
@@ -321,7 +322,7 @@ export default function MonthlyHoursScreen() {
   };
 
   return (
-    <SafeAreaView style={[styles.safeArea, { backgroundColor: theme.background }]} edges={['top', 'left', 'right']}>
+    <SafeAreaView style={[styles.safeArea, { backgroundColor: theme.background }]} edges={['left', 'right']}>
       <ScrollView
         style={styles.container}
         contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 28 }]}
@@ -761,7 +762,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   content: {
-    padding: 16,
+    paddingHorizontal: 16,
+    paddingTop: layoutTokens.screenTop,
     gap: 14,
   },
   header: {

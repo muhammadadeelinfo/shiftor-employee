@@ -183,7 +183,7 @@ const styles = StyleSheet.create({
   header: {
     borderBottomWidth: 1,
     paddingHorizontal: layoutTokens.screenHorizontal,
-    paddingTop: 8,
+    paddingTop: layoutTokens.screenTop,
     paddingBottom: 12,
   },
   headerInner: {

@@ -181,7 +181,7 @@ const styles = StyleSheet.create({
   },
   header: {
     paddingHorizontal: layoutTokens.screenHorizontal,
-    paddingTop: 8,
+    paddingTop: layoutTokens.screenTop,
     paddingBottom: 8,
   },
   headerRow: {

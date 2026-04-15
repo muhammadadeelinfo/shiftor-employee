@@ -103,16 +103,28 @@ export const confirmShiftAssignment = async (assignmentId: string): Promise<void
     throw new Error('Supabase client not configured');
   }
 
-  const { error } = await supabase
+  const confirmedAt = new Date().toISOString();
+  const { data, error } = await supabase
     .from('shift_assignments')
     .update({
       confirmationStatus: 'confirmed by employee',
-      confirmedAt: new Date().toISOString(),
+      confirmedAt,
     })
-    .eq('id', assignmentId);
+    .eq('id', assignmentId)
+    .select('id, confirmationStatus, confirmedAt')
+    .maybeSingle();
 
   if (error) {
     throw error;
+  }
+
+  const updatedStatus =
+    typeof data?.confirmationStatus === 'string' ? data.confirmationStatus.trim().toLowerCase() : '';
+  const updatedConfirmedAt =
+    typeof data?.confirmedAt === 'string' ? data.confirmedAt.trim() : '';
+
+  if (!data?.id || updatedStatus !== 'confirmed by employee' || !updatedConfirmedAt) {
+    throw new Error(`Shift confirmation was not applied for assignment ${assignmentId}.`);
   }
 };
 

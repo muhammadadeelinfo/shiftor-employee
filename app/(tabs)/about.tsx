@@ -10,8 +10,9 @@ import {
 } from 'react-native';
 import Constants from 'expo-constants';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLanguage } from '@shared/context/LanguageContext';
+import { layoutTokens } from '@shared/theme/layout';
 import { useTheme } from '@shared/themeContext';
 import { SUPPORT_EMAIL, SUPPORT_FALLBACK_URL } from '@shared/utils/support';
 import { getLegalLinks, openExternalUrlWithFallback } from '@shared/utils/legalLinks';
@@ -42,126 +43,128 @@ export default function AboutScreen() {
   );
 
   return (
-    <ScrollView
-      style={[styles.scrollView, { backgroundColor: theme.background }]}
-      contentContainerStyle={[
-        styles.container,
-        {
-          flexGrow: 1,
-          backgroundColor: theme.background,
-          paddingTop: insets.top + 10,
-          paddingBottom: insets.bottom + 32,
-        },
-      ]}
-      showsVerticalScrollIndicator={false}
-    >
-      <View style={[styles.heroCard, { backgroundColor: theme.surfaceElevated, borderColor: theme.border }]}>
-        <View style={styles.heroHeader}>
-          <View
-            style={[
-              styles.heroBrandFrame,
-              { backgroundColor: theme.surface, borderColor: theme.borderSoft },
-            ]}
-          >
-            <Image
-              source={require('../../assets/icon.png')}
-              style={styles.heroLogo}
-              resizeMode="cover"
-            />
-          </View>
-          <View style={styles.heroTextBlock}>
-            <Text style={[styles.heroTitle, { color: theme.textPrimary }]}>{t('guestAboutTitle')}</Text>
-            <Text style={[styles.heroBody, { color: theme.textSecondary }]}>{t('guestAboutBody')}</Text>
-          </View>
-        </View>
-      </View>
-
-      <View style={[styles.sectionCard, { backgroundColor: theme.surfaceElevated, borderColor: theme.border }]}>
-        <Text style={[styles.sectionTitle, { color: theme.textPrimary }]}>{t('guestAboutPreviewTitle')}</Text>
-        <View style={styles.bulletList}>
-          {previewBullets.map((item) => (
-            <View key={item} style={styles.bulletRow}>
-              <Ionicons name="checkmark-circle" size={16} color={theme.primary} />
-              <Text style={[styles.bulletText, { color: theme.textSecondary }]}>{item}</Text>
+    <SafeAreaView style={[styles.scrollView, { backgroundColor: theme.background }]} edges={['left', 'right']}>
+      <ScrollView
+        style={[styles.scrollView, { backgroundColor: theme.background }]}
+        contentContainerStyle={[
+          styles.container,
+          {
+            flexGrow: 1,
+            backgroundColor: theme.background,
+            paddingTop: layoutTokens.screenTop,
+            paddingBottom: insets.bottom + 32,
+          },
+        ]}
+        showsVerticalScrollIndicator={false}
+      >
+        <View style={[styles.heroCard, { backgroundColor: theme.surfaceElevated, borderColor: theme.border }]}>
+          <View style={styles.heroHeader}>
+            <View
+              style={[
+                styles.heroBrandFrame,
+                { backgroundColor: theme.surface, borderColor: theme.borderSoft },
+              ]}
+            >
+              <Image
+                source={require('../../assets/icon.png')}
+                style={styles.heroLogo}
+                resizeMode="cover"
+              />
             </View>
-          ))}
-        </View>
-      </View>
-
-      <View style={[styles.sectionCard, { backgroundColor: theme.surfaceElevated, borderColor: theme.border }]}>
-        <Text style={[styles.sectionTitle, { color: theme.textPrimary }]}>{t('aboutSectionTitle')}</Text>
-        <View style={styles.metaRow}>
-          <Text style={[styles.metaLabel, { color: theme.textSecondary }]}>{t('aboutAppName')}</Text>
-          <Text style={[styles.metaValue, { color: theme.textPrimary }]}>Shiftor Employee</Text>
-        </View>
-        <View style={styles.metaRow}>
-          <Text style={[styles.metaLabel, { color: theme.textSecondary }]}>Developer</Text>
-          <Text style={[styles.metaValue, { color: theme.textPrimary }]}>Goi Labs</Text>
-        </View>
-        <View style={styles.metaRow}>
-          <Text style={[styles.metaLabel, { color: theme.textSecondary }]}>{t('aboutVersion')}</Text>
-          <Text style={[styles.metaValue, { color: theme.textPrimary }]}>{versionLabel}</Text>
-        </View>
-      </View>
-
-      <View style={[styles.sectionCard, { backgroundColor: theme.surfaceElevated, borderColor: theme.border }]}>
-        <Text style={[styles.sectionTitle, { color: theme.textPrimary }]}>{t('supportSectionTitle')}</Text>
-        {!isIOS ? (
-          <>
-          <TouchableOpacity
-            onPress={() =>
-              void openExternalUrlWithFallback({
-                title: t('supportHelpCenter'),
-                url: supportPageUrl,
-                fallbackUrl: SUPPORT_FALLBACK_URL,
-                unableToOpenMessage: t('unableOpenLinkDevice'),
-              })
-            }
-            activeOpacity={0.85}
-            style={[styles.linkButton, { backgroundColor: theme.surface, borderColor: theme.borderSoft }]}
-          >
-            <Text style={[styles.linkButtonText, { color: theme.textPrimary }]}>{t('supportHelpCenter')}</Text>
-            <Ionicons name="open-outline" size={16} color={theme.textPrimary} />
-          </TouchableOpacity>
-          <TouchableOpacity
-            onPress={() =>
-              void openExternalUrlWithFallback({
-                title: t('aboutPrivacyPolicy'),
-                url: privacyPolicyUrl,
-                fallbackUrl: SUPPORT_FALLBACK_URL,
-                unableToOpenMessage: t('unableOpenLinkDevice'),
-              })
-            }
-            activeOpacity={0.85}
-            style={[styles.linkButton, { backgroundColor: theme.surface, borderColor: theme.borderSoft }]}
-          >
-            <Text style={[styles.linkButtonText, { color: theme.textPrimary }]}>{t('aboutPrivacyPolicy')}</Text>
-            <Ionicons name="open-outline" size={16} color={theme.textPrimary} />
-          </TouchableOpacity>
-          <TouchableOpacity
-            onPress={() =>
-              void openExternalUrlWithFallback({
-                title: t('aboutTerms'),
-                url: termsUrl,
-                fallbackUrl: SUPPORT_FALLBACK_URL,
-                unableToOpenMessage: t('unableOpenLinkDevice'),
-              })
-            }
-            activeOpacity={0.85}
-            style={[styles.linkButton, { backgroundColor: theme.surface, borderColor: theme.borderSoft }]}
-          >
-            <Text style={[styles.linkButtonText, { color: theme.textPrimary }]}>{t('aboutTerms')}</Text>
-            <Ionicons name="open-outline" size={16} color={theme.textPrimary} />
-          </TouchableOpacity>
-          </>
-        ) : (
-          <View style={[styles.iosInfoCard, { backgroundColor: theme.surface, borderColor: theme.borderSoft }]}>
-            <Text style={[styles.iosInfoText, { color: theme.textSecondary }]}>{t('loginSupportText')}</Text>
-            <Text style={[styles.iosInfoEmail, { color: theme.textPrimary }]}>{SUPPORT_EMAIL}</Text>
+            <View style={styles.heroTextBlock}>
+              <Text style={[styles.heroTitle, { color: theme.textPrimary }]}>{t('guestAboutTitle')}</Text>
+              <Text style={[styles.heroBody, { color: theme.textSecondary }]}>{t('guestAboutBody')}</Text>
+            </View>
           </View>
-        )}
-      </View>
-    </ScrollView>
+        </View>
+
+        <View style={[styles.sectionCard, { backgroundColor: theme.surfaceElevated, borderColor: theme.border }]}>
+          <Text style={[styles.sectionTitle, { color: theme.textPrimary }]}>{t('guestAboutPreviewTitle')}</Text>
+          <View style={styles.bulletList}>
+            {previewBullets.map((item) => (
+              <View key={item} style={styles.bulletRow}>
+                <Ionicons name="checkmark-circle" size={16} color={theme.primary} />
+                <Text style={[styles.bulletText, { color: theme.textSecondary }]}>{item}</Text>
+              </View>
+            ))}
+          </View>
+        </View>
+
+        <View style={[styles.sectionCard, { backgroundColor: theme.surfaceElevated, borderColor: theme.border }]}>
+          <Text style={[styles.sectionTitle, { color: theme.textPrimary }]}>{t('aboutSectionTitle')}</Text>
+          <View style={styles.metaRow}>
+            <Text style={[styles.metaLabel, { color: theme.textSecondary }]}>{t('aboutAppName')}</Text>
+            <Text style={[styles.metaValue, { color: theme.textPrimary }]}>Shiftor Employee</Text>
+          </View>
+          <View style={styles.metaRow}>
+            <Text style={[styles.metaLabel, { color: theme.textSecondary }]}>Developer</Text>
+            <Text style={[styles.metaValue, { color: theme.textPrimary }]}>Goi Labs</Text>
+          </View>
+          <View style={styles.metaRow}>
+            <Text style={[styles.metaLabel, { color: theme.textSecondary }]}>{t('aboutVersion')}</Text>
+            <Text style={[styles.metaValue, { color: theme.textPrimary }]}>{versionLabel}</Text>
+          </View>
+        </View>
+
+        <View style={[styles.sectionCard, { backgroundColor: theme.surfaceElevated, borderColor: theme.border }]}>
+          <Text style={[styles.sectionTitle, { color: theme.textPrimary }]}>{t('supportSectionTitle')}</Text>
+          {!isIOS ? (
+            <>
+              <TouchableOpacity
+                onPress={() =>
+                  void openExternalUrlWithFallback({
+                    title: t('supportHelpCenter'),
+                    url: supportPageUrl,
+                    fallbackUrl: SUPPORT_FALLBACK_URL,
+                    unableToOpenMessage: t('unableOpenLinkDevice'),
+                  })
+                }
+                activeOpacity={0.85}
+                style={[styles.linkButton, { backgroundColor: theme.surface, borderColor: theme.borderSoft }]}
+              >
+                <Text style={[styles.linkButtonText, { color: theme.textPrimary }]}>{t('supportHelpCenter')}</Text>
+                <Ionicons name="open-outline" size={16} color={theme.textPrimary} />
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={() =>
+                  void openExternalUrlWithFallback({
+                    title: t('aboutPrivacyPolicy'),
+                    url: privacyPolicyUrl,
+                    fallbackUrl: SUPPORT_FALLBACK_URL,
+                    unableToOpenMessage: t('unableOpenLinkDevice'),
+                  })
+                }
+                activeOpacity={0.85}
+                style={[styles.linkButton, { backgroundColor: theme.surface, borderColor: theme.borderSoft }]}
+              >
+                <Text style={[styles.linkButtonText, { color: theme.textPrimary }]}>{t('aboutPrivacyPolicy')}</Text>
+                <Ionicons name="open-outline" size={16} color={theme.textPrimary} />
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={() =>
+                  void openExternalUrlWithFallback({
+                    title: t('aboutTerms'),
+                    url: termsUrl,
+                    fallbackUrl: SUPPORT_FALLBACK_URL,
+                    unableToOpenMessage: t('unableOpenLinkDevice'),
+                  })
+                }
+                activeOpacity={0.85}
+                style={[styles.linkButton, { backgroundColor: theme.surface, borderColor: theme.borderSoft }]}
+              >
+                <Text style={[styles.linkButtonText, { color: theme.textPrimary }]}>{t('aboutTerms')}</Text>
+                <Ionicons name="open-outline" size={16} color={theme.textPrimary} />
+              </TouchableOpacity>
+            </>
+          ) : (
+            <View style={[styles.iosInfoCard, { backgroundColor: theme.surface, borderColor: theme.borderSoft }]}>
+              <Text style={[styles.iosInfoText, { color: theme.textSecondary }]}>{t('loginSupportText')}</Text>
+              <Text style={[styles.iosInfoEmail, { color: theme.textPrimary }]}>{SUPPORT_EMAIL}</Text>
+            </View>
+          )}
+        </View>
+      </ScrollView>
+    </SafeAreaView>
   );
 }
 
