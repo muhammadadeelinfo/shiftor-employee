@@ -11,6 +11,8 @@ import {
   View,
 } from 'react-native';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import * as FileSystem from 'expo-file-system/legacy';
+import * as Sharing from 'expo-sharing';
 import { ShiftCard } from '@shared/components/ShiftCard';
 import { PrimaryButton } from '@shared/components/PrimaryButton';
 import { useShiftFeed } from '@features/shifts/useShiftFeed';
@@ -24,6 +26,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { layoutTokens } from '@shared/theme/layout';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useAuth } from '@hooks/useSupabaseAuth';
+import { buildShiftPlanCalendarContent, buildShiftPlanFileName } from '@shared/utils/shiftPlanExport';
 
 const getMonthLabel = (date: Date) => date.toLocaleDateString([], { month: 'long', year: 'numeric' });
 
@@ -53,6 +56,7 @@ export default function MyShiftsScreen() {
   const { orderedShifts, isLoading, error, refetch } = useShiftFeed();
   const [confirmingId, setConfirmingId] = useState<string | null>(null);
   const [confirmingAll, setConfirmingAll] = useState(false);
+  const [isExportingPlan, setIsExportingPlan] = useState(false);
   const [layoutTick, setLayoutTick] = useState(0);
   const listScrollRef = useRef<ScrollView>(null);
   const shiftLayouts = useRef(new Map<string, number>());
@@ -233,6 +237,50 @@ export default function MyShiftsScreen() {
     }
   }, [confirmingAll, pendingAssignmentIds, refetch, t]);
 
+  const handleExportShiftPlan = useCallback(async () => {
+    if (isExportingPlan) return;
+    if (!orderedShifts.length) {
+      Alert.alert(t('shiftPlanExportTitle'), t('shiftPlanExportEmptyBody'));
+      return;
+    }
+
+    setIsExportingPlan(true);
+    try {
+      const directory = FileSystem.documentDirectory;
+      if (!directory) {
+        throw new Error('Document directory unavailable');
+      }
+
+      const fileName = buildShiftPlanFileName(orderedShifts);
+      const fileUri = `${directory}${fileName}`;
+      const content = buildShiftPlanCalendarContent(orderedShifts);
+
+      await FileSystem.writeAsStringAsync(fileUri, content, {
+        encoding: FileSystem.EncodingType.UTF8,
+      });
+
+      if (await Sharing.isAvailableAsync()) {
+        await Sharing.shareAsync(fileUri, {
+          mimeType: 'text/calendar',
+          dialogTitle: t('shiftPlanExportAction'),
+          UTI: 'public.ics',
+        });
+      }
+
+      Alert.alert(
+        t('shiftPlanExportTitle'),
+        t('shiftPlanExportSuccessBody', {
+          path: fileUri.replace(directory, 'Files/'),
+        })
+      );
+    } catch (error) {
+      console.error('Failed to export shift plan', error);
+      Alert.alert(t('shiftPlanExportTitle'), t('shiftPlanExportFailedBody'));
+    } finally {
+      setIsExportingPlan(false);
+    }
+  }, [isExportingPlan, orderedShifts, t]);
+
   useEffect(() => {
     shiftLayouts.current.clear();
     lastAutoScrolledShiftId.current = null;
@@ -322,48 +370,78 @@ export default function MyShiftsScreen() {
         >
           <View style={styles.pageHeaderTopRow}>
             <Text style={[styles.pageHeaderTitle, { color: theme.textPrimary }]}>{t('shiftOverview')}</Text>
+            {!isGuest ? (
+              <TouchableOpacity
+                onPress={() => {
+                  void handleExportShiftPlan();
+                }}
+                disabled={isExportingPlan}
+                activeOpacity={0.9}
+                style={[
+                  styles.exportAction,
+                  {
+                    backgroundColor: theme.surfaceMuted,
+                    borderColor: theme.borderSoft,
+                  },
+                  isExportingPlan && styles.exportActionDisabled,
+                ]}
+              >
+                {isExportingPlan ? (
+                  <ActivityIndicator size="small" color={theme.primary} />
+                ) : (
+                  <>
+                    <Ionicons name="download-outline" size={14} color={theme.primary} />
+                    <Text style={[styles.exportActionText, { color: theme.textPrimary }]}>
+                      {t('shiftPlanExportAction')}
+                    </Text>
+                  </>
+                )}
+              </TouchableOpacity>
+            ) : null}
           </View>
           <View style={styles.pageHeaderMetaRow}>
             <Text style={[styles.pageHeaderSubtitle, { color: theme.textSecondary }]} numberOfLines={1}>
               {nextShiftLabel}
             </Text>
-            {pendingAssignmentIds.length > 0 ? (
-              <TouchableOpacity
-                onPress={() => {
-                  void handleConfirmAll();
-                }}
-                disabled={confirmingAll}
-                activeOpacity={0.9}
-                style={[
-                  styles.confirmAllAction,
-                  {
-                    backgroundColor: theme.surfaceMuted,
-                    borderColor: theme.borderSoft,
-                  },
-                  confirmingAll && styles.confirmAllActionDisabled,
-                ]}
-              >
-                {confirmingAll ? (
-                  <ActivityIndicator color={theme.primary} />
-                ) : (
-                  <>
-                    <Ionicons name="checkmark-done-outline" size={13} color={theme.primary} />
-                    <Text
-                      style={[
-                        styles.confirmAllActionText,
-                        isTabletLandscape && styles.confirmAllActionTextTablet,
-                        { color: theme.textPrimary },
-                      ]}
-                    >
-                      {t('confirmAllShiftsShort')}
-                    </Text>
-                    <View style={[styles.confirmAllCountBadge, { backgroundColor: theme.primary }]}>
-                      <Text style={styles.confirmAllCountText}>{pendingAssignmentIds.length}</Text>
-                    </View>
-                  </>
-                )}
-              </TouchableOpacity>
-            ) : null}
+            <View style={styles.headerActionsRow}>
+              {pendingAssignmentIds.length > 0 ? (
+                <TouchableOpacity
+                  onPress={() => {
+                    void handleConfirmAll();
+                  }}
+                  disabled={confirmingAll}
+                  activeOpacity={0.9}
+                  style={[
+                    styles.confirmAllAction,
+                    {
+                      backgroundColor: theme.surfaceMuted,
+                      borderColor: theme.borderSoft,
+                    },
+                    confirmingAll && styles.confirmAllActionDisabled,
+                  ]}
+                >
+                  {confirmingAll ? (
+                    <ActivityIndicator color={theme.primary} />
+                  ) : (
+                    <>
+                      <Ionicons name="checkmark-done-outline" size={13} color={theme.primary} />
+                      <Text
+                        style={[
+                          styles.confirmAllActionText,
+                          isTabletLandscape && styles.confirmAllActionTextTablet,
+                          { color: theme.textPrimary },
+                        ]}
+                      >
+                        {t('confirmAllShiftsShort')}
+                      </Text>
+                      <View style={[styles.confirmAllCountBadge, { backgroundColor: theme.primary }]}>
+                        <Text style={styles.confirmAllCountText}>{pendingAssignmentIds.length}</Text>
+                      </View>
+                    </>
+                  )}
+                </TouchableOpacity>
+              ) : null}
+            </View>
           </View>
         </View>
         {errorView}
@@ -437,11 +515,34 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     gap: 10,
   },
+  headerActionsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
   pageHeaderSubtitle: {
     flex: 1,
     fontSize: 12,
     marginTop: 0,
     fontWeight: '500',
+  },
+  exportAction: {
+    minHeight: 30,
+    borderRadius: 999,
+    borderWidth: 1,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  exportActionDisabled: {
+    opacity: 0.78,
+  },
+  exportActionText: {
+    fontSize: 11,
+    fontWeight: '700',
+    letterSpacing: 0.2,
   },
   confirmAllAction: {
     minHeight: 28,
