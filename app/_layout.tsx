@@ -44,6 +44,7 @@ import { useAuth } from '@hooks/useSupabaseAuth';
 import { useQuery } from '@tanstack/react-query';
 import { getShifts, type Shift } from '@features/shifts/shiftsService';
 import { useShiftNotifications } from '@shared/hooks/useShiftNotifications';
+import { getStartupRoute } from '@shared/utils/startupRoute';
 
 void SplashScreen.preventAutoHideAsync().catch(() => {
   /* splash screen is optional in dev */
@@ -139,6 +140,7 @@ function LayoutContentInner() {
   );
   const includedShiftSet = useMemo(() => new Set(includedShiftKeys), [includedShiftKeys]);
   const { user, loading } = useAuth();
+  const isAuthRoute = pathname === '/login' || pathname === '/signup';
   const userId = user?.id;
   const { data: quickShifts = [] } = useQuery({
     queryKey: ['quickActionsShifts', userId],
@@ -176,6 +178,18 @@ function LayoutContentInner() {
     () => monthlyShifts.filter((shift) => includedShiftSet.has(formatShiftKey(shift))),
     [monthlyShifts, includedShiftSet, formatShiftKey]
   );
+  useEffect(() => {
+    if (loading) {
+      return;
+    }
+    if (!user && !isAuthRoute) {
+      router.replace('/login');
+      return;
+    }
+    if (user && isAuthRoute) {
+      router.replace(getStartupRoute(true));
+    }
+  }, [isAuthRoute, loading, router, user]);
   const reportOptionDefinitions = useMemo<
     { key: ReportOptionKey; label: string }[]
   >(

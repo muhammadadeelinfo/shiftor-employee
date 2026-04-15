@@ -1,2 +1,2 @@
 export const getStartupRoute = (hasUser: boolean) =>
-  hasUser ? '/my-shifts' : '/jobs';
+  hasUser ? '/my-shifts' : '/login';

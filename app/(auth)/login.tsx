@@ -127,26 +127,6 @@ export default function LoginScreen() {
     }
   };
 
-  const handleSupportEmail = async () => {
-    const supportUrl = buildSupportMailto('Help request');
-    try {
-      const supported = await Linking.canOpenURL(supportUrl);
-      if (supported) {
-        await Linking.openURL(supportUrl);
-        return;
-      }
-      if (!isIOS) {
-        const fallbackSupported = await Linking.canOpenURL(SUPPORT_FALLBACK_URL);
-        if (fallbackSupported) {
-          await Linking.openURL(SUPPORT_FALLBACK_URL);
-          return;
-        }
-      }
-      Alert.alert(t('supportHelpCenter'), `${t('unableOpenLinkDevice')}\n${SUPPORT_EMAIL}`);
-    } catch {
-      Alert.alert(t('supportHelpCenter'), `${t('unableOpenLinkDevice')}\n${SUPPORT_EMAIL}`);
-    }
-  };
   const handleForgotPassword = async () => {
     const trimmedEmail = email.trim();
     if (!trimmedEmail) {
@@ -199,6 +179,23 @@ export default function LoginScreen() {
       Alert.alert(title, `${t('unableOpenLinkDevice')}\n${SUPPORT_EMAIL}`);
     }
   };
+  const handleSupportEmail = async () => {
+    const supportUrl = buildSupportMailto('Help request');
+    const webSupportUrl = helpCenterUrl || SUPPORT_FALLBACK_URL;
+
+    try {
+      try {
+        await Linking.openURL(supportUrl);
+        return;
+      } catch {
+        // Fall back to the web help center when Mail is unavailable on the device/simulator.
+      }
+
+      await Linking.openURL(webSupportUrl);
+    } catch {
+      Alert.alert(t('supportHelpCenter'), `${t('unableOpenLinkDevice')}\n${SUPPORT_EMAIL}`);
+    }
+  };
 
   const { width } = useWindowDimensions();
   const disablePrimaryAction = loading || !email.trim() || !password;
@@ -212,21 +209,19 @@ export default function LoginScreen() {
       <View style={styles.accentCircleLarge} />
       <View style={styles.accentCircleSmall} />
       <SafeAreaView style={styles.safeArea}>
-        <TouchableOpacity
-          onPress={() => {
-            if (router.canGoBack()) {
+        {router.canGoBack() ? (
+          <TouchableOpacity
+            onPress={() => {
               router.back();
-              return;
-            }
-            router.replace('/jobs');
-          }}
-          disabled={loading}
-          activeOpacity={0.75}
-          style={styles.pageBackButton}
-        >
-          <Ionicons name="chevron-back" size={17} color="#e2e8f0" />
-          <Text style={styles.pageBackButtonText}>{t('loginBackToJobs')}</Text>
-        </TouchableOpacity>
+            }}
+            disabled={loading}
+            activeOpacity={0.75}
+            style={styles.pageBackButton}
+          >
+            <Ionicons name="chevron-back" size={17} color="#e2e8f0" />
+            <Text style={styles.pageBackButtonText}>{t('loginBackToJobs')}</Text>
+          </TouchableOpacity>
+        ) : null}
         <KeyboardAvoidingView
           behavior={Platform.OS === 'ios' ? 'padding' : undefined}
           style={styles.keyboardContainer}

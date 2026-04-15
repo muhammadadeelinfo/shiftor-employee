@@ -1,4 +1,4 @@
-import { Tabs, usePathname, useRouter } from 'expo-router';
+import { Redirect, Tabs, usePathname, useRouter } from 'expo-router';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '@shared/themeContext';
@@ -6,6 +6,7 @@ import { useLanguage, type TranslationKey } from '@shared/context/LanguageContex
 import { useWindowDimensions } from 'react-native';
 import { useEffect } from 'react';
 import { useAuth } from '@hooks/useSupabaseAuth';
+import { useStartupJobsAvailability } from '@features/jobs/useStartupJobsAvailability';
 
 const iconConfig: Record<
   string,
@@ -53,26 +54,32 @@ function ThemeAwareTabs({ insets }: { insets: ReturnType<typeof useSafeAreaInset
   const pathname = usePathname();
   const { theme } = useTheme();
   const { t } = useLanguage();
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
+  const { hasJobs, loading: jobsAvailabilityLoading } = useStartupJobsAvailability();
   const { width } = useWindowDimensions();
   const isTablet = width >= 768;
+  const jobsTabVisible = jobsAvailabilityLoading || hasJobs;
 
   useEffect(() => {
     if (!user) {
-      if (pathname === '/my-shifts' || pathname === '/qr-clock-in') {
-        router.replace('/jobs');
-      }
       return;
     }
-
-    if (pathname === '/about') {
-      router.replace('/jobs');
+    if (pathname === '/about' || (!jobsTabVisible && pathname === '/jobs')) {
+      router.replace('/calendar');
     }
-  }, [pathname, router, user]);
+  }, [jobsTabVisible, pathname, router, user]);
+
+  if (authLoading) {
+    return null;
+  }
+
+  if (!user) {
+    return <Redirect href="/login" />;
+  }
 
   return (
     <Tabs
-      initialRouteName="jobs"
+      initialRouteName="my-shifts"
       screenOptions={({ route }) => {
         const icon = iconConfig[route.name] ?? {
           active: 'square',
@@ -112,11 +119,11 @@ function ThemeAwareTabs({ insets }: { insets: ReturnType<typeof useSafeAreaInset
         };
       }}
     >
-      <Tabs.Screen name="jobs" />
-      <Tabs.Screen name="my-shifts" options={{ href: user ? undefined : null }} />
+      <Tabs.Screen name="jobs" options={{ href: jobsTabVisible ? undefined : null }} />
+      <Tabs.Screen name="my-shifts" />
       <Tabs.Screen name="calendar" />
-      <Tabs.Screen name="about" options={{ href: user ? null : undefined }} />
-      <Tabs.Screen name="qr-clock-in" options={{ href: user ? undefined : null }} />
+      <Tabs.Screen name="about" options={{ href: null }} />
+      <Tabs.Screen name="qr-clock-in" />
       <Tabs.Screen name="account" />
       <Tabs.Screen name="calendar-settings" options={{ href: null }} />
     </Tabs>
