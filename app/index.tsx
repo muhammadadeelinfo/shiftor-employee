@@ -1,9 +1,11 @@
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useEffect, useState } from 'react';
 import { useRouter } from 'expo-router';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useAuth } from '@hooks/useSupabaseAuth';
 import { useLanguage } from '@shared/context/LanguageContext';
 import { getStartupRoute } from '@shared/utils/startupRoute';
+import { loadOnboardingCompletion } from '@shared/utils/onboarding';
 
 const ROOT_BOOT_TIMEOUT_MS = 12000;
 
@@ -12,14 +14,37 @@ export default function RootIndex() {
   const { t } = useLanguage();
   const router = useRouter();
   const [showBootFallback, setShowBootFallback] = useState(false);
+  const [hasSeenOnboarding, setHasSeenOnboarding] = useState<boolean | null>(null);
 
   useEffect(() => {
-    if (loading) return;
+    let isMounted = true;
+    loadOnboardingCompletion(AsyncStorage)
+      .then((value) => {
+        if (isMounted) {
+          setHasSeenOnboarding(value);
+        }
+      })
+      .catch(() => {
+        if (isMounted) {
+          setHasSeenOnboarding(false);
+        }
+      });
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (loading || hasSeenOnboarding === null) return;
+    if (!hasSeenOnboarding) {
+      router.replace('/onboarding');
+      return;
+    }
     router.replace(getStartupRoute(Boolean(user)));
-  }, [loading, router, user]);
+  }, [hasSeenOnboarding, loading, router, user]);
 
   useEffect(() => {
-    if (!loading) {
+    if (!loading && hasSeenOnboarding !== null) {
       setShowBootFallback(false);
       return;
     }
@@ -27,7 +52,7 @@ export default function RootIndex() {
       setShowBootFallback(true);
     }, ROOT_BOOT_TIMEOUT_MS);
     return () => clearTimeout(timeout);
-  }, [loading]);
+  }, [hasSeenOnboarding, loading]);
 
   const handleRetry = () => {
     setShowBootFallback(false);
@@ -42,7 +67,7 @@ export default function RootIndex() {
     <View style={styles.container}>
       <ActivityIndicator color="#93c5fd" />
       <Text style={styles.text}>
-        {loading ? t('rootCheckingSession') : t('rootPreparingWorkspace')}
+        {loading || hasSeenOnboarding === null ? t('rootCheckingSession') : t('rootPreparingWorkspace')}
       </Text>
       {showBootFallback ? (
         <View style={styles.fallbackCard}>

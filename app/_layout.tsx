@@ -141,6 +141,7 @@ function LayoutContentInner() {
   const includedShiftSet = useMemo(() => new Set(includedShiftKeys), [includedShiftKeys]);
   const { user, loading } = useAuth();
   const isAuthRoute = pathname === '/login' || pathname === '/signup';
+  const isPublicRoute = isAuthRoute || pathname === '/onboarding';
   const userId = user?.id;
   const { data: quickShifts = [] } = useQuery({
     queryKey: ['quickActionsShifts', userId],
@@ -182,14 +183,14 @@ function LayoutContentInner() {
     if (loading) {
       return;
     }
-    if (!user && !isAuthRoute) {
+    if (!user && !isPublicRoute) {
       router.replace('/login');
       return;
     }
     if (user && isAuthRoute) {
       router.replace(getStartupRoute(true));
     }
-  }, [isAuthRoute, loading, router, user]);
+  }, [isAuthRoute, isPublicRoute, loading, router, user]);
   const reportOptionDefinitions = useMemo<
     { key: ReportOptionKey; label: string }[]
   >(
