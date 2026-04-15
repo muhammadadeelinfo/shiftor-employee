@@ -2,13 +2,9 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   Animated,
   Easing,
-  NativeScrollEvent,
-  NativeSyntheticEvent,
   Pressable,
-  ScrollView,
   StyleSheet,
   Text,
-  useWindowDimensions,
   View,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -31,6 +27,8 @@ type SlideDefinition = {
   title: string;
   body: string;
   points: string[];
+  spotlightLabel: string;
+  spotlightValue: string;
   metricLabel: string;
   metricValue: string;
   icon: keyof typeof Ionicons.glyphMap;
@@ -85,7 +83,10 @@ const buildSlideDefinition = (
   points: [
     t(slideKey(config.prefix, 'PointOne')),
     t(slideKey(config.prefix, 'PointTwo')),
+    t(slideKey(config.prefix, 'PointThree')),
   ],
+  spotlightLabel: t(slideKey(config.prefix, 'SpotlightLabel')),
+  spotlightValue: t(slideKey(config.prefix, 'SpotlightValue')),
   metricLabel: t(slideKey(config.prefix, 'MetricLabel')),
   metricValue: t(slideKey(config.prefix, 'MetricValue')),
   icon: config.icon,
@@ -98,25 +99,18 @@ export default function OnboardingScreen() {
   const { user } = useAuth();
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { width } = useWindowDimensions();
-  const scrollRef = useRef<ScrollView | null>(null);
   const [activeIndex, setActiveIndex] = useState(0);
   const [isCompleting, setIsCompleting] = useState(false);
-  const [hasInteracted, setHasInteracted] = useState(false);
   const introAnim = useRef(new Animated.Value(0)).current;
   const cardAnim = useRef(new Animated.Value(0)).current;
-  const swipeHintAnim = useRef(new Animated.Value(0)).current;
 
   const slides = useMemo<SlideDefinition[]>(
     () => SLIDE_CONFIGS.map((config) => buildSlideDefinition(t, config)),
     [t]
   );
+  const activeSlide = slides[activeIndex];
 
-  const cardWidth = Math.min(width - 40, 420);
-  const cardGap = 16;
-  const snapInterval = cardWidth + cardGap;
   const isLastSlide = activeIndex === slides.length - 1;
-  const showSwipeHint = !hasInteracted && !isLastSlide;
   const introOpacity = introAnim.interpolate({
     inputRange: [0, 1],
     outputRange: [0, 1],
@@ -132,10 +126,6 @@ export default function OnboardingScreen() {
   const cardScale = cardAnim.interpolate({
     inputRange: [0, 1],
     outputRange: [0.985, 1],
-  });
-  const swipeHintTranslateX = swipeHintAnim.interpolate({
-    inputRange: [0, 1],
-    outputRange: [-8, 8],
   });
 
   useEffect(() => {
@@ -157,46 +147,9 @@ export default function OnboardingScreen() {
     }).start();
   }, [activeIndex, cardAnim]);
 
-  useEffect(() => {
-    if (!showSwipeHint) {
-      swipeHintAnim.stopAnimation();
-      swipeHintAnim.setValue(0);
-      return;
-    }
-
-    const loop = Animated.loop(
-      Animated.sequence([
-        Animated.timing(swipeHintAnim, {
-          toValue: 1,
-          duration: 900,
-          easing: Easing.inOut(Easing.ease),
-          useNativeDriver: true,
-        }),
-        Animated.timing(swipeHintAnim, {
-          toValue: 0,
-          duration: 900,
-          easing: Easing.inOut(Easing.ease),
-          useNativeDriver: true,
-        }),
-      ])
-    );
-    loop.start();
-
-    return () => {
-      loop.stop();
-    };
-  }, [showSwipeHint, swipeHintAnim]);
-
   const goToSlide = (index: number) => {
     const nextIndex = Math.max(0, Math.min(index, slides.length - 1));
-    scrollRef.current?.scrollTo({ x: nextIndex * snapInterval, animated: true });
     setActiveIndex(nextIndex);
-    setHasInteracted(true);
-  };
-
-  const handleMomentumEnd = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
-    const nextIndex = Math.round(event.nativeEvent.contentOffset.x / snapInterval);
-    setActiveIndex(Math.max(0, Math.min(nextIndex, slides.length - 1)));
   };
 
   const completeOnboarding = async () => {
@@ -267,91 +220,68 @@ export default function OnboardingScreen() {
         </View>
       </Animated.View>
 
-      {showSwipeHint ? (
-        <Animated.View
-          style={[
-            styles.swipeHintWrap,
-            {
-              opacity: introOpacity,
-              transform: [{ translateY: introTranslateY }, { translateX: swipeHintTranslateX }],
-            },
-          ]}
-        >
-          <View style={[styles.swipeHintPill, { backgroundColor: theme.overlay, borderColor: theme.borderSoft }]}>
-            <Ionicons name="chevron-forward" size={16} color={theme.textSecondary} />
-            <Text style={[styles.swipeHintText, { color: theme.textSecondary }]}>{t('onboardingSwipeHint')}</Text>
-            <Ionicons name="chevron-forward" size={16} color={theme.primary} />
-          </View>
-        </Animated.View>
-      ) : null}
-
-      <ScrollView
-        ref={scrollRef}
-        horizontal
-        snapToInterval={snapInterval}
-        decelerationRate="fast"
-        showsHorizontalScrollIndicator={false}
-        onScrollBeginDrag={() => setHasInteracted(true)}
-        onMomentumScrollEnd={handleMomentumEnd}
-        contentContainerStyle={[styles.carouselContent, { paddingHorizontal: 20 }]}
+      <Animated.View
+        style={[
+          styles.slideStage,
+          {
+            opacity: cardOpacity,
+            transform: [{ scale: cardScale }],
+          },
+        ]}
       >
-        {slides.map((slide, index) => {
-          const isActive = index === activeIndex;
-          return (
-            <Animated.View
-              key={slide.key}
-              style={{
-                opacity: isActive ? cardOpacity : 0.82,
-                transform: [{ scale: isActive ? cardScale : 0.985 }],
-              }}
+        <LinearGradient
+          colors={[theme.surfaceElevated, theme.surface, activeSlide.accent[0]]}
+          start={[0, 0]}
+          end={[1, 1]}
+          style={[styles.slideCard, { borderColor: theme.border }]}
+        >
+          <View style={styles.slideTopRow}>
+            <LinearGradient
+              colors={activeSlide.accent}
+              start={[0, 0]}
+              end={[1, 1]}
+              style={styles.iconBadge}
             >
-              <LinearGradient
-                colors={[theme.surfaceElevated, theme.surface, slide.accent[0]]}
-                start={[0, 0]}
-                end={[1, 1]}
-                style={[
-                  styles.slideCard,
-                  {
-                    width: cardWidth,
-                    marginRight: cardGap,
-                    borderColor: theme.border,
-                  },
-                ]}
+              <Ionicons name={activeSlide.icon} size={24} color="#fff" />
+            </LinearGradient>
+
+            <View style={[styles.metricPill, { backgroundColor: theme.overlay, borderColor: theme.borderSoft }]}>
+              <Text style={[styles.metricLabel, { color: theme.textSecondary }]}>{activeSlide.metricLabel}</Text>
+              <Text style={[styles.metricValue, { color: theme.textPrimary }]}>{activeSlide.metricValue}</Text>
+            </View>
+          </View>
+
+          <View style={styles.slideCopy}>
+            <Text style={[styles.eyebrow, { color: theme.textSecondary }]}>{activeSlide.eyebrow}</Text>
+            <Text style={[styles.slideTitle, { color: theme.textPrimary }]}>{activeSlide.title}</Text>
+            <Text style={[styles.slideBody, { color: theme.textSecondary }]}>{activeSlide.body}</Text>
+          </View>
+
+          <View style={styles.pointList}>
+            <Text style={[styles.pointsLabel, { color: theme.textSecondary }]}>
+              {t('onboardingHighlightsLabel')}
+            </Text>
+            {activeSlide.points.map((point) => (
+              <View
+                key={point}
+                style={[styles.pointRow, { backgroundColor: theme.overlay, borderColor: theme.borderSoft }]}
               >
-                <LinearGradient
-                  colors={slide.accent}
-                  start={[0, 0]}
-                  end={[1, 1]}
-                  style={styles.iconBadge}
-                >
-                  <Ionicons name={slide.icon} size={24} color="#fff" />
-                </LinearGradient>
+                <View style={[styles.pointIndicator, { backgroundColor: activeSlide.accent[1] }]} />
+                <Text style={[styles.pointText, { color: theme.textPrimary }]}>{point}</Text>
+              </View>
+            ))}
+          </View>
 
-                <View style={[styles.metricPill, { backgroundColor: theme.overlay, borderColor: theme.borderSoft }]}>
-                  <Text style={[styles.metricLabel, { color: theme.textSecondary }]}>{slide.metricLabel}</Text>
-                  <Text style={[styles.metricValue, { color: theme.textPrimary }]}>{slide.metricValue}</Text>
-                </View>
-
-                <Text style={[styles.eyebrow, { color: theme.textSecondary }]}>{slide.eyebrow}</Text>
-                <Text style={[styles.slideTitle, { color: theme.textPrimary }]}>{slide.title}</Text>
-                <Text style={[styles.slideBody, { color: theme.textSecondary }]}>{slide.body}</Text>
-
-                <View style={styles.pointList}>
-                  {slide.points.map((point) => (
-                    <View
-                      key={point}
-                      style={[styles.pointRow, { backgroundColor: theme.overlay, borderColor: theme.borderSoft }]}
-                    >
-                      <View style={[styles.pointIndicator, { backgroundColor: slide.accent[1] }]} />
-                      <Text style={[styles.pointText, { color: theme.textPrimary }]}>{point}</Text>
-                    </View>
-                  ))}
-                </View>
-              </LinearGradient>
-            </Animated.View>
-          );
-        })}
-      </ScrollView>
+          <View style={[styles.spotlightCard, { backgroundColor: theme.overlay, borderColor: theme.borderSoft }]}>
+            <Text style={[styles.spotlightLabel, { color: theme.textSecondary }]}>
+              {activeSlide.spotlightLabel}
+            </Text>
+            <Text style={[styles.spotlightValue, { color: theme.textPrimary }]}>
+              {activeSlide.spotlightValue}
+            </Text>
+          </View>
+        </LinearGradient>
+      </Animated.View>
 
       <Animated.View
         style={[
@@ -459,49 +389,41 @@ const styles = StyleSheet.create({
     height: 8,
     borderRadius: 999,
   },
-  swipeHintWrap: {
+  slideStage: {
+    flex: 1,
     paddingHorizontal: 20,
-    marginTop: 14,
-    alignItems: 'flex-start',
-  },
-  swipeHintPill: {
-    borderWidth: 1,
-    borderRadius: 999,
-    paddingHorizontal: 14,
-    paddingVertical: 9,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  swipeHintText: {
-    fontSize: 13,
-    fontWeight: '600',
-  },
-  carouselContent: {
-    paddingTop: 22,
+    paddingTop: 18,
+    paddingBottom: 12,
   },
   slideCard: {
-    minHeight: 470,
+    flex: 1,
     borderRadius: 30,
     borderWidth: 1,
-    padding: 22,
+    padding: 20,
     overflow: 'hidden',
+    justifyContent: 'space-between',
+  },
+  slideTopRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    gap: 14,
+  },
+  slideCopy: {
+    marginTop: 8,
   },
   iconBadge: {
-    width: 58,
-    height: 58,
+    width: 54,
+    height: 54,
     borderRadius: 18,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 18,
   },
   metricPill: {
-    alignSelf: 'flex-start',
     borderRadius: 999,
     borderWidth: 1,
-    paddingHorizontal: 14,
-    paddingVertical: 9,
-    marginBottom: 20,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
   },
   metricLabel: {
     fontSize: 11,
@@ -514,30 +436,37 @@ const styles = StyleSheet.create({
     fontWeight: '800',
   },
   eyebrow: {
-    fontSize: 12,
+    fontSize: 11,
     textTransform: 'uppercase',
     letterSpacing: 1.2,
     fontWeight: '700',
-    marginBottom: 12,
+    marginBottom: 10,
   },
   slideTitle: {
-    fontSize: 28,
-    lineHeight: 32,
+    fontSize: 26,
+    lineHeight: 30,
     fontWeight: '800',
   },
   slideBody: {
-    marginTop: 12,
-    fontSize: 15,
-    lineHeight: 23,
+    marginTop: 10,
+    fontSize: 14,
+    lineHeight: 21,
   },
   pointList: {
-    marginTop: 22,
-    gap: 12,
+    gap: 10,
+  },
+  pointsLabel: {
+    fontSize: 11,
+    textTransform: 'uppercase',
+    letterSpacing: 1,
+    fontWeight: '700',
+    marginBottom: 2,
   },
   pointRow: {
     borderWidth: 1,
-    borderRadius: 20,
-    padding: 14,
+    borderRadius: 18,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
     flexDirection: 'row',
     alignItems: 'flex-start',
   },
@@ -550,14 +479,32 @@ const styles = StyleSheet.create({
   },
   pointText: {
     flex: 1,
-    fontSize: 14,
-    lineHeight: 21,
+    fontSize: 13,
+    lineHeight: 19,
     fontWeight: '500',
   },
+  spotlightCard: {
+    borderWidth: 1,
+    borderRadius: 20,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    marginTop: 12,
+  },
+  spotlightLabel: {
+    fontSize: 11,
+    textTransform: 'uppercase',
+    letterSpacing: 1,
+    fontWeight: '700',
+    marginBottom: 6,
+  },
+  spotlightValue: {
+    fontSize: 14,
+    lineHeight: 20,
+    fontWeight: '600',
+  },
   footer: {
-    marginTop: 'auto',
     paddingHorizontal: 20,
-    paddingTop: 22,
+    paddingTop: 8,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 16,
