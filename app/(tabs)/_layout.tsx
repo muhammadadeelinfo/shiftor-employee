@@ -64,7 +64,7 @@ function ThemeAwareTabs({ insets }: { insets: ReturnType<typeof useSafeAreaInset
     if (!user) {
       return;
     }
-    if (pathname === '/about' || (!jobsTabVisible && pathname === '/jobs')) {
+    if (!jobsTabVisible && pathname === '/jobs') {
       router.replace('/calendar');
     }
   }, [jobsTabVisible, pathname, router, user]);

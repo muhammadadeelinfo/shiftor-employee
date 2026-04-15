@@ -30,13 +30,10 @@ import {
   shouldStackForCompactWidth,
 } from '@shared/utils/responsiveLayout';
 import {
-  SUPPORT_EMAIL,
-  SUPPORT_FALLBACK_URL,
 } from '@shared/utils/support';
 import Constants from 'expo-constants';
 import { formatAddress } from '@shared/utils/address';
 import { getUserFacingErrorMessage } from '@shared/utils/userFacingError';
-import { getLegalLinks, openExternalUrlWithFallback } from '@shared/utils/legalLinks';
 import {
   fetchMonthlyHours,
   formatMinutesLabel,
@@ -465,31 +462,6 @@ export default function AccountScreen() {
       );
     }
   };
-  const { privacyPolicyUrl, termsUrl, supportPageUrl } = getLegalLinks();
-  const handlePrivacyPolicy = async () => {
-    await openExternalUrlWithFallback({
-      title: t('aboutPrivacyPolicy'),
-      url: privacyPolicyUrl,
-      fallbackUrl: SUPPORT_FALLBACK_URL,
-      unableToOpenMessage: t('unableOpenLinkDevice'),
-    });
-  };
-  const handleTerms = async () => {
-    await openExternalUrlWithFallback({
-      title: t('aboutTerms'),
-      url: termsUrl,
-      fallbackUrl: SUPPORT_FALLBACK_URL,
-      unableToOpenMessage: t('unableOpenLinkDevice'),
-    });
-  };
-  const handleHelpCenter = async () => {
-    await openExternalUrlWithFallback({
-      title: t('supportHelpCenter'),
-      url: supportPageUrl,
-      fallbackUrl: SUPPORT_FALLBACK_URL,
-      unableToOpenMessage: t('unableOpenLinkDevice'),
-    });
-  };
   const handleDeleteAccount = async () => {
     if (!supabase) {
       Alert.alert(t('supportDeleteAccount'), t('authClientUnavailable'));
@@ -753,7 +725,7 @@ export default function AccountScreen() {
               <View
                 style={[
                   styles.heroCard,
-                  { backgroundColor: 'rgba(255,255,255,0.06)' },
+                  { backgroundColor: theme.surfaceElevated },
                   isIOS && styles.heroCardIOS,
                 ]}
               >
@@ -1133,101 +1105,59 @@ export default function AccountScreen() {
             </View>
 
             {!isGuest ? (
-              <View
+              <TouchableOpacity
+                activeOpacity={0.88}
+                onPress={() => router.push('/support')}
                 style={[
                   styles.sectionCard,
                   { backgroundColor: theme.surface, borderColor: theme.borderSoft },
                   isIOS && styles.sectionCardIOS,
                 ]}
               >
-                <Text style={[styles.sectionHeading, { color: theme.textPrimary }]}>
-                  {t('supportSectionTitle')}
-                </Text>
-                {!isIOS ? (
-                  <View style={styles.toolsList}>
-                    <TouchableOpacity
-                      style={[styles.toolsRow, { borderColor: theme.borderSoft }]}
-                      onPress={() => void handleHelpCenter()}
-                    >
-                      <View style={[styles.toolsIconWrap, { backgroundColor: theme.surfaceMuted }]}>
-                        <Ionicons name="help-circle-outline" size={16} color={theme.primary} />
-                      </View>
-                      <Text style={[styles.toolsLabel, { color: theme.textPrimary }]}>
-                        {t('supportHelpCenter')}
-                      </Text>
-                      <Ionicons name="chevron-forward" size={16} color={theme.textSecondary} />
-                    </TouchableOpacity>
-                  </View>
-                ) : (
-                  <View
+                <View style={styles.sectionHeadingRow}>
+                  <Text
                     style={[
-                      styles.iOSSupportCard,
-                      { backgroundColor: theme.surfaceMuted, borderColor: theme.borderSoft },
+                      styles.sectionHeading,
+                      styles.sectionHeadingInRow,
+                      { color: theme.textPrimary },
                     ]}
                   >
-                    <Text style={[styles.sectionHint, { color: theme.textSecondary }]}>
-                      {t('loginSupportText')}
-                    </Text>
-                    <Text style={[styles.iOSSupportEmail, { color: theme.textPrimary }]}>{SUPPORT_EMAIL}</Text>
-                  </View>
-                )}
-              </View>
+                    {t('supportSectionTitle')}
+                  </Text>
+                  <Ionicons name="chevron-forward" size={18} color={theme.textSecondary} />
+                </View>
+                <Text style={[styles.sectionHint, { color: theme.textSecondary }]}>
+                  {t('loginSupportText')}
+                </Text>
+              </TouchableOpacity>
             ) : null}
 
             {!isGuest ? (
-              <View
+              <TouchableOpacity
+                activeOpacity={0.88}
+                onPress={() => router.push('/about')}
                 style={[
                   styles.sectionCard,
                   { backgroundColor: theme.surface, borderColor: theme.borderSoft },
                   isIOS && styles.sectionCardIOS,
                 ]}
               >
-                <Text style={[styles.sectionHeading, { color: theme.textPrimary }]}>
-                  {t('aboutSectionTitle')}
-                </Text>
+                <View style={styles.sectionHeadingRow}>
+                  <Text
+                    style={[
+                      styles.sectionHeading,
+                      styles.sectionHeadingInRow,
+                      { color: theme.textPrimary },
+                    ]}
+                  >
+                    {t('aboutSectionTitle')}
+                  </Text>
+                  <Ionicons name="chevron-forward" size={18} color={theme.textSecondary} />
+                </View>
                 <Text style={[styles.sectionHint, { color: theme.textSecondary }]}>
                   {t('aboutSectionHint')}
                 </Text>
-                <View style={styles.aboutMetaList}>
-                  {[
-                    { label: t('aboutAppName'), value: appName },
-                    { label: t('aboutVersion'), value: appVersionLabel },
-                  ].map((entry) => (
-                    <View key={entry.label} style={[styles.aboutMetaRow, { borderColor: theme.borderSoft }]}>
-                      <Text style={[styles.aboutMetaLabel, { color: theme.textSecondary }]}>{entry.label}</Text>
-                      <Text style={[styles.aboutMetaValue, { color: theme.textPrimary }]}>{entry.value}</Text>
-                    </View>
-                  ))}
-                </View>
-                {!isIOS ? (
-                  <View style={styles.toolsList}>
-                    <TouchableOpacity
-                      style={[styles.toolsRow, { borderColor: theme.borderSoft }]}
-                      onPress={() => void handlePrivacyPolicy()}
-                    >
-                      <View style={[styles.toolsIconWrap, { backgroundColor: theme.surfaceMuted }]}>
-                        <Ionicons name="shield-outline" size={16} color={theme.primary} />
-                      </View>
-                      <Text style={[styles.toolsLabel, { color: theme.textPrimary }]}>
-                        {t('aboutPrivacyPolicy')}
-                      </Text>
-                      <Ionicons name="chevron-forward" size={16} color={theme.textSecondary} />
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                      style={[styles.toolsRow, { borderColor: theme.borderSoft }]}
-                      onPress={() => void handleTerms()}
-                    >
-                      <View style={[styles.toolsIconWrap, { backgroundColor: theme.surfaceMuted }]}>
-                        <Ionicons name="document-text-outline" size={16} color={theme.primary} />
-                      </View>
-                      <Text style={[styles.toolsLabel, { color: theme.textPrimary }]}>
-                        {t('aboutTerms')}
-                      </Text>
-                      <Ionicons name="chevron-forward" size={16} color={theme.textSecondary} />
-                    </TouchableOpacity>
-                  </View>
-                ) : null}
-              </View>
+              </TouchableOpacity>
             ) : null}
 
             {!isGuest ? (
@@ -1332,10 +1262,6 @@ const styles = StyleSheet.create({
     borderRadius: 50,
     backgroundColor: 'rgba(129, 140, 248, 0.25)',
     opacity: 0.4,
-    shadowColor: '#818cf8',
-    shadowOpacity: 0.4,
-    shadowOffset: { width: 0, height: 24 },
-    shadowRadius: 30,
   },
   heroHeader: {
     flexDirection: 'row',
@@ -1767,28 +1693,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     borderWidth: 1,
     marginLeft: 10,
-  },
-  aboutMetaList: {
-    borderTopWidth: 1,
-    marginTop: 2,
-  },
-  aboutMetaRow: {
-    borderBottomWidth: 1,
-    paddingVertical: 10,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: 10,
-  },
-  aboutMetaLabel: {
-    fontSize: 12,
-    fontWeight: '600',
-  },
-  aboutMetaValue: {
-    fontSize: 13,
-    fontWeight: '700',
-    flex: 1,
-    textAlign: 'right',
   },
   companyInfoCard: {
     marginTop: 2,
