@@ -265,7 +265,7 @@ export default function StartupScreen() {
   const insets = useSafeAreaInsets();
   const { theme } = useTheme();
   const { t } = useLanguage();
-  const { session, loading: authLoading } = useAuth();
+  const { session, user, loading: authLoading } = useAuth();
 
   const [jobs, setJobs] = useState<StartupJob[]>([]);
   const [loadingJobs, setLoadingJobs] = useState(true);
