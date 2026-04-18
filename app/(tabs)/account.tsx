@@ -915,6 +915,22 @@ export default function AccountScreen() {
                   </LinearGradient>
                 </TouchableOpacity>
               ) : null}
+              {!isGuest ? (
+                <View style={styles.toolsList}>
+                  <TouchableOpacity
+                    style={[styles.toolsRow, { borderColor: theme.borderSoft }]}
+                    onPress={() => router.push('/vacation-requests')}
+                  >
+                    <View style={[styles.toolsIconWrap, { backgroundColor: theme.surfaceMuted }]}>
+                      <Ionicons name="airplane-outline" size={16} color={theme.primary} />
+                    </View>
+                    <Text style={[styles.toolsLabel, { color: theme.textPrimary }]}>
+                      {t('accountVacationRequests')}
+                    </Text>
+                    <Ionicons name="chevron-forward" size={16} color={theme.textSecondary} />
+                  </TouchableOpacity>
+                </View>
+              ) : null}
               <View style={styles.contactList}>
                 <Text style={[styles.contactSectionTitle, { color: theme.textSecondary }]}>{t('contactInformation')}</Text>
                 {contactFields.map((field) => (
