@@ -69,6 +69,7 @@
     "tests/i18nMonitoringIntegration.test.ts",
     "tests/uiNotificationsIntegration.test.ts",
     "tests/uiAccountIntegration.test.ts",
+    "tests/monthlyHours.test.ts",
     "tests/e2eLanguageRestartFlow.test.ts",
     "tests/e2eNotificationRealtimeFlow.test.ts",
     "tests/visualResponsiveSnapshot.test.ts",

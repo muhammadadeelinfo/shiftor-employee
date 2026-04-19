@@ -12,7 +12,6 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
-import * as FileSystem from 'expo-file-system/legacy';
 import { useRouter } from 'expo-router';
 import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '@hooks/useSupabaseAuth';
@@ -26,6 +25,8 @@ import {
   formatMonthlyHoursMonthLabel,
   formatSignedMinutesLabel,
   getEmployeeApiBaseUrl,
+  getMonthlyHoursShiftTimings,
+  type MonthlyHoursShiftTiming,
 } from '@features/account/monthlyHours';
 
 type ObjectTotal = {
@@ -59,6 +60,36 @@ const shiftMonthKey = (monthKey: string, offset: number) => {
 
   const next = new Date(Date.UTC(year, month - 1 + offset, 1));
   return formatMonthKey(next);
+};
+
+const formatTimingDate = (value?: string | null) => {
+  if (!value) return '—';
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) return '—';
+  return parsed.toLocaleDateString([], {
+    weekday: 'short',
+    month: 'short',
+    day: 'numeric',
+  });
+};
+
+const formatTimingTime = (value?: string | null) => {
+  if (!value) return '—';
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) return '—';
+  return parsed.toLocaleTimeString([], {
+    hour: 'numeric',
+    minute: '2-digit',
+  });
+};
+
+const formatTimingWindow = (shift: MonthlyHoursShiftTiming, t: (key: any, params?: Record<string, string | number>) => string) => {
+  const start = formatTimingTime(shift.start);
+  const end = formatTimingTime(shift.end);
+  if (start === '—' && end === '—') {
+    return t('notProvided');
+  }
+  return `${start} - ${end}`;
 };
 
 export default function MonthlyHoursScreen() {
@@ -139,6 +170,7 @@ export default function MonthlyHoursScreen() {
       ]
     : [];
   const objectTotals = getObjectTotals(data?.objectTotals);
+  const shiftTimings = useMemo(() => getMonthlyHoursShiftTimings(data), [data]);
 
   const presentExportNotice = (
     title: string,
@@ -204,6 +236,38 @@ export default function MonthlyHoursScreen() {
               )
               .join('')
           : `<p class="empty">${escapeHtml(t('accountMonthlyHoursNoLocations'))}</p>`;
+      const shiftTimingsHtml =
+        shiftTimings.length > 0
+          ? shiftTimings
+              .map(
+                (shift) => `
+                  <div class="timing-row">
+                    <div class="timing-head">
+                      <div>
+                        <div class="location-title">${escapeHtml(shift.location || shift.title)}</div>
+                        <div class="location-meta">${escapeHtml(formatTimingDate(shift.clockIn ?? shift.clockOut ?? shift.start))}</div>
+                      </div>
+                      <div class="worked-pill">${escapeHtml(formatTimingWindow(shift, t))}</div>
+                    </div>
+                  <div class="timing-grid timing-grid-three">
+                    <div class="timing-box">
+                      <div class="timing-label">${escapeHtml(t('accountMonthlyHoursWorked'))}</div>
+                      <div class="timing-value">${escapeHtml(formatMinutesLabel(shift.workedMinutes, t))}</div>
+                    </div>
+                    <div class="timing-box">
+                      <div class="timing-label">${escapeHtml(t('accountMonthlyHoursClockInLabel'))}</div>
+                      <div class="timing-value">${escapeHtml(formatTimingTime(shift.clockIn))}</div>
+                      </div>
+                      <div class="timing-box">
+                        <div class="timing-label">${escapeHtml(t('accountMonthlyHoursClockOutLabel'))}</div>
+                        <div class="timing-value">${escapeHtml(formatTimingTime(shift.clockOut))}</div>
+                      </div>
+                    </div>
+                  </div>
+                `
+              )
+              .join('')
+          : '';
 
       const html = `
         <html>
@@ -239,6 +303,14 @@ export default function MonthlyHoursScreen() {
               .worked-pill { display: table-cell; text-align: right; font-size: 15px; font-weight: 800; color: #2563eb; }
               .location-foot { margin-top: 10px; font-size: 13px; color: #475569; }
               .location-foot strong { display: table-cell; text-align: right; color: #0f172a; }
+              .timing-row { border-top: 1px solid #e2e8f0; padding-top: 14px; margin-top: 14px; }
+              .timing-row:first-child { border-top: none; padding-top: 0; margin-top: 0; }
+              .timing-head { display: table; width: 100%; margin-bottom: 10px; }
+              .timing-grid { display: table; width: 100%; border-spacing: 12px 0; margin: 0 -12px; }
+              .timing-grid-three .timing-box { width: calc(33.333% - 12px); }
+              .timing-box { display: inline-block; width: calc(50% - 12px); box-sizing: border-box; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 16px; padding: 14px; margin: 0 12px 0 0; }
+              .timing-label { font-size: 12px; color: #64748b; margin-bottom: 4px; }
+              .timing-value { font-size: 18px; font-weight: 800; color: #0f172a; }
               .empty { color: #64748b; margin: 0; }
             </style>
           </head>
@@ -279,33 +351,21 @@ export default function MonthlyHoursScreen() {
               <h2 class="section-title">${escapeHtml(t('accountMonthlyHoursLocationsTitle'))}</h2>
               ${locationsHtml}
             </div>
+            ${
+              shiftTimingsHtml
+                ? `<div class="section">
+                    <h2 class="section-title">${escapeHtml(t('accountMonthlyHoursClockTimesTitle'))}</h2>
+                    ${shiftTimingsHtml}
+                  </div>`
+                : ''
+            }
           </body>
         </html>
       `;
 
       const { uri } = await Print.printToFileAsync({ html });
       const shareTitle = t('reportGeneratePdf');
-      const fileName = `shiftor-monthly-hours-${selectedMonthKey}.pdf`;
-      const target = `${FileSystem.documentDirectory ?? ''}${fileName}`;
-      let savedUri: string | null = null;
-
-      if (FileSystem.documentDirectory) {
-        try {
-          await FileSystem.copyAsync({ from: uri, to: target });
-          savedUri = target;
-        } catch {
-          savedUri = null;
-        }
-      }
-
-      if (savedUri) {
-        const relative = savedUri.replace(FileSystem.documentDirectory ?? '', 'Files/');
-        presentExportNotice(
-          t('reportDownloadedTitle'),
-          t('reportDownloadedBody', { path: relative }),
-          'success'
-        );
-      } else if (await Sharing.isAvailableAsync()) {
+      if (await Sharing.isAvailableAsync()) {
         await Sharing.shareAsync(uri, {
           mimeType: 'application/pdf',
           dialogTitle: shareTitle,
@@ -634,6 +694,82 @@ export default function MonthlyHoursScreen() {
             </Text>
           )}
         </View>
+
+        {summary ? (
+          <View style={[styles.panel, { backgroundColor: theme.surface, borderColor: theme.borderSoft }]}>
+            <View style={styles.panelHeader}>
+              <Text style={[styles.panelTitle, { color: theme.textPrimary }]}>
+                {t('accountMonthlyHoursClockTimesTitle')}
+              </Text>
+              <View style={[styles.panelBadge, { backgroundColor: theme.surfaceMuted, borderColor: theme.borderSoft }]}>
+                <Text style={[styles.panelBadgeText, { color: theme.textSecondary }]}>
+                  {t('accountMonthlyHoursShiftCount', { count: shiftTimings.length })}
+                </Text>
+              </View>
+            </View>
+            {shiftTimings.length > 0 ? (
+              <View style={styles.timingList}>
+                {shiftTimings.map((shift) => (
+                  <View
+                    key={shift.id}
+                    style={[styles.timingRow, { borderColor: theme.borderSoft, backgroundColor: theme.surfaceMuted }]}
+                  >
+                    <View style={styles.timingHeader}>
+                      <View style={styles.timingCopy}>
+                        <Text style={[styles.timingTitle, { color: theme.textPrimary }]}>
+                          {shift.location || shift.title}
+                        </Text>
+                        <Text style={[styles.timingMeta, { color: theme.textSecondary }]}>
+                          {formatTimingDate(shift.clockIn ?? shift.clockOut ?? shift.start)}
+                        </Text>
+                      </View>
+                      <View
+                        style={[
+                          styles.locationWorkedBadge,
+                          { backgroundColor: 'rgba(12, 19, 37, 0.3)', borderColor: 'rgba(255,255,255,0.08)' },
+                        ]}
+                      >
+                      <Text style={[styles.locationWorkedBadgeText, { color: theme.primary }]}>
+                        {formatTimingWindow(shift, t)}
+                      </Text>
+                    </View>
+                  </View>
+                  <View style={styles.timingStats}>
+                    <View style={[styles.timingStatCard, { backgroundColor: theme.surface, borderColor: theme.borderSoft }]}>
+                      <Text style={[styles.timingStatLabel, { color: theme.textSecondary }]}>
+                        {t('accountMonthlyHoursWorked')}
+                      </Text>
+                      <Text style={[styles.timingStatValue, { color: theme.textPrimary }]}>
+                        {formatMinutesLabel(shift.workedMinutes, t)}
+                      </Text>
+                    </View>
+                    <View style={[styles.timingStatCard, { backgroundColor: theme.surface, borderColor: theme.borderSoft }]}>
+                      <Text style={[styles.timingStatLabel, { color: theme.textSecondary }]}>
+                        {t('accountMonthlyHoursClockInLabel')}
+                      </Text>
+                        <Text style={[styles.timingStatValue, { color: theme.textPrimary }]}>
+                          {formatTimingTime(shift.clockIn)}
+                        </Text>
+                      </View>
+                      <View style={[styles.timingStatCard, { backgroundColor: theme.surface, borderColor: theme.borderSoft }]}>
+                        <Text style={[styles.timingStatLabel, { color: theme.textSecondary }]}>
+                          {t('accountMonthlyHoursClockOutLabel')}
+                        </Text>
+                        <Text style={[styles.timingStatValue, { color: theme.textPrimary }]}>
+                          {formatTimingTime(shift.clockOut)}
+                        </Text>
+                      </View>
+                    </View>
+                  </View>
+                ))}
+              </View>
+            ) : (
+              <Text style={[styles.emptyText, { color: theme.textSecondary }]}>
+                {t('accountMonthlyHoursClockTimesEmpty')}
+              </Text>
+            )}
+          </View>
+        ) : null}
       </ScrollView>
       {exportNotice ? (
         <View pointerEvents="box-none" style={[styles.noticeLayer, { bottom: insets.bottom + 18 }]}>
@@ -1125,6 +1261,54 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     gap: 12,
+  },
+  timingList: {
+    gap: 12,
+  },
+  timingRow: {
+    borderWidth: 1,
+    borderRadius: 18,
+    padding: 14,
+    gap: 12,
+  },
+  timingHeader: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+    gap: 12,
+  },
+  timingCopy: {
+    flex: 1,
+    gap: 2,
+  },
+  timingTitle: {
+    fontSize: 15,
+    fontWeight: '700',
+  },
+  timingMeta: {
+    fontSize: 12,
+  },
+  timingStats: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
+  },
+  timingStatCard: {
+    flex: 1,
+    minWidth: 96,
+    borderWidth: 1,
+    borderRadius: 16,
+    padding: 12,
+    gap: 4,
+  },
+  timingStatLabel: {
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  timingStatValue: {
+    fontSize: 18,
+    fontWeight: '800',
+    letterSpacing: -0.3,
   },
   emptyText: {
     fontSize: 14,

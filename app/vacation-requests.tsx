@@ -2,7 +2,6 @@ import { useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
-  Linking,
   Modal,
   Platform,
   Pressable,
@@ -25,8 +24,10 @@ import { useAuth } from '@hooks/useSupabaseAuth';
 import { useLanguage } from '@shared/context/LanguageContext';
 import { layoutTokens } from '@shared/theme/layout';
 import { getContentMaxWidth, shouldStackForCompactWidth } from '@shared/utils/responsiveLayout';
+import { downloadRemoteDocument } from '@shared/utils/nativeDocumentOpen';
 import { getUserFacingErrorMessage } from '@shared/utils/userFacingError';
 import {
+  buildVacationApprovalDocumentFileName,
   fetchVacationApprovalLetterUrl,
   fetchVacationRequestContext,
   fetchVacationRequests,
@@ -178,7 +179,10 @@ export default function VacationRequestsScreen() {
         return;
       }
 
-      await Linking.openURL(signedUrl);
+      await downloadRemoteDocument({
+        url: signedUrl,
+        fileName: buildVacationApprovalDocumentFileName(request.id),
+      });
     } catch (openError) {
       Alert.alert(
         t('vacationRequestsTitle'),

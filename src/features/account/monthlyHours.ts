@@ -1,4 +1,8 @@
 import Constants from 'expo-constants';
+import {
+  getMonthlyHoursShiftTimings,
+  type MonthlyHoursShiftTiming,
+} from './monthlyHoursParsing';
 
 export type MonthlyHoursSummary = {
   month: string;
@@ -20,14 +24,22 @@ export type MonthlyHoursResponse = {
     lastName: string | null;
     email: string | null;
   };
+  rows?: Array<unknown>;
   summary: MonthlyHoursSummary;
   objectTotals: Array<unknown>;
+  shifts?: Array<unknown>;
+  shiftTotals?: Array<unknown>;
+  shiftEntries?: Array<unknown>;
+  entries?: Array<unknown>;
+  items?: Array<unknown>;
 };
 
 type Translate = (key: any, params?: Record<string, string | number>) => string;
 
 export const formatMonthKey = (value: Date) =>
   `${value.getUTCFullYear()}-${String(value.getUTCMonth() + 1).padStart(2, '0')}`;
+
+export { getMonthlyHoursShiftTimings, type MonthlyHoursShiftTiming };
 
 export const getEmployeeApiBaseUrl = () => {
   const value = (Constants.expoConfig?.extra?.apiBaseUrl as string | undefined)?.trim();

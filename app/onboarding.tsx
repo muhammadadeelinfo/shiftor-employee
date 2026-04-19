@@ -27,8 +27,6 @@ type SlideDefinition = {
   title: string;
   body: string;
   points: string[];
-  spotlightLabel: string;
-  spotlightValue: string;
   metricLabel: string;
   metricValue: string;
   icon: keyof typeof Ionicons.glyphMap;
@@ -83,10 +81,7 @@ const buildSlideDefinition = (
   points: [
     t(slideKey(config.prefix, 'PointOne')),
     t(slideKey(config.prefix, 'PointTwo')),
-    t(slideKey(config.prefix, 'PointThree')),
   ],
-  spotlightLabel: t(slideKey(config.prefix, 'SpotlightLabel')),
-  spotlightValue: t(slideKey(config.prefix, 'SpotlightValue')),
   metricLabel: t(slideKey(config.prefix, 'MetricLabel')),
   metricValue: t(slideKey(config.prefix, 'MetricValue')),
   icon: config.icon,
@@ -270,15 +265,6 @@ export default function OnboardingScreen() {
                 <Text style={[styles.pointText, { color: theme.textPrimary }]}>{point}</Text>
               </View>
             ))}
-          </View>
-
-          <View style={[styles.spotlightCard, { backgroundColor: theme.overlay, borderColor: theme.borderSoft }]}>
-            <Text style={[styles.spotlightLabel, { color: theme.textSecondary }]}>
-              {activeSlide.spotlightLabel}
-            </Text>
-            <Text style={[styles.spotlightValue, { color: theme.textPrimary }]}>
-              {activeSlide.spotlightValue}
-            </Text>
           </View>
         </LinearGradient>
       </Animated.View>
@@ -482,25 +468,6 @@ const styles = StyleSheet.create({
     fontSize: 13,
     lineHeight: 19,
     fontWeight: '500',
-  },
-  spotlightCard: {
-    borderWidth: 1,
-    borderRadius: 20,
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    marginTop: 12,
-  },
-  spotlightLabel: {
-    fontSize: 11,
-    textTransform: 'uppercase',
-    letterSpacing: 1,
-    fontWeight: '700',
-    marginBottom: 6,
-  },
-  spotlightValue: {
-    fontSize: 14,
-    lineHeight: 20,
-    fontWeight: '600',
   },
   footer: {
     paddingHorizontal: 20,

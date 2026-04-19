@@ -11,5 +11,7 @@ assert.ok(enTranslations.profileGreeting.includes('{name}'));
 assert.notStrictEqual(deTranslations.notificationsSectionTitle, enTranslations.notificationsSectionTitle);
 assert.ok(enTranslations.accountMonthlyHoursTitle.length > 0);
 assert.ok(deTranslations.accountMonthlyHoursTitle.length > 0);
+assert.ok(enTranslations.accountCertificateOfSickness.length > 0);
+assert.ok(deTranslations.accountCertificateOfSickness.length > 0);
 
 console.log('tests/uiAccountIntegration.test.ts OK');

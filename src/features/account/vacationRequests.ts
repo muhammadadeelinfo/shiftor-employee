@@ -59,7 +59,7 @@ export const formatVacationRange = (startDate: string, endDate: string, language
   return startLabel === endLabel ? startLabel : `${startLabel} - ${endLabel}`;
 };
 
-const buildVacationApprovalDocumentFileName = (requestId: string) =>
+export const buildVacationApprovalDocumentFileName = (requestId: string) =>
   `vacation-approval-letter-${requestId}.pdf`;
 
 const buildVacationApprovalDocumentStoragePath = (

@@ -112,12 +112,78 @@ export const enTranslations = {
     accountMonthlyHoursCurrentMonth: 'This month',
     accountMonthlyHoursBreakdownTitle: 'Shift status breakdown',
     accountMonthlyHoursLocationsTitle: 'Hours by location',
+    accountMonthlyHoursClockTimesTitle: 'Clock in and clock out',
+    accountMonthlyHoursClockInLabel: 'Clock in',
+    accountMonthlyHoursClockOutLabel: 'Clock out',
+    accountMonthlyHoursClockTimesEmpty:
+      'Clock in and clock out times will appear here when logged shifts are included in this monthly report.',
     accountMonthlyHoursNoLocations: 'No location totals are available for this month yet.',
     accountMonthlyHoursStatusComplete: 'Complete',
     accountMonthlyHoursStatusOpen: 'Open',
     accountMonthlyHoursStatusMissing: 'Missing',
     accountMonthlyHoursStatusScheduled: 'Scheduled',
+    accountCertificateOfSickness: 'Documents',
     accountVacationRequests: 'Vacation requests',
+    certificateOfSicknessTitle: 'Employee documents',
+    certificateOfSicknessHint:
+      'Upload employment documents here so your admin team can review and download them.',
+    certificateOfSicknessOverviewLabel: 'Employee documents',
+    certificateOfSicknessStatusReady: 'Ready to submit',
+    certificateOfSicknessStatusUploading: 'Uploading',
+    certificateOfSicknessStatusMissing: 'No documents yet',
+    certificateOfSicknessLatestSubmitted: 'Latest submitted',
+    certificateOfSicknessNoRecentSubmission: 'No recent submission',
+    certificateOfSicknessFilesCount: 'Submitted files',
+    certificateOfSicknessNewSubmission: 'New upload',
+    certificateOfSicknessHistory: 'Submitted documents',
+    certificateOfSicknessEmpty:
+      'No employee documents have been submitted yet. Upload your first file above.',
+    certificateOfSicknessEmployeeUnavailable:
+      'Your employee profile is not ready yet. Please try again shortly.',
+    certificateOfSicknessApiUnavailable:
+      'Document uploads are not available right now. Please try again later.',
+    certificateOfSicknessLoading: 'Loading your submitted documents...',
+    certificateOfSicknessLoadFailed:
+      'We could not load your submitted documents right now.',
+    certificateOfSicknessPickAction: 'Choose file',
+    certificateOfSicknessReplaceAction: 'Replace file',
+    certificateOfSicknessSubmitAction: 'Upload document',
+    certificateOfSicknessSubmitting: 'Submitting...',
+    certificateOfSicknessSubmitted:
+      'Your document was uploaded successfully.',
+    certificateOfSicknessSubmitFailed:
+      'We could not upload your document right now.',
+    certificateOfSicknessSelectedFile: 'Selected file',
+    certificateOfSicknessAcceptedTypes: 'Accepted: PDF, JPG, PNG, DOC, DOCX, TXT up to 10 MB.',
+    certificateOfSicknessDownloadAction: 'Download',
+    certificateOfSicknessOpening: 'Opening file...',
+    certificateOfSicknessDownloadFailed:
+      'We could not download this document right now.',
+    certificateOfSicknessDownloadedTitle: 'Document downloaded',
+    certificateOfSicknessDownloadedBody: 'Saved under {path}.',
+    certificateOfSicknessUnavailable:
+      'The selected file is no longer available. Please upload it again.',
+    certificateOfSicknessMissingFile:
+      'Please choose a document file before uploading.',
+    certificateOfSicknessInvalidFile:
+      'Please choose a valid document file.',
+    certificateOfSicknessFileTooLarge:
+      'This file is too large. The maximum size is 10 MB.',
+    certificateOfSicknessUnsupportedType:
+      'This file type is not supported.',
+    employeeDocumentsTypeField: 'Document type',
+    employeeDocumentsTypeHint: 'Choose what kind of document you are uploading.',
+    employeeDocumentsTypeUnavailable: 'This document type is not available yet. Please choose another type.',
+    employeeDocumentsHistoryHint: 'Filter previous uploads by document type.',
+    employeeDocumentsFilterAll: 'All',
+    employeeDocumentsFilteredEmpty: 'No uploaded documents match this filter yet.',
+    employeeDocumentsActiveFilter: 'History filter',
+    employeeDocumentsNoRecentForType: 'No recent upload for {type}',
+    employeeDocumentsTypeCertificateOfSickness: 'Certificate of sickness',
+    employeeDocumentsTypeIdPassport: 'ID / passport',
+    employeeDocumentsTypeContract: 'Contract',
+    employeeDocumentsTypeProofOfAddress: 'Proof of address',
+    employeeDocumentsTypeOther: 'Other',
     vacationRequestsTitle: 'Vacation requests',
     vacationRequestsHint: 'Send your vacation dates to the admin team and track the current request status.',
     vacationRequestsNewRequest: 'New request',
@@ -153,6 +219,7 @@ export const enTranslations = {
     vacationRequestsPendingSupport: 'You can send another request anytime.',
     vacationRequestsReadySupport: 'Choose your dates and send one clean request.',
     vacationRequestsApprovalLetterAction: 'Open approval letter',
+    vacationRequestsDownloadApprovalLetter: 'Download approval letter',
     vacationRequestsApprovalLetterOpening: 'Opening approval letter...',
     vacationRequestsApprovalLetterUnavailable:
       'The approval letter is not available yet. Please try again shortly.',

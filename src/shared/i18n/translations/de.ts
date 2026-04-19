@@ -112,12 +112,80 @@ export const deTranslations = {
     accountMonthlyHoursCurrentMonth: 'Dieser Monat',
     accountMonthlyHoursBreakdownTitle: 'Schichtstatus im Überblick',
     accountMonthlyHoursLocationsTitle: 'Stunden nach Einsatzort',
+    accountMonthlyHoursClockTimesTitle: 'Ein- und Ausstempelzeiten',
+    accountMonthlyHoursClockInLabel: 'Eingestempelt',
+    accountMonthlyHoursClockOutLabel: 'Ausgestempelt',
+    accountMonthlyHoursClockTimesEmpty:
+      'Ein- und Ausstempelzeiten erscheinen hier, sobald erfasste Schichten in diesem Monatsbericht enthalten sind.',
     accountMonthlyHoursNoLocations: 'Für diesen Monat sind noch keine Standortsummen verfügbar.',
     accountMonthlyHoursStatusComplete: 'Abgeschlossen',
     accountMonthlyHoursStatusOpen: 'Offen',
     accountMonthlyHoursStatusMissing: 'Fehlend',
     accountMonthlyHoursStatusScheduled: 'Geplant',
+    accountCertificateOfSickness: 'Dokumente',
     accountVacationRequests: 'Urlaubsanträge',
+    certificateOfSicknessTitle: 'Mitarbeiterdokumente',
+    certificateOfSicknessHint:
+      'Lade hier Mitarbeiterdokumente hoch, damit dein Admin-Team sie prüfen und herunterladen kann.',
+    certificateOfSicknessOverviewLabel: 'Mitarbeiterdokumente',
+    certificateOfSicknessStatusReady: 'Bereit zum Senden',
+    certificateOfSicknessStatusUploading: 'Wird hochgeladen',
+    certificateOfSicknessStatusMissing: 'Noch keine Dokumente',
+    certificateOfSicknessLatestSubmitted: 'Zuletzt gesendet',
+    certificateOfSicknessNoRecentSubmission: 'Keine aktuelle Einreichung',
+    certificateOfSicknessFilesCount: 'Eingereichte Dateien',
+    certificateOfSicknessNewSubmission: 'Neuer Upload',
+    certificateOfSicknessHistory: 'Eingereichte Dokumente',
+    certificateOfSicknessEmpty:
+      'Es wurden noch keine Mitarbeiterdokumente eingereicht. Lade oben deine erste Datei hoch.',
+    certificateOfSicknessEmployeeUnavailable:
+      'Dein Mitarbeiterprofil ist noch nicht bereit. Bitte versuche es gleich noch einmal.',
+    certificateOfSicknessApiUnavailable:
+      'Dokumente koennen gerade nicht hochgeladen werden. Bitte versuche es spaeter noch einmal.',
+    certificateOfSicknessLoading: 'Deine eingereichten Dokumente werden geladen...',
+    certificateOfSicknessLoadFailed:
+      'Deine eingereichten Dokumente konnten gerade nicht geladen werden.',
+    certificateOfSicknessPickAction: 'Datei wählen',
+    certificateOfSicknessReplaceAction: 'Datei ersetzen',
+    certificateOfSicknessSubmitAction: 'Dokument hochladen',
+    certificateOfSicknessSubmitting: 'Wird gesendet...',
+    certificateOfSicknessSubmitted:
+      'Dein Dokument wurde erfolgreich hochgeladen.',
+    certificateOfSicknessSubmitFailed:
+      'Dein Dokument konnte gerade nicht hochgeladen werden.',
+    certificateOfSicknessSelectedFile: 'Ausgewählte Datei',
+    certificateOfSicknessAcceptedTypes:
+      'Erlaubt: PDF, JPG, PNG, DOC, DOCX, TXT bis 10 MB.',
+    certificateOfSicknessDownloadAction: 'Herunterladen',
+    certificateOfSicknessOpening: 'Datei wird geöffnet...',
+    certificateOfSicknessDownloadFailed:
+      'Dieses Dokument konnte gerade nicht heruntergeladen werden.',
+    certificateOfSicknessDownloadedTitle: 'Dokument heruntergeladen',
+    certificateOfSicknessDownloadedBody: 'Gespeichert unter {path}.',
+    certificateOfSicknessUnavailable:
+      'Die ausgewählte Datei ist nicht mehr verfügbar. Bitte lade sie erneut hoch.',
+    certificateOfSicknessMissingFile:
+      'Bitte wähle vor dem Hochladen eine Dokumentdatei aus.',
+    certificateOfSicknessInvalidFile:
+      'Bitte wähle eine gültige Dokumentdatei aus.',
+    certificateOfSicknessFileTooLarge:
+      'Diese Datei ist zu groß. Die maximale Größe beträgt 10 MB.',
+    certificateOfSicknessUnsupportedType:
+      'Dieser Dateityp wird nicht unterstützt.',
+    employeeDocumentsTypeField: 'Dokumenttyp',
+    employeeDocumentsTypeHint: 'Wähle aus, welche Art von Dokument du hochladen möchtest.',
+    employeeDocumentsTypeUnavailable:
+      'Dieser Dokumenttyp ist noch nicht verfügbar. Bitte wähle einen anderen Typ.',
+    employeeDocumentsHistoryHint: 'Filtere frühere Uploads nach Dokumenttyp.',
+    employeeDocumentsFilterAll: 'Alle',
+    employeeDocumentsFilteredEmpty: 'Für diesen Filter wurden noch keine Dokumente hochgeladen.',
+    employeeDocumentsActiveFilter: 'Listenfilter',
+    employeeDocumentsNoRecentForType: 'Kein aktueller Upload für {type}',
+    employeeDocumentsTypeCertificateOfSickness: 'Krankmeldung',
+    employeeDocumentsTypeIdPassport: 'Ausweis / Reisepass',
+    employeeDocumentsTypeContract: 'Vertrag',
+    employeeDocumentsTypeProofOfAddress: 'Adressnachweis',
+    employeeDocumentsTypeOther: 'Sonstiges',
     vacationRequestsTitle: 'Urlaubsanträge',
     vacationRequestsHint: 'Senden Sie Ihre Urlaubsdaten an das Admin-Team und verfolgen Sie den aktuellen Status Ihrer Anfrage.',
     vacationRequestsNewRequest: 'Neue Anfrage',
@@ -153,6 +221,7 @@ export const deTranslations = {
     vacationRequestsPendingSupport: 'Sie koennen jederzeit eine weitere Anfrage senden.',
     vacationRequestsReadySupport: 'Waehlen Sie Ihre Daten und senden Sie eine klare Anfrage.',
     vacationRequestsApprovalLetterAction: 'Bestätigung öffnen',
+    vacationRequestsDownloadApprovalLetter: 'Bestätigung herunterladen',
     vacationRequestsApprovalLetterOpening: 'Bestätigung wird geöffnet...',
     vacationRequestsApprovalLetterUnavailable:
       'Die Bestätigung ist noch nicht verfügbar. Bitte versuchen Sie es in Kürze erneut.',

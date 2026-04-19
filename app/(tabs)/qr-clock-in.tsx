@@ -488,7 +488,7 @@ export default function QrClockInScreen() {
       >
         <LinearGradient
           colors={[theme.heroGradientStart, theme.heroGradientEnd]}
-          style={[styles.hero, { borderColor: theme.borderSoft }]}
+          style={[styles.hero, { backgroundColor: theme.surfaceElevated, borderColor: theme.borderSoft }]}
         >
           <View style={[styles.heroIconWrap, { backgroundColor: theme.surface }]}>
             <Ionicons name="qr-code-outline" size={18} color={theme.primary} />
@@ -584,11 +584,6 @@ const styles = StyleSheet.create({
     padding: 14,
     marginBottom: 16,
     borderWidth: 1,
-    shadowColor: '#000',
-    shadowOpacity: 0.2,
-    shadowOffset: { width: 0, height: 8 },
-    shadowRadius: 18,
-    elevation: 10,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,

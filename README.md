@@ -37,6 +37,12 @@ npm run android
 npm run web
 ```
 
+For native development builds instead of Expo Go:
+```bash
+npm run ios:dev
+npm run android:dev
+```
+
 ## Environment
 
 Minimum required values in `.env`:
@@ -87,8 +93,10 @@ npx expo start -c
 ## Scripts
 
 - `npm run start` - start Expo/Metro
-- `npm run ios` - run iOS target
-- `npm run android` - run Android target
+- `npm run ios` - run iOS target in Expo Go
+- `npm run ios:dev` - run iOS target in a custom development build
+- `npm run android` - run Android target in Expo Go
+- `npm run android:dev` - run Android target in a custom development build
 - `npm run web` - run web target
 - `npm run test` - run full test suite
 - `npm run check-db-config` - validate DB/env wiring

@@ -124,6 +124,9 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
       NSRemindersUsageDescription:
         process.env.IOS_REMINDERS_USAGE_DESCRIPTION ??
         'Reminders access lets you optionally create shift reminder entries.',
+      NSRemindersFullAccessUsageDescription:
+        process.env.IOS_REMINDERS_USAGE_DESCRIPTION ??
+        'Reminders access lets you optionally create shift reminder entries.',
       NSUserNotificationsUsageDescription:
         process.env.IOS_NOTIFICATIONS_USAGE_DESCRIPTION ??
         'Notifications keep you updated about shifts and schedule changes.',

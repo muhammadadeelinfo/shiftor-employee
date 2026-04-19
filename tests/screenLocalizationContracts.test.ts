@@ -3,7 +3,12 @@ import fs from 'fs';
 import { enTranslations } from '../src/shared/i18n/translations/en';
 import { deTranslations } from '../src/shared/i18n/translations/de';
 
-const files = ['app/notifications.tsx', 'app/(tabs)/account.tsx', 'app/vacation-requests.tsx'];
+const files = [
+  'app/notifications.tsx',
+  'app/(tabs)/account.tsx',
+  'app/vacation-requests.tsx',
+  'app/employee-documents.tsx',
+];
 const keyPattern = /t\('([A-Za-z0-9_]+)'/g;
 
 const keys = new Set<string>();

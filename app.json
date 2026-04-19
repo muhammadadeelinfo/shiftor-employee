@@ -23,6 +23,8 @@
         "NSCalendarsUsageDescription": "Calendar access lets you import shifts and sync your schedule.",
         "NSCalendarsFullAccessUsageDescription": "Calendar access lets you import shifts and sync your schedule.",
         "NSCalendarsWriteOnlyAccessUsageDescription": "Calendar access lets you import shifts and sync your schedule.",
+        "NSRemindersUsageDescription": "Reminders access lets you optionally create shift reminder entries.",
+        "NSRemindersFullAccessUsageDescription": "Reminders access lets you optionally create shift reminder entries.",
         "NSUserNotificationsUsageDescription": "Notifications keep you updated about shifts and schedule changes.",
         "ITSAppUsesNonExemptEncryption": false
       }
