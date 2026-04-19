@@ -94,7 +94,7 @@ export default function CalendarSettingsScreen() {
       />
       <View style={styles.header}>
         <View style={styles.headerRow}>
-          <BackButton />
+          <BackButton fallbackHref="/account" />
           <View style={styles.headerText}>
             <Text style={[styles.title, { color: theme.textPrimary }]}>{t('calendarSettingsTitle')}</Text>
             <Text style={[styles.subtitle, { color: theme.textSecondary }]}>

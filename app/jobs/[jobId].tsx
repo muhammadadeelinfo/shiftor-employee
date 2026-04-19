@@ -490,7 +490,7 @@ export default function JobDetailsScreen() {
         />
       }
     >
-      <BackButton label={t('startupJobDetailsBack')} />
+      <BackButton label={t('startupJobDetailsBack')} fallbackHref="/jobs" />
 
       <LinearGradient
         colors={[theme.heroGradientStart, theme.heroGradientEnd]}

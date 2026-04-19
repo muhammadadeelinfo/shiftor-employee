@@ -404,7 +404,7 @@ export default function MonthlyHoursScreen() {
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.header}>
-          <BackButton />
+          <BackButton fallbackHref="/account" />
           <View style={styles.headerCopy}>
             <Text style={[styles.headerTitle, { color: theme.textPrimary }]}>
               {t('accountMonthlyHoursPageTitle')}

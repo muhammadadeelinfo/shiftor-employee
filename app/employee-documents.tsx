@@ -298,7 +298,7 @@ export default function EmployeeDocumentsScreen() {
         keyboardShouldPersistTaps="handled"
       >
         <View style={styles.header}>
-          <BackButton />
+          <BackButton fallbackHref="/account" />
           <View style={styles.headerCopy}>
             <Text style={[styles.headerTitle, { color: theme.textPrimary }]}>{t('certificateOfSicknessTitle')}</Text>
             <Text style={[styles.headerHint, { color: theme.textSecondary }]}>

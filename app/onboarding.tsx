@@ -13,6 +13,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '@hooks/useSupabaseAuth';
+import { BackButton } from '@shared/components/BackButton';
 import { PrimaryButton } from '@shared/components/PrimaryButton';
 import { useLanguage, type TranslationKey } from '@shared/context/LanguageContext';
 import { useTheme } from '@shared/themeContext';
@@ -104,6 +105,7 @@ export default function OnboardingScreen() {
     [t]
   );
   const activeSlide = slides[activeIndex];
+  const shouldShowRouteBack = router.canGoBack() || Boolean(user);
 
   const isLastSlide = activeIndex === slides.length - 1;
   const introOpacity = introAnim.interpolate({
@@ -176,15 +178,18 @@ export default function OnboardingScreen() {
           },
         ]}
       >
-        <View style={styles.headerTextWrap}>
-          <Text style={[styles.headerTitle, { color: theme.textPrimary }]}>{t('onboardingTitle')}</Text>
-          <Text style={[styles.headerSubtitle, { color: theme.textSecondary }]}>
-            {t('onboardingSubtitle')}
-          </Text>
+        {shouldShowRouteBack ? <BackButton fallbackHref={user ? '/account' : undefined} /> : null}
+        <View style={styles.headerTopRow}>
+          <View style={styles.headerTextWrap}>
+            <Text style={[styles.headerTitle, { color: theme.textPrimary }]}>{t('onboardingTitle')}</Text>
+            <Text style={[styles.headerSubtitle, { color: theme.textSecondary }]}>
+              {t('onboardingSubtitle')}
+            </Text>
+          </View>
+          <Pressable onPress={completeOnboarding} hitSlop={10}>
+            <Text style={[styles.skipText, { color: theme.textSecondary }]}>{t('onboardingSkip')}</Text>
+          </Pressable>
         </View>
-        <Pressable onPress={completeOnboarding} hitSlop={10}>
-          <Text style={[styles.skipText, { color: theme.textSecondary }]}>{t('onboardingSkip')}</Text>
-        </Pressable>
       </Animated.View>
 
       <Animated.View
@@ -331,6 +336,9 @@ const styles = StyleSheet.create({
   },
   header: {
     paddingHorizontal: 20,
+    gap: 16,
+  },
+  headerTopRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',

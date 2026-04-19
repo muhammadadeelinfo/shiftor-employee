@@ -88,7 +88,7 @@ export default function NotificationsScreen() {
           ]}
         >
           <View style={[styles.headerRow, shouldStackHeader ? styles.headerRowCompact : null]}>
-            <BackButton />
+            <BackButton fallbackHref="/account" />
             <View style={styles.headerText}>
               <Text style={[styles.title, { color: theme.textPrimary }]}>
                 {t('notificationsPanelTitle')}
