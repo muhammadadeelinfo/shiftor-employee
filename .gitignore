@@ -43,3 +43,6 @@ yarn-error.*
 
 # local test artifacts
 tmp-test/
+
+# local Supabase CLI state
+supabase/.temp/
