@@ -25,6 +25,7 @@ import * as ImageManipulator from 'expo-image-manipulator';
 import Constants from 'expo-constants';
 import { supabase, supabaseStorageBucket } from '@lib/supabaseClient';
 import { useAuth } from '@hooks/useSupabaseAuth';
+import { BackButton } from '@shared/components/BackButton';
 import { useTheme } from '@shared/themeContext';
 import { useLanguage } from '@shared/context/LanguageContext';
 import { PrimaryButton } from '@shared/components/PrimaryButton';
@@ -770,14 +771,7 @@ export default function ProfileEditScreen() {
     <SafeAreaView style={[styles.safeArea, { backgroundColor: theme.background }]} edges={['left', 'right']}>
       <ScrollView contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 24 }]}>
         <View style={[styles.card, { backgroundColor: theme.surface, borderColor: theme.borderSoft }]}>
-          <TouchableOpacity
-            style={[styles.backRow, { borderColor: theme.borderSoft }]}
-            onPress={() => router.back()}
-            disabled={saving}
-          >
-            <Ionicons name="chevron-back" size={18} color={theme.textSecondary} />
-            <Text style={[styles.backText, { color: theme.textSecondary }]}>{t('commonCancel') || 'Back'}</Text>
-          </TouchableOpacity>
+          <BackButton label={t('commonCancel') || 'Back'} disabled={saving} />
 
           <Text style={[styles.title, { color: theme.textPrimary }]}>{t('profileEditTitle')}</Text>
           <Text style={[styles.hint, { color: theme.textSecondary }]}>{t('profileEditHint')}</Text>

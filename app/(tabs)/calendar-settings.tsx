@@ -4,6 +4,7 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
 import { useRouter } from 'expo-router';
+import { BackButton } from '@shared/components/BackButton';
 import { useTheme } from '@shared/themeContext';
 import { useLanguage } from '@shared/context/LanguageContext';
 import { layoutTokens } from '@shared/theme/layout';
@@ -93,12 +94,7 @@ export default function CalendarSettingsScreen() {
       />
       <View style={styles.header}>
         <View style={styles.headerRow}>
-          <TouchableOpacity
-            style={[styles.backButton, { backgroundColor: theme.surfaceMuted, borderColor: theme.borderSoft }]}
-            onPress={() => router.back()}
-          >
-            <Ionicons name="chevron-back" size={18} color={theme.textPrimary} />
-          </TouchableOpacity>
+          <BackButton />
           <View style={styles.headerText}>
             <Text style={[styles.title, { color: theme.textPrimary }]}>{t('calendarSettingsTitle')}</Text>
             <Text style={[styles.subtitle, { color: theme.textSecondary }]}>

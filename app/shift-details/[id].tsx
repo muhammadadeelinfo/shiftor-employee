@@ -13,6 +13,7 @@ import type { ComponentProps } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { getShiftById } from '@features/shifts/shiftsService';
+import { BackButton } from '@shared/components/BackButton';
 import { PrimaryButton } from '@shared/components/PrimaryButton';
 import type { Shift } from '@features/shifts/shiftsService';
 import { useAuth } from '@hooks/useSupabaseAuth';
@@ -271,6 +272,7 @@ export default function ShiftDetailsScreen() {
   return (
     <ScrollView contentContainerStyle={contentStyle}>
       <View style={styles.headerContainer}>
+        <BackButton fallbackHref="/my-shifts" style={styles.topBackButton} />
         <Text style={styles.tabLabel}>{t('shiftOverview')}</Text>
       </View>
       <LinearGradient
@@ -495,6 +497,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     marginBottom: 16,
+  },
+  topBackButton: {
+    marginRight: 12,
   },
   backButton: {
     width: 34,

@@ -1,9 +1,14 @@
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { BackButton } from '@shared/components/BackButton';
 import { useLanguage } from '@shared/context/LanguageContext';
+import { useTheme } from '@shared/themeContext';
 
 export default function NotFoundScreen() {
+  const router = useRouter();
   const { t } = useLanguage();
+  const { theme } = useTheme();
   const readmeSummary = [
     t('notFoundSummaryOne'),
     t('notFoundSummaryTwo'),
@@ -13,13 +18,23 @@ export default function NotFoundScreen() {
   ];
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]}>
       <ScrollView contentContainerStyle={styles.content}>
-        <Text style={styles.heading}>{t('notFoundHeading')}</Text>
+        <BackButton
+          fallbackHref="/"
+          onPress={() => {
+            if (router.canGoBack()) {
+              router.back();
+              return;
+            }
+            router.replace('/');
+          }}
+        />
+        <Text style={[styles.heading, { color: theme.textPrimary }]}>{t('notFoundHeading')}</Text>
         {readmeSummary.map((line) => (
           <View key={line} style={styles.row}>
-            <Text style={styles.bullet}>{'\u2022'}</Text>
-            <Text style={styles.text}>{line}</Text>
+            <Text style={[styles.bullet, { color: theme.primary }]}>{'\u2022'}</Text>
+            <Text style={[styles.text, { color: theme.textSecondary }]}>{line}</Text>
           </View>
         ))}
       </ScrollView>

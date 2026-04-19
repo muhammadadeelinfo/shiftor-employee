@@ -14,6 +14,7 @@ import { useRouter } from 'expo-router';
 import { NativeModulesProxy } from 'expo-modules-core';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { BackButton } from '@shared/components/BackButton';
 import { PrimaryButton } from '@shared/components/PrimaryButton';
 import { useTheme } from '@shared/themeContext';
 import { useAuth } from '@hooks/useSupabaseAuth';
@@ -297,14 +298,7 @@ export default function EmployeeDocumentsScreen() {
         keyboardShouldPersistTaps="handled"
       >
         <View style={styles.header}>
-          <TouchableOpacity
-            accessibilityRole="button"
-            accessibilityLabel={t('commonBack')}
-            style={[styles.backButton, { backgroundColor: theme.surfaceMuted, borderColor: theme.borderSoft }]}
-            onPress={() => router.back()}
-          >
-            <Ionicons name="chevron-back" size={18} color={theme.textPrimary} />
-          </TouchableOpacity>
+          <BackButton />
           <View style={styles.headerCopy}>
             <Text style={[styles.headerTitle, { color: theme.textPrimary }]}>{t('certificateOfSicknessTitle')}</Text>
             <Text style={[styles.headerHint, { color: theme.textSecondary }]}>

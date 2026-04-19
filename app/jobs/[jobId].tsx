@@ -18,6 +18,7 @@ import { NativeModulesProxy } from 'expo-modules-core';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { BackButton } from '@shared/components/BackButton';
 import { useLanguage } from '@shared/context/LanguageContext';
 import { useTheme } from '@shared/themeContext';
 import { openAddressInMaps } from '@shared/utils/maps';
@@ -440,14 +441,7 @@ export default function JobDetailsScreen() {
   if (isLoading) {
     return (
       <View style={[styles.emptyRoot, { backgroundColor: theme.background, paddingTop: topContentPadding }]}>
-        <TouchableOpacity
-          onPress={() => router.replace('/jobs')}
-          activeOpacity={0.8}
-          style={[styles.backButton, { backgroundColor: theme.surface, borderColor: theme.border }]}
-        >
-          <Ionicons name="arrow-back" size={18} color={theme.textPrimary} />
-          <Text style={[styles.backButtonText, { color: theme.textPrimary }]}>{t('startupJobDetailsBack')}</Text>
-        </TouchableOpacity>
+        <BackButton label={t('startupJobDetailsBack')} onPress={() => router.replace('/jobs')} />
         <View style={[styles.loadingCard, { backgroundColor: theme.surface, borderColor: theme.border }]}>
           <ActivityIndicator color={theme.primary} />
           <Text style={[styles.messageBody, { color: theme.textSecondary }]}>{t('startupJobDetailsLoading')}</Text>
@@ -459,14 +453,7 @@ export default function JobDetailsScreen() {
   if (!job) {
     return (
       <View style={[styles.emptyRoot, { backgroundColor: theme.background, paddingTop: topContentPadding }]}>
-        <TouchableOpacity
-          onPress={() => router.replace('/jobs')}
-          activeOpacity={0.8}
-          style={[styles.backButton, { backgroundColor: theme.surface, borderColor: theme.border }]}
-        >
-          <Ionicons name="arrow-back" size={18} color={theme.textPrimary} />
-          <Text style={[styles.backButtonText, { color: theme.textPrimary }]}>{t('startupJobDetailsBack')}</Text>
-        </TouchableOpacity>
+        <BackButton label={t('startupJobDetailsBack')} onPress={() => router.replace('/jobs')} />
         <View style={[styles.messageCard, { backgroundColor: theme.surface, borderColor: theme.border }]}>
           <Text style={[styles.messageTitle, { color: theme.textPrimary }]}>{t('startupJobDetailsMissingTitle')}</Text>
           <Text style={[styles.messageBody, { color: theme.textSecondary }]}>
@@ -503,14 +490,7 @@ export default function JobDetailsScreen() {
         />
       }
     >
-      <TouchableOpacity
-        onPress={() => router.back()}
-        activeOpacity={0.8}
-        style={[styles.backButton, { backgroundColor: theme.surface, borderColor: theme.border }]}
-      >
-        <Ionicons name="arrow-back" size={18} color={theme.textPrimary} />
-        <Text style={[styles.backButtonText, { color: theme.textPrimary }]}>{t('startupJobDetailsBack')}</Text>
-      </TouchableOpacity>
+      <BackButton label={t('startupJobDetailsBack')} />
 
       <LinearGradient
         colors={[theme.heroGradientStart, theme.heroGradientEnd]}

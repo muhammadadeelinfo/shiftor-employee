@@ -16,6 +16,7 @@ import * as Sharing from 'expo-sharing';
 import { useRouter } from 'expo-router';
 import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '@hooks/useSupabaseAuth';
+import { BackButton } from '@shared/components/BackButton';
 import { useLanguage } from '@shared/context/LanguageContext';
 import { layoutTokens } from '@shared/theme/layout';
 import { useTheme } from '@shared/themeContext';
@@ -403,14 +404,7 @@ export default function MonthlyHoursScreen() {
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.header}>
-          <TouchableOpacity
-            accessibilityRole="button"
-            accessibilityLabel={t('commonBack')}
-            style={[styles.backButton, { backgroundColor: theme.surfaceMuted, borderColor: theme.borderSoft }]}
-            onPress={() => router.back()}
-          >
-            <Ionicons name="chevron-back" size={18} color={theme.textPrimary} />
-          </TouchableOpacity>
+          <BackButton />
           <View style={styles.headerCopy}>
             <Text style={[styles.headerTitle, { color: theme.textPrimary }]}>
               {t('accountMonthlyHoursPageTitle')}

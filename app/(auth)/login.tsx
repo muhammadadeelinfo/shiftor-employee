@@ -19,6 +19,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { LinearGradient } from 'expo-linear-gradient';
 import Constants from 'expo-constants';
+import { BackButton } from '@shared/components/BackButton';
 import { PrimaryButton } from '@shared/components/PrimaryButton';
 import { supabase } from '@lib/supabaseClient';
 import { useRouter } from 'expo-router';
@@ -210,17 +211,7 @@ export default function LoginScreen() {
       <View style={styles.accentCircleSmall} />
       <SafeAreaView style={styles.safeArea}>
         {router.canGoBack() ? (
-          <TouchableOpacity
-            onPress={() => {
-              router.back();
-            }}
-            disabled={loading}
-            activeOpacity={0.75}
-            style={styles.pageBackButton}
-          >
-            <Ionicons name="chevron-back" size={17} color="#e2e8f0" />
-            <Text style={styles.pageBackButtonText}>{t('loginBackToJobs')}</Text>
-          </TouchableOpacity>
+          <BackButton label={t('loginBackToJobs')} disabled={loading} style={styles.pageBackButton} />
         ) : null}
         <KeyboardAvoidingView
           behavior={Platform.OS === 'ios' ? 'padding' : undefined}

@@ -11,6 +11,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import * as Calendar from 'expo-calendar';
+import { BackButton } from '@shared/components/BackButton';
 import { useShiftFeed } from '@features/shifts/useShiftFeed';
 import { getShiftPhase, phaseMeta, type ShiftPhase } from '@shared/utils/shiftPhase';
 import { useCalendarSelection } from '@shared/context/CalendarSelectionContext';
@@ -185,6 +186,7 @@ export default function CalendarDayDetailsScreen() {
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]} edges={['left', 'right']}>
       <View style={styles.header}>
+        <BackButton fallbackHref="/calendar" style={styles.backButton} />
         <View style={styles.headerText}>
           <Text style={[styles.title, { color: theme.textPrimary }]}>{t('calendarDetailTitle')}</Text>
           {activeDayLabel ? (
@@ -314,6 +316,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 18,
     paddingTop: 10,
     paddingBottom: 8,
+  },
+  backButton: {
+    marginBottom: 12,
   },
   headerText: {
     flex: 1,

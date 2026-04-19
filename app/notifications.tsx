@@ -10,7 +10,7 @@ import {
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import Ionicons from '@expo/vector-icons/Ionicons';
+import { BackButton } from '@shared/components/BackButton';
 import { useNotifications } from '@shared/context/NotificationContext';
 import { useTheme } from '@shared/themeContext';
 import { useLanguage } from '@shared/context/LanguageContext';
@@ -88,14 +88,7 @@ export default function NotificationsScreen() {
           ]}
         >
           <View style={[styles.headerRow, shouldStackHeader ? styles.headerRowCompact : null]}>
-            <TouchableOpacity
-              accessibilityRole="button"
-              accessibilityLabel={t('commonBack')}
-              style={[styles.backButton, { backgroundColor: theme.surfaceMuted, borderColor: theme.borderSoft }]}
-              onPress={() => router.back()}
-            >
-              <Ionicons name="chevron-back" size={18} color={theme.textPrimary} />
-            </TouchableOpacity>
+            <BackButton />
             <View style={styles.headerText}>
               <Text style={[styles.title, { color: theme.textPrimary }]}>
                 {t('notificationsPanelTitle')}

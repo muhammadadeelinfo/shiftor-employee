@@ -2,6 +2,7 @@ import { Alert, Linking, ScrollView, StyleSheet, Text, TouchableOpacity, View } 
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import Ionicons from '@expo/vector-icons/Ionicons';
+import { BackButton } from '@shared/components/BackButton';
 import { useLanguage } from '@shared/context/LanguageContext';
 import { layoutTokens } from '@shared/theme/layout';
 import { useTheme } from '@shared/themeContext';
@@ -45,14 +46,7 @@ export default function SupportScreen() {
         ]}
         showsVerticalScrollIndicator={false}
       >
-        <TouchableOpacity
-          onPress={() => router.replace('/account')}
-          activeOpacity={0.8}
-          style={[styles.backButton, { borderColor: theme.borderSoft, backgroundColor: theme.surface }]}
-        >
-          <Ionicons name="chevron-back" size={18} color={theme.textSecondary} />
-          <Text style={[styles.backText, { color: theme.textSecondary }]}>{t('commonBack')}</Text>
-        </TouchableOpacity>
+        <BackButton onPress={() => router.replace('/account')} />
 
         <View style={styles.pageHeader}>
           <Text style={[styles.pageTitle, { color: theme.textPrimary }]}>{t('supportSectionTitle')}</Text>

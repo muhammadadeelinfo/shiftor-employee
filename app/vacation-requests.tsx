@@ -18,10 +18,11 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useRouter } from 'expo-router';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { BackButton } from '@shared/components/BackButton';
 import { PrimaryButton } from '@shared/components/PrimaryButton';
 import { useTheme } from '@shared/themeContext';
 import { useAuth } from '@hooks/useSupabaseAuth';
-import { useLanguage } from '@shared/context/LanguageContext';
+import { useLanguage, type TranslationKey } from '@shared/context/LanguageContext';
 import { layoutTokens } from '@shared/theme/layout';
 import { getContentMaxWidth, shouldStackForCompactWidth } from '@shared/utils/responsiveLayout';
 import { downloadRemoteDocument } from '@shared/utils/nativeDocumentOpen';
@@ -212,14 +213,7 @@ export default function VacationRequestsScreen() {
         keyboardShouldPersistTaps="handled"
       >
         <View style={styles.header}>
-          <TouchableOpacity
-            accessibilityRole="button"
-            accessibilityLabel={t('commonBack')}
-            style={[styles.backButton, { backgroundColor: theme.surfaceMuted, borderColor: theme.borderSoft }]}
-            onPress={() => router.back()}
-          >
-            <Ionicons name="chevron-back" size={18} color={theme.textPrimary} />
-          </TouchableOpacity>
+          <BackButton />
           <View style={styles.headerCopy}>
             <Text style={[styles.headerTitle, { color: theme.textPrimary }]}>{t('vacationRequestsTitle')}</Text>
             <Text style={[styles.headerHint, { color: theme.textSecondary }]}>
@@ -492,7 +486,7 @@ function VacationRequestCard({
   getStatusLabel: (status: VacationRequestStatus) => string;
   onOpenApprovalLetter: (request: VacationRequestRecord) => void;
   isOpeningApprovalLetter: boolean;
-  t: (key: string) => string;
+  t: (key: TranslationKey) => string;
   isCompact: boolean;
 }) {
   return (
