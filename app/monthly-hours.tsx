@@ -209,46 +209,15 @@ export default function MonthlyHoursScreen() {
         month: 'short',
         year: 'numeric',
       });
-      const completionPercent = Math.round(progress * 100);
-      const balanceSurface =
-        summary.deltaMinutes < 0
-          ? '#fff1f2'
-          : summary.deltaMinutes > 0
-            ? '#ecfdf5'
-            : '#f8fafc';
-      const balanceBorder =
-        summary.deltaMinutes < 0
-          ? '#fecdd3'
-          : summary.deltaMinutes > 0
-            ? '#bbf7d0'
-            : '#dbe4f0';
-      const balanceHeading =
-        summary.deltaMinutes < 0
-          ? '#9f1239'
-          : summary.deltaMinutes > 0
-            ? '#166534'
-            : '#334155';
-      const reportSummaryCards = [
-        {
-          label: t('accountMonthlyHoursWorked'),
-          value: formatMinutesLabel(summary.workedMinutes, t),
-        },
-        {
-          label: t('accountMonthlyHoursPlanned'),
-          value: formatMinutesLabel(summary.plannedMinutes, t),
-        },
-        {
-          label: t('accountMonthlyHoursShiftCount', { count: summary.shiftsCount }),
-          value: `${summary.shiftsCount}`,
-        },
-      ];
+      const balanceTone =
+        summary.deltaMinutes < 0 ? '#b91c1c' : summary.deltaMinutes > 0 ? '#166534' : '#0f172a';
       const statusHtml = statusCards
         .map(
           (item) => `
-            <div class="stat-box">
-              <div class="stat-value" style="color:${item.tone}">${item.value}</div>
-              <div class="stat-label">${escapeHtml(item.label)}</div>
-            </div>
+            <td class="status-cell">
+              <div class="status-value" style="color:${item.tone}">${item.value}</div>
+              <div class="status-label">${escapeHtml(item.label)}</div>
+            </td>
           `
         )
         .join('');
@@ -263,465 +232,430 @@ export default function MonthlyHoursScreen() {
                   );
 
                   return `
-                  <div class="location-row">
-                    <div class="location-head">
-                      <div>
-                        <div class="location-title">${escapeHtml(item.objectTitle?.trim() || t('notProvided'))}</div>
-                        <div class="location-meta">${escapeHtml(
+                    <tr>
+                      <td class="name-cell">
+                        <div class="primary-text">${escapeHtml(item.objectTitle?.trim() || t('notProvided'))}</div>
+                        <div class="secondary-text">${escapeHtml(
                           t('accountMonthlyHoursShiftCount', { count: item.shiftsCount ?? 0 })
                         )}</div>
-                      </div>
-                      <div class="worked-pill">${escapeHtml(
-                        formatMinutesLabel(item.workedMinutes ?? 0, t)
-                      )}</div>
-                    </div>
-                    <div class="location-progress-track">
-                      <div class="location-progress-fill" style="width:${locationProgress}%"></div>
-                    </div>
-                    <div class="location-stats">
-                      <div class="location-stat">
-                        <div class="location-stat-label">${escapeHtml(t('accountMonthlyHoursPlanned'))}</div>
-                        <div class="location-stat-value">${escapeHtml(
-                          formatMinutesLabel(item.plannedMinutes ?? 0, t)
-                        )}</div>
-                      </div>
-                      <div class="location-stat location-stat-right">
-                        <div class="location-stat-label">%</div>
-                        <div class="location-stat-value">${escapeHtml(
-                        item.plannedMinutes && item.plannedMinutes > 0
-                          ? `${locationProgress}%`
-                          : progressPercent
-                        )}</div>
-                      </div>
-                    </div>
-                  </div>
-                `;
+                      </td>
+                      <td class="numeric-cell">${escapeHtml(formatMinutesLabel(item.workedMinutes ?? 0, t))}</td>
+                      <td class="numeric-cell">${escapeHtml(formatMinutesLabel(item.plannedMinutes ?? 0, t))}</td>
+                      <td class="numeric-cell">${escapeHtml(
+                        item.plannedMinutes && item.plannedMinutes > 0 ? `${locationProgress}%` : progressPercent
+                      )}</td>
+                    </tr>
+                  `;
                 }
               )
               .join('')
-          : `<p class="empty">${escapeHtml(t('accountMonthlyHoursNoLocations'))}</p>`;
+          : `
+              <tr>
+                <td colspan="4" class="empty-row">${escapeHtml(t('accountMonthlyHoursNoLocations'))}</td>
+              </tr>
+            `;
       const shiftTimingsHtml =
         shiftTimings.length > 0
           ? shiftTimings
               .map(
                 (shift) => `
-                  <div class="timing-row">
-                    <div class="timing-head">
-                      <div>
-                        <div class="location-title">${escapeHtml(shift.location || shift.title)}</div>
-                        <div class="location-meta">${escapeHtml(formatTimingDate(shift.clockIn ?? shift.clockOut ?? shift.start))}</div>
-                      </div>
-                      <div class="worked-pill">${escapeHtml(formatTimingWindow(shift, t))}</div>
-                    </div>
-                  <div class="timing-grid timing-grid-three">
-                    <div class="timing-box">
-                      <div class="timing-label">${escapeHtml(t('accountMonthlyHoursWorked'))}</div>
-                      <div class="timing-value">${escapeHtml(formatMinutesLabel(shift.workedMinutes, t))}</div>
-                    </div>
-                    <div class="timing-box">
-                      <div class="timing-label">${escapeHtml(t('accountMonthlyHoursClockInLabel'))}</div>
-                      <div class="timing-value">${escapeHtml(formatTimingTime(shift.clockIn))}</div>
-                      </div>
-                      <div class="timing-box">
-                        <div class="timing-label">${escapeHtml(t('accountMonthlyHoursClockOutLabel'))}</div>
-                        <div class="timing-value">${escapeHtml(formatTimingTime(shift.clockOut))}</div>
-                      </div>
-                    </div>
-                  </div>
+                  <tr>
+                    <td class="name-cell">
+                      <div class="primary-text">${escapeHtml(shift.location || shift.title)}</div>
+                      <div class="secondary-text">${escapeHtml(
+                        formatTimingDate(shift.clockIn ?? shift.clockOut ?? shift.start)
+                      )}</div>
+                    </td>
+                    <td class="numeric-cell">${escapeHtml(formatMinutesLabel(shift.workedMinutes, t))}</td>
+                    <td class="numeric-cell">${escapeHtml(formatTimingTime(shift.clockIn))}</td>
+                    <td class="numeric-cell">${escapeHtml(formatTimingTime(shift.clockOut))}</td>
+                  </tr>
                 `
               )
               .join('')
-          : '';
+          : `
+              <tr>
+                <td colspan="4" class="empty-row">${escapeHtml(t('accountMonthlyHoursUnavailable'))}</td>
+              </tr>
+            `;
 
       const html = `
         <html>
           <head>
             <meta charset="utf-8" />
             <style>
+              @page {
+                margin: 22mm 18mm;
+              }
               * { box-sizing: border-box; }
               body {
                 margin: 0;
-                font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-                background: #eef3f8;
+                font-family: "Helvetica Neue", "Segoe UI", Arial, sans-serif;
+                background: #ffffff;
                 color: #0f172a;
               }
-              .page {
-                padding: 28px;
+              .report {
+                width: 100%;
               }
-              .sheet {
-                max-width: 860px;
-                margin: 0 auto;
+              .masthead {
+                border-bottom: 2px solid #0f172a;
+                padding-bottom: 18px;
+                margin-bottom: 18px;
               }
-              .hero {
-                background: linear-gradient(145deg, #13203f 0%, #172a52 52%, #0d152b 100%);
-                color: white;
-                border-radius: 30px;
-                padding: 28px;
-                box-shadow: 0 24px 60px rgba(15, 23, 42, 0.2);
-              }
-              .hero-top {
+              .masthead-row {
                 display: table;
                 width: 100%;
-                margin-bottom: 24px;
               }
-              .hero-top-left,
-              .hero-top-right {
+              .masthead-left,
+              .masthead-right {
                 display: table-cell;
                 vertical-align: top;
               }
-              .hero-top-right {
+              .masthead-right {
                 text-align: right;
               }
-              .eyebrow {
+              .brand {
                 font-size: 11px;
                 text-transform: uppercase;
-                letter-spacing: 1.6px;
-                opacity: 0.68;
-                margin-bottom: 10px;
-              }
-              .title {
-                font-size: 34px;
-                line-height: 1.06;
-                font-weight: 800;
-                margin: 0 0 8px;
-              }
-              .meta {
-                font-size: 14px;
-                opacity: 0.78;
-              }
-              .generated {
-                display: inline-block;
-                padding: 10px 14px;
-                border-radius: 999px;
-                background: rgba(255,255,255,0.08);
-                border: 1px solid rgba(255,255,255,0.1);
-                font-size: 12px;
-                color: rgba(255,255,255,0.82);
-              }
-              .hero-summary {
-                display: table;
-                width: 100%;
-                border-spacing: 14px 0;
-                margin: 0 -14px 18px;
-              }
-              .hero-summary-card {
-                display: inline-block;
-                vertical-align: top;
-                width: calc(33.333% - 14px);
-                margin: 0 14px 0 0;
-                padding: 18px;
-                border-radius: 22px;
-                background: rgba(255,255,255,0.08);
-                border: 1px solid rgba(255,255,255,0.1);
-              }
-              .hero-summary-label {
-                font-size: 12px;
-                color: rgba(226,232,240,0.72);
+                letter-spacing: 1.5px;
+                color: #475569;
                 margin-bottom: 8px;
               }
-              .hero-summary-value {
-                font-size: 28px;
+              .report-title {
+                font-size: 32px;
                 line-height: 1.1;
                 font-weight: 800;
-                color: #f8fafc;
+                margin: 0 0 6px;
+                color: #0f172a;
               }
-              .balance-card {
-                padding: 18px;
-                border-radius: 24px;
-                background: ${balanceSurface};
-                border: 1px solid ${balanceBorder};
+              .report-subtitle {
+                font-size: 14px;
+                color: #64748b;
               }
-              .balance-label {
+              .report-kicker {
+                margin-top: 10px;
                 font-size: 12px;
-                color: ${balanceHeading};
-                text-transform: uppercase;
-                letter-spacing: 1.1px;
-                margin-bottom: 10px;
+                line-height: 1.55;
+                color: #475569;
+                max-width: 520px;
               }
-              .balance-value {
-                font-size: 32px;
+              .report-date {
+                font-size: 12px;
+                color: #64748b;
+              }
+              .report-date strong {
+                display: block;
+                font-size: 14px;
+                color: #0f172a;
+                margin-bottom: 4px;
+              }
+              .summary-grid {
+                width: 100%;
+                border-collapse: collapse;
+                margin: 18px 0 14px;
+              }
+              .summary-grid td {
+                width: 33.333%;
+                border: 1px solid #cbd5e1;
+                padding: 14px 16px;
+                vertical-align: top;
+                background: #fbfdff;
+              }
+              .summary-label {
+                font-size: 12px;
+                color: #64748b;
+                text-transform: uppercase;
+                letter-spacing: 0.5px;
+                margin-bottom: 8px;
+              }
+              .summary-value {
+                font-size: 26px;
                 font-weight: 800;
+                color: #0f172a;
+              }
+              .summary-value.balance-summary {
                 color: ${balanceTone};
               }
-              .progress-card {
-                margin-top: 18px;
-                padding: 18px 20px;
-                border-radius: 24px;
-                background: rgba(255,255,255,0.08);
-                border: 1px solid rgba(255,255,255,0.1);
-              }
-              .progress-header {
+              .detail-band {
                 display: table;
                 width: 100%;
-                margin-bottom: 12px;
+                margin: 16px 0 24px;
+                border: 1px solid #cbd5e1;
+                background: #ffffff;
               }
-              .progress-header span {
+              .detail-band-cell {
                 display: table-cell;
-                font-size: 13px;
-                color: rgba(226,232,240,0.78);
+                padding: 14px 16px;
+                vertical-align: top;
               }
-              .progress-header span:last-child {
-                text-align: right;
-                font-weight: 700;
-                color: #f8fafc;
+              .detail-band-cell + .detail-band-cell {
+                border-left: 1px solid #cbd5e1;
               }
-              .track {
-                height: 12px;
-                border-radius: 999px;
-                background: rgba(255,255,255,0.12);
-                overflow: hidden;
+              .detail-label {
+                font-size: 12px;
+                color: #64748b;
+                text-transform: uppercase;
+                letter-spacing: 0.6px;
+                margin-bottom: 8px;
               }
-              .fill {
-                height: 100%;
-                width: ${progressPercent};
-                background: linear-gradient(90deg, #60a5fa, #67e8f9);
-                border-radius: inherit;
+              .detail-value {
+                font-size: 30px;
+                font-weight: 800;
+                color: ${balanceTone};
+                line-height: 1.05;
               }
-              .progress-meta {
-                display: table;
+              .detail-support {
+                margin-top: 6px;
+                font-size: 12px;
+                color: #64748b;
+              }
+              .progress-row {
                 width: 100%;
-                margin-top: 12px;
+                border-collapse: collapse;
+                margin-bottom: 26px;
+              }
+              .progress-row td {
+                border: 1px solid #cbd5e1;
+                padding: 11px 14px;
                 font-size: 13px;
-                color: rgba(226,232,240,0.78);
+                background: #fbfdff;
               }
-              .progress-meta span {
-                display: table-cell;
-              }
-              .progress-meta span:last-child {
+              .progress-row td:last-child {
                 text-align: right;
-                color: #f8fafc;
                 font-weight: 700;
               }
               .section {
-                margin-top: 22px;
-                background: #ffffff;
-                border: 1px solid #dbe4f0;
-                border-radius: 24px;
-                padding: 22px;
-                box-shadow: 0 16px 40px rgba(148, 163, 184, 0.08);
-              }
-              .section-header {
-                display: table;
-                width: 100%;
-                margin-bottom: 16px;
+                margin-top: 24px;
               }
               .section-title {
-                display: table-cell;
-                font-size: 20px;
+                font-size: 16px;
                 font-weight: 800;
+                margin: 0 0 8px;
                 color: #0f172a;
-                margin: 0;
               }
-              .section-subtitle {
-                display: table-cell;
-                text-align: right;
-                font-size: 12px;
-                color: #64748b;
+              .section-rule {
+                height: 1px;
+                background: #cbd5e1;
+                margin-bottom: 10px;
               }
-              .stat-box {
-                display: inline-block;
-                width: calc(50% - 12px);
-                box-sizing: border-box;
-                background: #f8fbff;
-                border: 1px solid #e2e8f0;
-                border-radius: 20px;
-                padding: 18px;
-                margin: 12px 12px 0 0;
+              .status-grid {
+                width: 100%;
+                border-collapse: collapse;
               }
-              .stat-value {
-                font-size: 30px;
-                line-height: 1;
+              .status-grid td {
+                width: 25%;
+                border: 1px solid #cbd5e1;
+                padding: 14px;
+                vertical-align: top;
+                background: #ffffff;
+              }
+              .status-value {
+                font-size: 28px;
                 font-weight: 800;
                 margin-bottom: 8px;
               }
-              .stat-label {
+              .status-label {
                 font-size: 13px;
                 color: #475569;
               }
-              .location-row,
-              .timing-row {
-                margin-top: 14px;
-                padding-top: 14px;
-                border-top: 1px solid #e2e8f0;
-              }
-              .location-row:first-child,
-              .timing-row:first-child {
-                margin-top: 0;
-                padding-top: 0;
-                border-top: none;
-              }
-              .location-head,
-              .timing-head {
-                display: table;
+              .record-table {
                 width: 100%;
-                margin-bottom: 12px;
+                border-collapse: collapse;
               }
-              .location-title {
-                font-size: 18px;
-                font-weight: 700;
-                color: #0f172a;
+              .record-table col.name-col {
+                width: 46%;
               }
-              .location-meta {
+              .record-table col.metric-col {
+                width: 18%;
+              }
+              .record-table th,
+              .record-table td {
+                border: 1px solid #cbd5e1;
+                padding: 10px 12px;
                 font-size: 13px;
-                color: #64748b;
-                margin-top: 4px;
               }
-              .worked-pill {
-                display: table-cell;
-                text-align: right;
-                vertical-align: top;
-                font-size: 15px;
-                font-weight: 800;
-                color: #2563eb;
+              .record-table th {
+                text-align: left;
+                background: #f8fafc;
+                color: #475569;
+                font-weight: 700;
+                text-transform: uppercase;
+                letter-spacing: 0.4px;
+                font-size: 11px;
               }
-              .location-progress-track {
-                height: 10px;
-                border-radius: 999px;
-                background: #e8eef7;
-                overflow: hidden;
-                margin-bottom: 12px;
+              .record-table tbody tr:nth-child(even) td {
+                background: #fcfdff;
               }
-              .location-progress-fill {
-                height: 100%;
-                background: linear-gradient(90deg, #60a5fa, #67e8f9);
-                border-radius: inherit;
-              }
-              .location-stats {
-                display: table;
-                width: 100%;
-              }
-              .location-stat {
-                display: table-cell;
-                width: 50%;
-              }
-              .location-stat-right {
+              .numeric-cell {
                 text-align: right;
               }
-              .location-stat-label {
-                font-size: 12px;
-                color: #64748b;
-                margin-bottom: 4px;
+              .name-cell {
+                text-align: left;
               }
-              .location-stat-value {
-                font-size: 15px;
+              .primary-text {
+                font-size: 14px;
                 font-weight: 700;
                 color: #0f172a;
               }
-              .timing-grid {
-                display: table;
-                width: 100%;
-                border-spacing: 12px 0;
-                margin: 0 -12px;
-              }
-              .timing-grid-three .timing-box {
-                width: calc(33.333% - 12px);
-              }
-              .timing-box {
-                display: inline-block;
-                width: calc(50% - 12px);
-                box-sizing: border-box;
-                background: #f8fbff;
-                border: 1px solid #e2e8f0;
-                border-radius: 18px;
-                padding: 14px;
-                margin: 0 12px 0 0;
-              }
-              .timing-label {
+              .secondary-text {
+                margin-top: 3px;
                 font-size: 12px;
                 color: #64748b;
-                margin-bottom: 6px;
               }
-              .timing-value {
-                font-size: 18px;
-                font-weight: 800;
-                color: #0f172a;
-              }
-              .footer {
-                margin-top: 16px;
+              .empty-row {
                 text-align: center;
                 font-size: 12px;
-                color: #94a3b8;
-              }
-              .empty {
                 color: #64748b;
-                margin: 0;
+              }
+              .footer {
+                margin-top: 28px;
+                padding-top: 10px;
+                border-top: 1px solid #cbd5e1;
+                font-size: 12px;
+                color: #64748b;
+                display: table;
+                width: 100%;
+              }
+              .footer span {
+                display: table-cell;
+              }
+              .footer span:last-child {
+                text-align: right;
               }
             </style>
           </head>
           <body>
-            <div class="page">
-              <div class="sheet">
-                <div class="hero">
-                  <div class="hero-top">
-                    <div class="hero-top-left">
-                      <div class="eyebrow">${escapeHtml(t('accountMonthlyHoursTitle'))}</div>
-                      <h1 class="title">${escapeHtml(monthLabel)}</h1>
-                      <div class="meta">${escapeHtml(t('accountMonthlyHoursShiftCount', { count: summary.shiftsCount }))}</div>
-                    </div>
-                    <div class="hero-top-right">
-                      <div class="generated">${escapeHtml(generatedOnLabel)}</div>
+            <div class="report">
+              <div class="masthead">
+                <div class="masthead-row">
+                  <div class="masthead-left">
+                    <div class="brand">Shiftor Employee</div>
+                    <h1 class="report-title">${escapeHtml(monthLabel)}</h1>
+                    <div class="report-subtitle">${escapeHtml(t('accountMonthlyHoursTitle'))}</div>
+                    <div class="report-kicker">
+                      ${escapeHtml(t('accountMonthlyHoursPageHint'))}
                     </div>
                   </div>
-                  <div class="hero-summary">
-                    ${reportSummaryCards
-                      .map(
-                        (card) => `
-                          <div class="hero-summary-card">
-                            <div class="hero-summary-label">${escapeHtml(card.label)}</div>
-                            <div class="hero-summary-value">${escapeHtml(card.value)}</div>
-                          </div>
-                        `
-                      )
-                      .join('')}
-                  </div>
-                  <div class="balance-card">
-                    <div class="balance-label">${escapeHtml(t('accountMonthlyHoursBalance'))}</div>
-                    <div class="balance-value">${escapeHtml(formatDeltaMinutesLabel(summary.deltaMinutes, t))}</div>
-                  </div>
-                  <div class="progress-card">
-                    <div class="progress-header">
-                      <span>${escapeHtml(t('accountMonthlyHoursPlanned'))}</span>
-                      <span>${escapeHtml(`${completionPercent}%`)}</span>
-                    </div>
-                    <div class="track"><div class="fill"></div></div>
-                    <div class="progress-meta">
-                      <span>${escapeHtml(
-                        `${t('accountMonthlyHoursPlanned')}: ${formatMinutesLabel(summary.plannedMinutes, t)}`
-                      )}</span>
-                      <span>${escapeHtml(progressPercent)}</span>
+                  <div class="masthead-right">
+                    <div class="report-date">
+                      <strong>${escapeHtml(generatedOnLabel)}</strong>
+                      ${escapeHtml(t('reportGeneratePdf'))}
                     </div>
                   </div>
                 </div>
+              </div>
 
-                <div class="section">
-                  <div class="section-header">
-                    <h2 class="section-title">${escapeHtml(t('accountMonthlyHoursBreakdownTitle'))}</h2>
-                    <div class="section-subtitle">${escapeHtml(t('accountMonthlyHoursPageHint'))}</div>
-                  </div>
-                  ${statusHtml}
+              <table class="summary-grid" aria-hidden="true">
+                <tr>
+                  ${[
+                    {
+                      label: t('accountMonthlyHoursWorked'),
+                      value: formatMinutesLabel(summary.workedMinutes, t),
+                    },
+                    {
+                      label: t('accountMonthlyHoursPlanned'),
+                      value: formatMinutesLabel(summary.plannedMinutes, t),
+                    },
+                    {
+                      label: t('accountMonthlyHoursShiftCount', { count: summary.shiftsCount }),
+                      value: `${summary.shiftsCount}`,
+                    },
+                  ]
+                    .map(
+                      (card) => `
+                        <td>
+                          <div class="summary-label">${escapeHtml(card.label)}</div>
+                          <div class="summary-value">${escapeHtml(card.value)}</div>
+                        </td>
+                      `
+                    )
+                    .join('')}
+                </tr>
+              </table>
+
+              <div class="detail-band">
+                <div class="detail-band-cell">
+                  <div class="detail-label">${escapeHtml(t('accountMonthlyHoursBalance'))}</div>
+                  <div class="detail-value">${escapeHtml(formatDeltaMinutesLabel(summary.deltaMinutes, t))}</div>
+                  <div class="detail-support">${escapeHtml(`${t('accountMonthlyHoursWorked')}: ${formatMinutesLabel(summary.workedMinutes, t)}`)}</div>
                 </div>
-
-                <div class="section">
-                  <div class="section-header">
-                    <h2 class="section-title">${escapeHtml(t('accountMonthlyHoursLocationsTitle'))}</h2>
-                    <div class="section-subtitle">${escapeHtml(objectTotals.length ? `${objectTotals.length}` : '')}</div>
-                  </div>
-                  ${locationsHtml}
+                <div class="detail-band-cell">
+                  <div class="detail-label">%</div>
+                  <div class="detail-value" style="color:#0f172a;">${escapeHtml(progressPercent)}</div>
+                  <div class="detail-support">${escapeHtml(`${t('accountMonthlyHoursPlanned')}: ${formatMinutesLabel(summary.plannedMinutes, t)}`)}</div>
                 </div>
+              </div>
 
-                ${
-                  shiftTimingsHtml
-                    ? `<div class="section">
-                        <div class="section-header">
-                          <h2 class="section-title">${escapeHtml(t('accountMonthlyHoursClockTimesTitle'))}</h2>
-                          <div class="section-subtitle">${escapeHtml(t('accountMonthlyHoursWorked'))}</div>
-                        </div>
-                        ${shiftTimingsHtml}
-                      </div>`
-                    : ''
-                }
+              <table class="progress-row" aria-hidden="true">
+                <tr>
+                  <td>${escapeHtml(t('accountMonthlyHoursPageHint'))}</td>
+                  <td>${escapeHtml(generatedOnLabel)}</td>
+                </tr>
+              </table>
 
-                <div class="footer">Shiftor Employee</div>
+              <div class="section">
+                <h2 class="section-title">${escapeHtml(t('accountMonthlyHoursBreakdownTitle'))}</h2>
+                <div class="section-rule"></div>
+                <table class="status-grid" aria-hidden="true">
+                  <tr>${statusHtml}</tr>
+                </table>
+              </div>
+
+              <div class="section">
+                <h2 class="section-title">${escapeHtml(t('accountMonthlyHoursLocationsTitle'))}</h2>
+                <div class="section-rule"></div>
+                <table class="record-table" aria-hidden="true">
+                  <colgroup>
+                    <col class="name-col" />
+                    <col class="metric-col" />
+                    <col class="metric-col" />
+                    <col class="metric-col" />
+                  </colgroup>
+                  <thead>
+                    <tr>
+                      <th>${escapeHtml(t('accountMonthlyHoursLocationsTitle'))}</th>
+                      <th>${escapeHtml(t('accountMonthlyHoursWorked'))}</th>
+                      <th>${escapeHtml(t('accountMonthlyHoursPlanned'))}</th>
+                      <th>%</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    ${locationsHtml}
+                  </tbody>
+                </table>
+              </div>
+
+              ${
+                shiftTimings.length > 0
+                  ? `<div class="section">
+                      <h2 class="section-title">${escapeHtml(t('accountMonthlyHoursClockTimesTitle'))}</h2>
+                      <div class="section-rule"></div>
+                      <table class="record-table" aria-hidden="true">
+                        <colgroup>
+                          <col class="name-col" />
+                          <col class="metric-col" />
+                          <col class="metric-col" />
+                          <col class="metric-col" />
+                        </colgroup>
+                        <thead>
+                          <tr>
+                            <th>${escapeHtml(t('accountMonthlyHoursClockTimesTitle'))}</th>
+                            <th>${escapeHtml(t('accountMonthlyHoursWorked'))}</th>
+                            <th>${escapeHtml(t('accountMonthlyHoursClockInLabel'))}</th>
+                            <th>${escapeHtml(t('accountMonthlyHoursClockOutLabel'))}</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          ${shiftTimingsHtml}
+                        </tbody>
+                      </table>
+                    </div>`
+                  : ''
+              }
+
+              <div class="footer">
+                <span>${escapeHtml(`${monthLabel} • ${generatedOnLabel}`)}</span>
+                <span>Shiftor Employee</span>
               </div>
             </div>
           </body>
