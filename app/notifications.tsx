@@ -10,6 +10,7 @@ import {
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { useNotifications } from '@shared/context/NotificationContext';
 import { useTheme } from '@shared/themeContext';
 import { useLanguage } from '@shared/context/LanguageContext';
@@ -87,13 +88,21 @@ export default function NotificationsScreen() {
           ]}
         >
           <View style={[styles.headerRow, shouldStackHeader ? styles.headerRowCompact : null]}>
+            <TouchableOpacity
+              accessibilityRole="button"
+              accessibilityLabel={t('commonBack')}
+              style={[styles.backButton, { backgroundColor: theme.surfaceMuted, borderColor: theme.borderSoft }]}
+              onPress={() => router.back()}
+            >
+              <Ionicons name="chevron-back" size={18} color={theme.textPrimary} />
+            </TouchableOpacity>
             <View style={styles.headerText}>
               <Text style={[styles.title, { color: theme.textPrimary }]}>
                 {t('notificationsPanelTitle')}
               </Text>
-            <Text style={[styles.subtitle, { color: theme.textSecondary }]}>
-              {t(getNotificationsSummaryTranslationKey(unreadCount), { count: unreadCount })}
-            </Text>
+              <Text style={[styles.subtitle, { color: theme.textSecondary }]}>
+                {t(getNotificationsSummaryTranslationKey(unreadCount), { count: unreadCount })}
+              </Text>
             </View>
             <TouchableOpacity
               style={[
@@ -195,13 +204,21 @@ const styles = StyleSheet.create({
   },
   headerRow: {
     flexDirection: 'row',
-    alignItems: 'flex-start',
+    alignItems: 'center',
     justifyContent: 'space-between',
     gap: 12,
   },
   headerRowCompact: {
-    flexDirection: 'column',
-    alignItems: 'stretch',
+    alignItems: 'center',
+  },
+  backButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 0,
   },
   headerText: {
     flex: 1,
