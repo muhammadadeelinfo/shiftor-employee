@@ -36,10 +36,10 @@ import { formatAddress } from '@shared/utils/address';
 import { getUserFacingErrorMessage } from '@shared/utils/userFacingError';
 import {
   fetchMonthlyHours,
+  formatDeltaMinutesLabel,
   formatMinutesLabel,
   formatMonthKey,
   formatMonthlyHoursMonthLabel,
-  formatSignedMinutesLabel,
   getEmployeeApiBaseUrl,
   type MonthlyHoursResponse,
 } from '@features/account/monthlyHours';
@@ -542,7 +542,7 @@ export default function AccountScreen() {
         },
         {
           label: t('accountMonthlyHoursBalance'),
-          value: formatSignedMinutesLabel(monthlyHours.summary.deltaMinutes, t),
+          value: formatDeltaMinutesLabel(monthlyHours.summary.deltaMinutes, t),
           tone: monthlyHoursBalanceTone,
         },
       ]

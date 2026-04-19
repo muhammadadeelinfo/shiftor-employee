@@ -59,12 +59,14 @@ export const formatMinutesLabel = (totalMinutes: number, t: Translate) => {
   return t('qrClockOutWorkedHoursMinutes', { hours, minutes });
 };
 
-export const formatSignedMinutesLabel = (totalMinutes: number, t: Translate) => {
+export const formatDeltaMinutesLabel = (totalMinutes: number, t: Translate) => {
   if (totalMinutes === 0) {
     return t('accountMonthlyHoursOnTrack');
   }
-  const prefix = totalMinutes > 0 ? '+' : '-';
-  return `${prefix}${formatMinutesLabel(totalMinutes, t)}`;
+  const value = formatMinutesLabel(totalMinutes, t);
+  return totalMinutes > 0
+    ? t('accountMonthlyHoursAhead', { value })
+    : t('accountMonthlyHoursBehind', { value });
 };
 
 export const formatMonthlyHoursMonthLabel = (

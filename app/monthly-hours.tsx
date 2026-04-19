@@ -5,6 +5,7 @@ import {
   StyleSheet,
   Text,
   TouchableOpacity,
+  useWindowDimensions,
   View,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -18,12 +19,13 @@ import { useAuth } from '@hooks/useSupabaseAuth';
 import { useLanguage } from '@shared/context/LanguageContext';
 import { layoutTokens } from '@shared/theme/layout';
 import { useTheme } from '@shared/themeContext';
+import { getContentMaxWidth, shouldStackForCompactWidth } from '@shared/utils/responsiveLayout';
 import {
   fetchMonthlyHours,
   formatMinutesLabel,
   formatMonthKey,
   formatMonthlyHoursMonthLabel,
-  formatSignedMinutesLabel,
+  formatDeltaMinutesLabel,
   getEmployeeApiBaseUrl,
   getMonthlyHoursShiftTimings,
   type MonthlyHoursShiftTiming,
@@ -92,12 +94,18 @@ const formatTimingWindow = (shift: MonthlyHoursShiftTiming, t: (key: any, params
   return `${start} - ${end}`;
 };
 
+const getCompletionRatio = (workedMinutes?: number | null, plannedMinutes?: number | null) => {
+  if (!plannedMinutes || plannedMinutes <= 0) return 0;
+  return Math.max(0, Math.min(1, (workedMinutes ?? 0) / plannedMinutes));
+};
+
 export default function MonthlyHoursScreen() {
   const router = useRouter();
   const { user, session } = useAuth();
   const { theme } = useTheme();
   const { t, language } = useLanguage();
   const insets = useSafeAreaInsets();
+  const { width } = useWindowDimensions();
   const apiBaseUrl = getEmployeeApiBaseUrl();
   const currentMonthKey = useMemo(() => formatMonthKey(new Date()), []);
   const [selectedMonthKey, setSelectedMonthKey] = useState(currentMonthKey);
@@ -127,12 +135,12 @@ export default function MonthlyHoursScreen() {
     () => formatMonthlyHoursMonthLabel(summary?.month ?? selectedMonthKey, language),
     [language, selectedMonthKey, summary?.month]
   );
-  const progress = summary
-    ? Math.max(
-        0,
-        Math.min(1, summary.plannedMinutes > 0 ? summary.workedMinutes / summary.plannedMinutes : 0)
-      )
-    : 0;
+  const contentMaxWidth = getContentMaxWidth(width) ?? 1080;
+  const isCompactPhoneLayout = shouldStackForCompactWidth(width);
+  const isTabletLayout = width >= 768;
+  const isNarrowPhoneLayout = width < 390;
+  const useSingleRowTimingStats = width < 460;
+  const progress = summary ? getCompletionRatio(summary.workedMinutes, summary.plannedMinutes) : 0;
   const progressPercent: `${number}%` = `${Math.round(progress * 100)}%`;
   const balanceTone = summary
     ? summary.deltaMinutes < 0
@@ -141,6 +149,8 @@ export default function MonthlyHoursScreen() {
         ? theme.success
         : theme.textPrimary
     : theme.textPrimary;
+  const heroBalanceTone =
+    summary && summary.deltaMinutes === 0 ? '#f8fafc' : balanceTone;
   const statusCards = summary
     ? [
         {
@@ -328,7 +338,7 @@ export default function MonthlyHoursScreen() {
                   <div class="balance-card">
                     <div class="metric-label">${escapeHtml(t('accountMonthlyHoursBalance'))}</div>
                     <div class="metric-value" style="font-size:32px;color:${balanceTone}">
-                      ${escapeHtml(formatSignedMinutesLabel(summary.deltaMinutes, t))}
+                      ${escapeHtml(formatDeltaMinutesLabel(summary.deltaMinutes, t))}
                     </div>
                   </div>
                 </div>
@@ -385,7 +395,11 @@ export default function MonthlyHoursScreen() {
     <SafeAreaView style={[styles.safeArea, { backgroundColor: theme.background }]} edges={['left', 'right']}>
       <ScrollView
         style={styles.container}
-        contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 28 }]}
+        contentContainerStyle={[
+          styles.content,
+          isCompactPhoneLayout && styles.contentCompact,
+          { paddingBottom: insets.bottom + 28, maxWidth: contentMaxWidth },
+        ]}
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.header}>
@@ -421,7 +435,13 @@ export default function MonthlyHoursScreen() {
         </View>
 
         <View style={styles.monthSwitcherWrap}>
-          <View style={[styles.monthSwitcher, { backgroundColor: theme.surface, borderColor: theme.borderSoft }]}>
+          <View
+            style={[
+              styles.monthSwitcher,
+              isCompactPhoneLayout && styles.monthSwitcherCompact,
+              { backgroundColor: theme.surface, borderColor: theme.borderSoft },
+            ]}
+          >
             <TouchableOpacity
               accessibilityRole="button"
               accessibilityLabel={t('accountMonthlyHoursPreviousMonth')}
@@ -433,6 +453,7 @@ export default function MonthlyHoursScreen() {
             <View
               style={[
                 styles.monthSwitcherCenter,
+                isCompactPhoneLayout && styles.monthSwitcherCenterCompact,
                 { backgroundColor: 'rgba(255,255,255,0.03)', borderColor: 'rgba(255,255,255,0.08)' },
               ]}
             >
@@ -482,73 +503,64 @@ export default function MonthlyHoursScreen() {
         </View>
 
         <LinearGradient
-          colors={['rgba(129, 140, 248, 0.2)', 'rgba(56, 189, 248, 0.1)', 'rgba(12, 19, 37, 0.16)']}
+          colors={['#13203f', '#172a52', '#0d152b']}
           start={[0, 0]}
-          end={[1, 1]}
-          style={[styles.heroCard, { borderColor: theme.borderSoft }]}
+          end={[1, 0.9]}
+          style={[styles.heroCard, { borderColor: 'rgba(148, 163, 184, 0.22)' }]}
         >
-          <View style={styles.heroGlow} />
+          <View style={styles.heroGlowPrimary} />
+          <View style={styles.heroGlowSecondary} />
           <View style={styles.heroHeader}>
             <View style={styles.heroCopy}>
-              <Text style={[styles.heroEyebrow, { color: theme.textSecondary }]}>
+              <Text style={[styles.heroEyebrow, { color: 'rgba(226, 232, 240, 0.72)' }]}>
                 {t('accountMonthlyHoursTitle')}
               </Text>
-              <Text style={[styles.heroMonth, { color: theme.textPrimary }]}>{monthLabel}</Text>
             </View>
-            {summary ? (
-              <View style={[styles.shiftsBadge, { backgroundColor: theme.surfaceMuted, borderColor: theme.borderSoft }]}>
-                <Text style={[styles.shiftsBadgeText, { color: theme.textPrimary }]}>
-                  {t('accountMonthlyHoursShiftCount', { count: summary.shiftsCount })}
-                </Text>
-              </View>
-            ) : null}
           </View>
 
           {isLoading ? (
             <View style={styles.stateBlock}>
               <ActivityIndicator color={theme.primary} />
-              <Text style={[styles.stateText, { color: theme.textSecondary }]}>
+              <Text style={[styles.stateText, { color: 'rgba(226, 232, 240, 0.78)' }]}>
                 {t('accountMonthlyHoursLoading')}
               </Text>
             </View>
           ) : summary ? (
             <>
-              <View style={styles.heroStatsRow}>
-                <View style={styles.heroMetric}>
-                  <Text style={[styles.heroMetricLabel, { color: theme.textSecondary }]}>
+              <View style={[styles.heroStatsRow, isCompactPhoneLayout && styles.heroStatsRowCompact]}>
+                <View style={[styles.heroMetricCard, styles.heroGlassCard]}>
+                  <Text style={[styles.heroMetricLabel, { color: 'rgba(226, 232, 240, 0.72)' }]}>
                     {t('accountMonthlyHoursWorked')}
                   </Text>
-                  <Text style={[styles.heroMetricValue, { color: theme.textPrimary }]}>
+                  <Text style={[styles.heroMetricValue, { color: '#f8fafc' }]}>
                     {formatMinutesLabel(summary.workedMinutes, t)}
-                  </Text>
-                  <Text style={[styles.heroMetricHint, { color: theme.textSecondary }]}>
-                    {t('accountMonthlyHoursPlanned')}: {formatMinutesLabel(summary.plannedMinutes, t)}
                   </Text>
                 </View>
                 <View
                   style={[
                     styles.balanceCard,
+                    styles.heroGlassCard,
                     {
                       backgroundColor:
                         summary.deltaMinutes < 0
-                          ? 'rgba(239, 68, 68, 0.14)'
+                          ? 'rgba(127, 29, 29, 0.3)'
                           : summary.deltaMinutes > 0
-                            ? 'rgba(34, 197, 94, 0.14)'
-                            : 'rgba(255,255,255,0.08)',
+                            ? 'rgba(20, 83, 45, 0.34)'
+                            : 'rgba(15, 23, 42, 0.24)',
                       borderColor:
                         summary.deltaMinutes < 0
-                          ? 'rgba(239, 68, 68, 0.34)'
+                          ? 'rgba(248, 113, 113, 0.34)'
                           : summary.deltaMinutes > 0
-                            ? 'rgba(34, 197, 94, 0.32)'
-                            : 'rgba(255,255,255,0.12)',
+                            ? 'rgba(74, 222, 128, 0.28)'
+                            : 'rgba(226, 232, 240, 0.12)',
                     },
                   ]}
                 >
-                  <Text style={[styles.balanceLabel, { color: theme.textSecondary }]}>
+                  <Text style={[styles.balanceLabel, { color: 'rgba(226, 232, 240, 0.72)' }]}>
                     {t('accountMonthlyHoursBalance')}
                   </Text>
-                  <Text style={[styles.balanceValue, { color: balanceTone }]}>
-                    {formatSignedMinutesLabel(summary.deltaMinutes, t)}
+                  <Text style={[styles.balanceValue, { color: heroBalanceTone }]}>
+                    {formatDeltaMinutesLabel(summary.deltaMinutes, t)}
                   </Text>
                 </View>
               </View>
@@ -556,25 +568,21 @@ export default function MonthlyHoursScreen() {
               <View
                 style={[
                   styles.progressWrap,
-                  { backgroundColor: 'rgba(255,255,255,0.04)', borderColor: 'rgba(255,255,255,0.08)' },
+                  styles.heroGlassCard,
+                  { backgroundColor: 'rgba(15, 23, 42, 0.22)', borderColor: 'rgba(226, 232, 240, 0.12)' },
                 ]}
               >
                 <View style={styles.progressHeader}>
-                  <Text style={[styles.progressSectionTitle, { color: theme.textPrimary }]}>
-                    {t('accountMonthlyHoursWorked')}
+                  <Text style={[styles.progressSectionTitle, { color: 'rgba(226, 232, 240, 0.72)' }]}>
+                    {t('accountMonthlyHoursPlanned')}
                   </Text>
-                  <View
-                    style={[
-                      styles.progressBadge,
-                      { backgroundColor: 'rgba(12, 19, 37, 0.36)', borderColor: 'rgba(255,255,255,0.12)' },
-                    ]}
-                  >
-                    <Text style={[styles.progressBadgeText, { color: theme.textPrimary }]}>{progressPercent}</Text>
+                  <View style={[styles.progressBadge, styles.heroGlassBadge]}>
+                    <Text style={[styles.progressBadgeText, { color: '#f8fafc' }]}>{progressPercent}</Text>
                   </View>
                 </View>
-                <View style={[styles.progressTrack, { backgroundColor: 'rgba(255,255,255,0.08)' }]}>
+                <View style={[styles.progressTrack, { backgroundColor: 'rgba(255,255,255,0.1)' }]}>
                   <LinearGradient
-                    colors={[theme.primary, theme.info]}
+                    colors={['#60a5fa', '#67e8f9']}
                     start={[0, 0]}
                     end={[1, 0]}
                     style={[
@@ -587,18 +595,16 @@ export default function MonthlyHoursScreen() {
                   />
                 </View>
                 <View style={styles.progressMeta}>
-                  <Text style={[styles.progressLabel, { color: theme.textSecondary }]}>
+                  <Text style={[styles.progressLabel, { color: 'rgba(226, 232, 240, 0.72)' }]}>
                     {t('accountMonthlyHoursPlanned')}: {formatMinutesLabel(summary.plannedMinutes, t)}
                   </Text>
-                  <Text style={[styles.progressValue, { color: theme.textPrimary }]}>
-                    {t('accountMonthlyHoursShiftCount', { count: summary.shiftsCount })}
-                  </Text>
+                  <Text style={[styles.progressValue, { color: '#f8fafc' }]}>{progressPercent}</Text>
                 </View>
               </View>
 
             </>
           ) : (
-            <Text style={[styles.stateText, { color: theme.textSecondary }]}>
+            <Text style={[styles.stateText, { color: 'rgba(226, 232, 240, 0.78)' }]}>
               {apiBaseUrl
                 ? error instanceof Error
                   ? error.message
@@ -609,24 +615,26 @@ export default function MonthlyHoursScreen() {
         </LinearGradient>
 
         {summary ? (
-          <View style={[styles.panel, { backgroundColor: theme.surface, borderColor: theme.borderSoft }]}>
+          <View style={[styles.panel, { backgroundColor: theme.surfaceElevated, borderColor: theme.borderSoft }]}>
             <View style={styles.panelHeader}>
-              <Text style={[styles.panelTitle, { color: theme.textPrimary }]}>
-                {t('accountMonthlyHoursBreakdownTitle')}
-              </Text>
-              <View style={[styles.panelBadge, { backgroundColor: theme.surfaceMuted, borderColor: theme.borderSoft }]}>
-                <Text style={[styles.panelBadgeText, { color: theme.textSecondary }]}>
-                  {t('accountMonthlyHoursShiftCount', { count: summary.shiftsCount })}
+              <View style={styles.panelHeaderCopy}>
+                <Text style={[styles.panelTitle, { color: theme.textPrimary }]}>
+                  {t('accountMonthlyHoursBreakdownTitle')}
                 </Text>
               </View>
             </View>
-            <View style={styles.statusGrid}>
+            <View style={[styles.statusGrid, isCompactPhoneLayout && styles.statusGridCompact]}>
               {statusCards.map((item) => (
                 <View
                   key={item.label}
-                  style={[styles.statusCard, { backgroundColor: theme.surfaceMuted, borderColor: theme.borderSoft }]}
+                  style={[
+                    styles.statusCard,
+                    isCompactPhoneLayout && styles.statusCardCompact,
+                    isTabletLayout && styles.statusCardWide,
+                    { backgroundColor: theme.surface, borderColor: theme.borderSoft },
+                  ]}
                 >
-                  <View style={[styles.statusIconWrap, { backgroundColor: 'rgba(255,255,255,0.04)' }]}>
+                  <View style={[styles.statusIconWrap, { backgroundColor: theme.surfaceMuted }]}>
                     <Ionicons name={item.icon} size={15} color={item.tone} />
                   </View>
                   <Text style={[styles.statusValue, { color: item.tone }]}>{item.value}</Text>
@@ -637,37 +645,36 @@ export default function MonthlyHoursScreen() {
           </View>
         ) : null}
 
-        <View style={[styles.panel, { backgroundColor: theme.surface, borderColor: theme.borderSoft }]}>
+        <View style={[styles.panel, { backgroundColor: theme.surfaceElevated, borderColor: theme.borderSoft }]}>
           <View style={styles.panelHeader}>
-            <Text style={[styles.panelTitle, { color: theme.textPrimary }]}>
-              {t('accountMonthlyHoursLocationsTitle')}
-            </Text>
-            {objectTotals.length > 0 ? (
-              <View style={[styles.panelBadge, { backgroundColor: theme.surfaceMuted, borderColor: theme.borderSoft }]}>
-                <Text style={[styles.panelBadgeText, { color: theme.textSecondary }]}>{objectTotals.length}</Text>
-              </View>
-            ) : null}
+            <View style={styles.panelHeaderCopy}>
+              <Text style={[styles.panelTitle, { color: theme.textPrimary }]}>
+                {t('accountMonthlyHoursLocationsTitle')}
+              </Text>
+            </View>
           </View>
           {objectTotals.length > 0 ? (
             <View style={styles.locationList}>
               {objectTotals.map((item, index) => (
                 <View
                   key={`${item.objectId ?? item.objectTitle ?? 'location'}-${index}`}
-                  style={[styles.locationRow, { borderColor: theme.borderSoft, backgroundColor: theme.surfaceMuted }]}
+                  style={[
+                    styles.locationRow,
+                    isCompactPhoneLayout && styles.locationRowCompact,
+                    { borderColor: theme.borderSoft, backgroundColor: theme.surface },
+                  ]}
                 >
-                  <View style={styles.locationHeader}>
+                  <View style={[styles.locationHeader, isCompactPhoneLayout && styles.locationHeaderCompact]}>
                     <View style={styles.locationCopy}>
                       <Text style={[styles.locationTitle, { color: theme.textPrimary }]}>
                         {item.objectTitle?.trim() || t('notProvided')}
-                      </Text>
-                      <Text style={[styles.locationMeta, { color: theme.textSecondary }]}>
-                        {t('accountMonthlyHoursShiftCount', { count: item.shiftsCount ?? 0 })}
                       </Text>
                     </View>
                     <View
                       style={[
                         styles.locationWorkedBadge,
-                        { backgroundColor: 'rgba(12, 19, 37, 0.3)', borderColor: 'rgba(255,255,255,0.08)' },
+                        isCompactPhoneLayout && styles.locationWorkedBadgeCompact,
+                        { backgroundColor: theme.surfaceMuted, borderColor: theme.borderSoft },
                       ]}
                     >
                       <Text style={[styles.locationWorkedBadgeText, { color: theme.primary }]}>
@@ -675,7 +682,25 @@ export default function MonthlyHoursScreen() {
                       </Text>
                     </View>
                   </View>
-                  <View style={styles.locationFooter}>
+                  <View style={styles.locationProgressWrap}>
+                    <View style={[styles.locationProgressTrack, { backgroundColor: theme.surfaceMuted }]}>
+                      <LinearGradient
+                        colors={['#60a5fa', '#67e8f9']}
+                        start={[0, 0]}
+                        end={[1, 0]}
+                        style={[
+                          styles.locationProgressFill,
+                          {
+                            width: `${Math.round(
+                              getCompletionRatio(item.workedMinutes ?? 0, item.plannedMinutes ?? 0) * 100
+                            )}%`,
+                            minWidth: (item.workedMinutes ?? 0) > 0 ? 10 : 0,
+                          },
+                        ]}
+                      />
+                    </View>
+                  </View>
+                  <View style={[styles.locationFooter, isNarrowPhoneLayout && styles.locationFooterCompact]}>
                     <Text style={[styles.locationPlanned, { color: theme.textSecondary }]}>
                       {t('accountMonthlyHoursPlanned')}: {formatMinutesLabel(item.plannedMinutes ?? 0, t)}
                     </Text>
@@ -696,14 +721,17 @@ export default function MonthlyHoursScreen() {
         </View>
 
         {summary ? (
-          <View style={[styles.panel, { backgroundColor: theme.surface, borderColor: theme.borderSoft }]}>
+          <View style={[styles.panel, { backgroundColor: theme.surfaceElevated, borderColor: theme.borderSoft }]}>
             <View style={styles.panelHeader}>
-              <Text style={[styles.panelTitle, { color: theme.textPrimary }]}>
-                {t('accountMonthlyHoursClockTimesTitle')}
-              </Text>
-              <View style={[styles.panelBadge, { backgroundColor: theme.surfaceMuted, borderColor: theme.borderSoft }]}>
-                <Text style={[styles.panelBadgeText, { color: theme.textSecondary }]}>
-                  {t('accountMonthlyHoursShiftCount', { count: shiftTimings.length })}
+              <View style={styles.panelHeaderCopy}>
+                <Text
+                  style={[
+                    styles.panelTitle,
+                    isCompactPhoneLayout && styles.panelTitleCompact,
+                    { color: theme.textPrimary },
+                  ]}
+                >
+                  {t('accountMonthlyHoursClockTimesTitle')}
                 </Text>
               </View>
             </View>
@@ -712,50 +740,167 @@ export default function MonthlyHoursScreen() {
                 {shiftTimings.map((shift) => (
                   <View
                     key={shift.id}
-                    style={[styles.timingRow, { borderColor: theme.borderSoft, backgroundColor: theme.surfaceMuted }]}
+                    style={[
+                      styles.timingRow,
+                      isCompactPhoneLayout && styles.timingRowCompact,
+                      { borderColor: theme.borderSoft, backgroundColor: theme.surface },
+                    ]}
                   >
-                    <View style={styles.timingHeader}>
+                    <View style={[styles.timingHeader, isCompactPhoneLayout && styles.timingHeaderCompact]}>
                       <View style={styles.timingCopy}>
                         <Text style={[styles.timingTitle, { color: theme.textPrimary }]}>
                           {shift.location || shift.title}
                         </Text>
-                        <Text style={[styles.timingMeta, { color: theme.textSecondary }]}>
-                          {formatTimingDate(shift.clockIn ?? shift.clockOut ?? shift.start)}
-                        </Text>
+                        <View style={[styles.timingMetaRow, isCompactPhoneLayout && styles.timingMetaRowCompact]}>
+                          <Text style={[styles.timingMeta, { color: theme.textSecondary }]}>
+                            {formatTimingDate(shift.clockIn ?? shift.clockOut ?? shift.start)}
+                          </Text>
+                          {isCompactPhoneLayout ? (
+                            <View
+                              style={[
+                                styles.timingInlineWorkedBadge,
+                                { backgroundColor: theme.surfaceMuted, borderColor: theme.borderSoft },
+                              ]}
+                            >
+                              <Text style={[styles.timingInlineWorkedLabel, { color: theme.textSecondary }]}>
+                                {t('accountMonthlyHoursWorked')}
+                              </Text>
+                              <Text style={[styles.timingInlineWorkedValue, { color: theme.textPrimary }]}>
+                                {formatMinutesLabel(shift.workedMinutes, t)}
+                              </Text>
+                            </View>
+                          ) : null}
+                        </View>
                       </View>
                       <View
                         style={[
                           styles.locationWorkedBadge,
-                          { backgroundColor: 'rgba(12, 19, 37, 0.3)', borderColor: 'rgba(255,255,255,0.08)' },
+                          isCompactPhoneLayout && styles.locationWorkedBadgeCompact,
+                          { backgroundColor: theme.surfaceMuted, borderColor: theme.borderSoft },
                         ]}
                       >
-                      <Text style={[styles.locationWorkedBadgeText, { color: theme.primary }]}>
-                        {formatTimingWindow(shift, t)}
-                      </Text>
+                        <Text style={[styles.locationWorkedBadgeText, { color: theme.primary }]}>
+                          {formatTimingWindow(shift, t)}
+                        </Text>
+                      </View>
                     </View>
-                  </View>
-                  <View style={styles.timingStats}>
-                    <View style={[styles.timingStatCard, { backgroundColor: theme.surface, borderColor: theme.borderSoft }]}>
-                      <Text style={[styles.timingStatLabel, { color: theme.textSecondary }]}>
-                        {t('accountMonthlyHoursWorked')}
-                      </Text>
-                      <Text style={[styles.timingStatValue, { color: theme.textPrimary }]}>
-                        {formatMinutesLabel(shift.workedMinutes, t)}
-                      </Text>
-                    </View>
-                    <View style={[styles.timingStatCard, { backgroundColor: theme.surface, borderColor: theme.borderSoft }]}>
-                      <Text style={[styles.timingStatLabel, { color: theme.textSecondary }]}>
-                        {t('accountMonthlyHoursClockInLabel')}
-                      </Text>
-                        <Text style={[styles.timingStatValue, { color: theme.textPrimary }]}>
+                    <View
+                      style={[
+                        styles.timingStats,
+                        useSingleRowTimingStats && styles.timingStatsCompact,
+                      ]}
+                    >
+                      {useSingleRowTimingStats ? (
+                        <View
+                          style={[
+                            styles.timingStatCard,
+                            styles.timingStatCardCompactWorked,
+                            styles.timingStatCardCompactThird,
+                            { backgroundColor: theme.surfaceMuted, borderColor: theme.borderSoft },
+                          ]}
+                        >
+                          <Text
+                            numberOfLines={1}
+                            style={[
+                              styles.timingStatLabel,
+                              styles.timingStatLabelCompact,
+                              { color: theme.textSecondary },
+                            ]}
+                          >
+                            {t('accountMonthlyHoursWorked')}
+                          </Text>
+                          <Text
+                            numberOfLines={1}
+                            adjustsFontSizeToFit
+                            minimumFontScale={0.85}
+                            style={[
+                              styles.timingStatValue,
+                              styles.timingStatValueCompact,
+                              { color: theme.textPrimary },
+                            ]}
+                          >
+                            {formatMinutesLabel(shift.workedMinutes, t)}
+                          </Text>
+                        </View>
+                      ) : null}
+                      {useSingleRowTimingStats ? null : (
+                        <View
+                          style={[
+                            styles.timingStatCard,
+                            styles.timingStatCardWorked,
+                            isTabletLayout && styles.timingStatCardWide,
+                            { backgroundColor: theme.surfaceMuted, borderColor: theme.borderSoft },
+                          ]}
+                        >
+                          <Text style={[styles.timingStatLabel, { color: theme.textSecondary }]}>
+                            {t('accountMonthlyHoursWorked')}
+                          </Text>
+                          <Text style={[styles.timingStatValue, { color: theme.textPrimary }]}>
+                            {formatMinutesLabel(shift.workedMinutes, t)}
+                          </Text>
+                        </View>
+                      )}
+                      <View
+                        style={[
+                          styles.timingStatCard,
+                          useSingleRowTimingStats && styles.timingStatCardCompactTime,
+                          useSingleRowTimingStats && styles.timingStatCardCompactThird,
+                          isTabletLayout && styles.timingStatCardWide,
+                          { backgroundColor: theme.surfaceMuted, borderColor: theme.borderSoft },
+                        ]}
+                      >
+                        <Text
+                          numberOfLines={1}
+                          style={[
+                            styles.timingStatLabel,
+                            useSingleRowTimingStats && styles.timingStatLabelCompact,
+                            { color: theme.textSecondary },
+                          ]}
+                        >
+                          {t('accountMonthlyHoursClockInLabel')}
+                        </Text>
+                        <Text
+                          numberOfLines={1}
+                          adjustsFontSizeToFit
+                          minimumFontScale={0.75}
+                          style={[
+                            styles.timingStatValue,
+                            useSingleRowTimingStats && styles.timingStatValueCompact,
+                            { color: theme.textPrimary },
+                          ]}
+                        >
                           {formatTimingTime(shift.clockIn)}
                         </Text>
                       </View>
-                      <View style={[styles.timingStatCard, { backgroundColor: theme.surface, borderColor: theme.borderSoft }]}>
-                        <Text style={[styles.timingStatLabel, { color: theme.textSecondary }]}>
+                      <View
+                        style={[
+                          styles.timingStatCard,
+                          useSingleRowTimingStats && styles.timingStatCardCompactTime,
+                          useSingleRowTimingStats && styles.timingStatCardCompactThird,
+                          isTabletLayout && styles.timingStatCardWide,
+                          { backgroundColor: theme.surfaceMuted, borderColor: theme.borderSoft },
+                        ]}
+                      >
+                        <Text
+                          numberOfLines={1}
+                          style={[
+                            styles.timingStatLabel,
+                            useSingleRowTimingStats && styles.timingStatLabelCompact,
+                            { color: theme.textSecondary },
+                          ]}
+                        >
                           {t('accountMonthlyHoursClockOutLabel')}
                         </Text>
-                        <Text style={[styles.timingStatValue, { color: theme.textPrimary }]}>
+                        <Text
+                          numberOfLines={1}
+                          adjustsFontSizeToFit
+                          minimumFontScale={0.75}
+                          style={[
+                            styles.timingStatValue,
+                            useSingleRowTimingStats && styles.timingStatValueCompact,
+                            { color: theme.textPrimary },
+                          ]}
+                        >
                           {formatTimingTime(shift.clockOut)}
                         </Text>
                       </View>
@@ -898,19 +1043,26 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   content: {
+    width: '100%',
+    alignSelf: 'center',
+    paddingHorizontal: 20,
+    paddingTop: layoutTokens.screenTop + 4,
+    gap: 18,
+  },
+  contentCompact: {
     paddingHorizontal: 16,
-    paddingTop: layoutTokens.screenTop,
-    gap: 14,
+    gap: 16,
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
+    marginBottom: 2,
   },
   backButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     borderWidth: 1,
     alignItems: 'center',
     justifyContent: 'center',
@@ -919,10 +1071,10 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   exportButton: {
-    width: 40,
-    height: 40,
+    width: 44,
+    height: 44,
     borderWidth: 1,
-    borderRadius: 20,
+    borderRadius: 22,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -930,31 +1082,35 @@ const styles = StyleSheet.create({
     opacity: 0.55,
   },
   headerTitle: {
-    fontSize: 20,
+    fontSize: 24,
     fontWeight: '800',
-    letterSpacing: -0.4,
+    letterSpacing: -0.6,
   },
   headerHint: {
-    marginTop: 2,
-    fontSize: 13,
-    lineHeight: 18,
+    marginTop: 4,
+    fontSize: 14,
+    lineHeight: 20,
   },
   monthSwitcherWrap: {
-    gap: 10,
+    gap: 12,
   },
   monthSwitcher: {
     borderWidth: 1,
-    borderRadius: 22,
-    padding: 10,
+    borderRadius: 24,
+    padding: 12,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
   },
+  monthSwitcherCompact: {
+    padding: 10,
+    gap: 10,
+  },
   monthSwitcherButton: {
-    width: 42,
-    height: 42,
+    width: 46,
+    height: 46,
     borderWidth: 1,
-    borderRadius: 21,
+    borderRadius: 23,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -963,18 +1119,23 @@ const styles = StyleSheet.create({
   },
   monthSwitcherCenter: {
     flex: 1,
-    minHeight: 58,
+    minHeight: 62,
     borderWidth: 1,
-    borderRadius: 18,
-    paddingHorizontal: 12,
+    borderRadius: 20,
+    paddingHorizontal: 14,
     flexDirection: 'row',
     alignItems: 'center',
+    gap: 12,
+  },
+  monthSwitcherCenterCompact: {
+    minHeight: 58,
+    paddingHorizontal: 12,
     gap: 10,
   },
   monthSwitcherIconWrap: {
-    width: 34,
-    height: 34,
-    borderRadius: 17,
+    width: 38,
+    height: 38,
+    borderRadius: 19,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -982,16 +1143,16 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   monthSwitcherLabel: {
-    fontSize: 11,
+    fontSize: 10,
     fontWeight: '700',
     textTransform: 'uppercase',
-    letterSpacing: 0.5,
+    letterSpacing: 0.9,
   },
   monthSwitcherValue: {
     marginTop: 4,
-    fontSize: 18,
+    fontSize: 20,
     fontWeight: '800',
-    letterSpacing: -0.3,
+    letterSpacing: -0.5,
   },
   monthResetChip: {
     alignSelf: 'center',
@@ -1009,20 +1170,29 @@ const styles = StyleSheet.create({
   },
   heroCard: {
     borderWidth: 1,
-    borderRadius: 24,
-    padding: 18,
-    gap: 16,
+    borderRadius: 30,
+    padding: 22,
+    gap: 18,
     overflow: 'hidden',
     position: 'relative',
   },
-  heroGlow: {
+  heroGlowPrimary: {
     position: 'absolute',
-    top: -18,
-    right: -12,
-    width: 160,
-    height: 160,
-    borderRadius: 80,
-    backgroundColor: 'rgba(96, 165, 250, 0.08)',
+    top: -48,
+    right: -20,
+    width: 220,
+    height: 220,
+    borderRadius: 110,
+    backgroundColor: 'rgba(96, 165, 250, 0.18)',
+  },
+  heroGlowSecondary: {
+    position: 'absolute',
+    bottom: -70,
+    left: -30,
+    width: 180,
+    height: 180,
+    borderRadius: 90,
+    backgroundColor: 'rgba(34, 211, 238, 0.12)',
   },
   heroHeader: {
     flexDirection: 'row',
@@ -1038,19 +1208,23 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: '700',
     textTransform: 'uppercase',
-    letterSpacing: 0.6,
+    letterSpacing: 1.2,
   },
   heroMonth: {
-    marginTop: 5,
-    fontSize: 22,
+    marginTop: 8,
+    fontSize: 30,
     fontWeight: '800',
-    letterSpacing: -0.4,
+    letterSpacing: -0.9,
   },
   shiftsBadge: {
     borderWidth: 1,
     borderRadius: 999,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+  },
+  heroGlassBadge: {
+    backgroundColor: 'rgba(15, 23, 42, 0.22)',
+    borderColor: 'rgba(226, 232, 240, 0.14)',
   },
   shiftsBadgeText: {
     fontSize: 11,
@@ -1069,47 +1243,61 @@ const styles = StyleSheet.create({
     alignItems: 'stretch',
     gap: 12,
   },
-  heroMetric: {
+  heroStatsRowCompact: {
+    flexDirection: 'column',
+  },
+  heroMetricCard: {
     flex: 1,
+    borderRadius: 22,
+    padding: 18,
+  },
+  heroGlassCard: {
+    borderWidth: 1,
+    backgroundColor: 'rgba(15, 23, 42, 0.22)',
+    borderColor: 'rgba(226, 232, 240, 0.12)',
   },
   heroMetricLabel: {
     fontSize: 12,
-    fontWeight: '600',
+    fontWeight: '700',
     marginBottom: 6,
+    textTransform: 'uppercase',
+    letterSpacing: 0.6,
   },
   heroMetricValue: {
-    fontSize: 34,
+    fontSize: 40,
     fontWeight: '800',
-    letterSpacing: -1,
+    letterSpacing: -1.2,
   },
   heroMetricHint: {
-    marginTop: 6,
+    marginTop: 8,
     fontSize: 13,
     fontWeight: '500',
   },
   balanceCard: {
-    minWidth: 128,
+    minWidth: 172,
     borderWidth: 1,
-    borderRadius: 18,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
+    borderRadius: 22,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
     justifyContent: 'center',
   },
   balanceLabel: {
     fontSize: 11,
-    fontWeight: '600',
-    marginBottom: 4,
+    fontWeight: '700',
+    marginBottom: 6,
+    textTransform: 'uppercase',
+    letterSpacing: 0.6,
   },
   balanceValue: {
-    fontSize: 18,
+    fontSize: 22,
     fontWeight: '800',
-    letterSpacing: -0.3,
+    letterSpacing: -0.5,
   },
   progressWrap: {
     borderWidth: 1,
-    borderRadius: 18,
-    padding: 14,
-    gap: 8,
+    borderRadius: 22,
+    padding: 16,
+    gap: 10,
   },
   progressHeader: {
     flexDirection: 'row',
@@ -1118,22 +1306,23 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   progressSectionTitle: {
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: '700',
-    letterSpacing: 0.2,
+    letterSpacing: 0.7,
+    textTransform: 'uppercase',
   },
   progressBadge: {
     borderWidth: 1,
     borderRadius: 999,
-    paddingHorizontal: 10,
-    paddingVertical: 5,
+    paddingHorizontal: 11,
+    paddingVertical: 6,
   },
   progressBadgeText: {
     fontSize: 11,
     fontWeight: '700',
   },
   progressTrack: {
-    height: 12,
+    height: 14,
     borderRadius: 999,
     overflow: 'hidden',
   },
@@ -1156,15 +1345,57 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '700',
   },
+  heroSummaryGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
+  },
+  heroSummaryGridCompact: {
+    gap: 8,
+  },
+  heroSummaryGridWide: {
+    flexWrap: 'nowrap',
+  },
+  heroSummaryCard: {
+    flex: 1,
+    minWidth: 140,
+    borderRadius: 18,
+    padding: 14,
+    gap: 6,
+  },
+  heroSummaryCardCompact: {
+    minWidth: '31%',
+    padding: 12,
+  },
+  heroSummaryLabel: {
+    fontSize: 11,
+    fontWeight: '700',
+    textTransform: 'uppercase',
+    letterSpacing: 0.8,
+  },
+  heroSummaryValue: {
+    fontSize: 22,
+    fontWeight: '800',
+    letterSpacing: -0.5,
+  },
   panel: {
     borderWidth: 1,
-    borderRadius: 22,
-    padding: 16,
-    gap: 12,
+    borderRadius: 24,
+    padding: 18,
+    gap: 14,
+  },
+  panelHeaderCopy: {
+    flex: 1,
+    gap: 4,
   },
   panelTitle: {
-    fontSize: 16,
+    fontSize: 18,
     fontWeight: '800',
+    letterSpacing: -0.3,
+    flexShrink: 1,
+  },
+  panelTitleCompact: {
+    fontSize: 16,
     letterSpacing: -0.2,
   },
   panelHeader: {
@@ -1178,6 +1409,11 @@ const styles = StyleSheet.create({
     borderRadius: 999,
     paddingHorizontal: 10,
     paddingVertical: 6,
+    flexShrink: 0,
+  },
+  panelBadgeCompact: {
+    paddingHorizontal: 8,
+    paddingVertical: 5,
   },
   panelBadgeText: {
     fontSize: 11,
@@ -1186,24 +1422,34 @@ const styles = StyleSheet.create({
   statusGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
+    gap: 12,
+  },
+  statusGridCompact: {
     gap: 10,
   },
   statusCard: {
-    width: '47%',
+    width: '48%',
     borderWidth: 1,
-    borderRadius: 18,
+    borderRadius: 20,
+    padding: 16,
+    gap: 10,
+  },
+  statusCardCompact: {
+    width: '47%',
     padding: 14,
-    gap: 8,
+  },
+  statusCardWide: {
+    width: '23.5%',
   },
   statusIconWrap: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     alignItems: 'center',
     justifyContent: 'center',
   },
   statusValue: {
-    fontSize: 22,
+    fontSize: 26,
     fontWeight: '800',
     letterSpacing: -0.5,
   },
@@ -1212,11 +1458,15 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   locationList: {
-    gap: 12,
+    gap: 14,
   },
   locationRow: {
     borderWidth: 1,
-    borderRadius: 18,
+    borderRadius: 20,
+    padding: 16,
+    gap: 14,
+  },
+  locationRowCompact: {
     padding: 14,
     gap: 12,
   },
@@ -1226,29 +1476,32 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     gap: 12,
   },
+  locationHeaderCompact: {
+    gap: 10,
+  },
   locationCopy: {
     flex: 1,
     gap: 2,
   },
   locationTitle: {
-    fontSize: 15,
+    fontSize: 16,
     fontWeight: '700',
   },
   locationMeta: {
-    fontSize: 12,
+    fontSize: 13,
   },
   locationTotal: {
-    fontSize: 13,
-    fontWeight: '700',
+    fontSize: 14,
+    fontWeight: '800',
   },
   locationPlanned: {
-    fontSize: 12,
+    fontSize: 13,
     flex: 1,
   },
   locationWorkedBadge: {
     borderWidth: 1,
-    borderRadius: 14,
-    paddingHorizontal: 10,
+    borderRadius: 999,
+    paddingHorizontal: 12,
     paddingVertical: 8,
   },
   locationWorkedBadgeText: {
@@ -1256,18 +1509,37 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     letterSpacing: -0.2,
   },
+  locationProgressWrap: {
+    gap: 8,
+  },
+  locationProgressTrack: {
+    height: 10,
+    borderRadius: 999,
+    overflow: 'hidden',
+  },
+  locationProgressFill: {
+    height: '100%',
+    borderRadius: 999,
+  },
   locationFooter: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     gap: 12,
   },
+  locationFooterCompact: {
+    alignItems: 'flex-start',
+  },
   timingList: {
-    gap: 12,
+    gap: 14,
   },
   timingRow: {
     borderWidth: 1,
-    borderRadius: 18,
+    borderRadius: 20,
+    padding: 16,
+    gap: 14,
+  },
+  timingRowCompact: {
     padding: 14,
     gap: 12,
   },
@@ -1277,38 +1549,107 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     gap: 12,
   },
+  timingHeaderCompact: {
+    flexDirection: 'column',
+    alignItems: 'stretch',
+    gap: 10,
+  },
   timingCopy: {
     flex: 1,
     gap: 2,
   },
   timingTitle: {
-    fontSize: 15,
+    fontSize: 16,
     fontWeight: '700',
   },
+  timingMetaRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    marginTop: 4,
+  },
+  timingMetaRowCompact: {
+    justifyContent: 'space-between',
+  },
   timingMeta: {
+    fontSize: 13,
+  },
+  timingInlineWorkedBadge: {
+    borderWidth: 1,
+    borderRadius: 999,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  timingInlineWorkedLabel: {
+    fontSize: 11,
+    fontWeight: '700',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  timingInlineWorkedValue: {
     fontSize: 12,
+    fontWeight: '800',
+    letterSpacing: -0.2,
   },
   timingStats: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 10,
+    gap: 12,
+  },
+  timingStatsCompact: {
+    flexWrap: 'nowrap',
+    gap: 8,
   },
   timingStatCard: {
     flex: 1,
-    minWidth: 96,
+    minWidth: 120,
     borderWidth: 1,
-    borderRadius: 16,
-    padding: 12,
-    gap: 4,
+    borderRadius: 18,
+    padding: 14,
+    gap: 6,
+  },
+  timingStatCardWide: {
+    minWidth: 0,
+  },
+  timingStatCardCompactThird: {
+    minWidth: 0,
+    flexBasis: 0,
+    paddingHorizontal: 12,
+    paddingVertical: 12,
+  },
+  timingStatCardCompactWorked: {
+    flex: 0.82,
+  },
+  timingStatCardCompactTime: {
+    flex: 1.08,
+  },
+  timingStatCardWorked: {
+    backgroundColor: '#0f172a',
   },
   timingStatLabel: {
     fontSize: 12,
-    fontWeight: '600',
+    fontWeight: '700',
+  },
+  timingStatLabelCompact: {
+    fontSize: 11,
+    letterSpacing: 0.2,
   },
   timingStatValue: {
-    fontSize: 18,
+    fontSize: 20,
     fontWeight: '800',
+    letterSpacing: -0.4,
+  },
+  timingStatValueCompact: {
+    fontSize: 17,
     letterSpacing: -0.3,
+  },
+  locationWorkedBadgeCompact: {
+    alignSelf: 'flex-start',
+    paddingHorizontal: 12,
+    paddingVertical: 7,
   },
   emptyText: {
     fontSize: 14,
