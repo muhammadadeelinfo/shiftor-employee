@@ -265,14 +265,15 @@ export default function MyShiftsScreen() {
           dialogTitle: t('shiftPlanExportAction'),
           UTI: 'public.ics',
         });
+        Alert.alert(t('shiftPlanExportTitle'), t('shiftPlanExportSuccessBody'));
+      } else {
+        Alert.alert(
+          t('shiftPlanExportTitle'),
+          t('shiftPlanExportSavedBody', {
+            path: fileUri.replace(directory, 'Files/'),
+          })
+        );
       }
-
-      Alert.alert(
-        t('shiftPlanExportTitle'),
-        t('shiftPlanExportSuccessBody', {
-          path: fileUri.replace(directory, 'Files/'),
-        })
-      );
     } catch (error) {
       console.error('Failed to export shift plan', error);
       Alert.alert(t('shiftPlanExportTitle'), t('shiftPlanExportFailedBody'));
