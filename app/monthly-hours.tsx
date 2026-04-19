@@ -204,6 +204,44 @@ export default function MonthlyHoursScreen() {
     setIsExportingPdf(true);
 
     try {
+      const generatedOnLabel = new Date().toLocaleDateString(language || undefined, {
+        day: 'numeric',
+        month: 'short',
+        year: 'numeric',
+      });
+      const completionPercent = Math.round(progress * 100);
+      const balanceSurface =
+        summary.deltaMinutes < 0
+          ? '#fff1f2'
+          : summary.deltaMinutes > 0
+            ? '#ecfdf5'
+            : '#f8fafc';
+      const balanceBorder =
+        summary.deltaMinutes < 0
+          ? '#fecdd3'
+          : summary.deltaMinutes > 0
+            ? '#bbf7d0'
+            : '#dbe4f0';
+      const balanceHeading =
+        summary.deltaMinutes < 0
+          ? '#9f1239'
+          : summary.deltaMinutes > 0
+            ? '#166534'
+            : '#334155';
+      const reportSummaryCards = [
+        {
+          label: t('accountMonthlyHoursWorked'),
+          value: formatMinutesLabel(summary.workedMinutes, t),
+        },
+        {
+          label: t('accountMonthlyHoursPlanned'),
+          value: formatMinutesLabel(summary.plannedMinutes, t),
+        },
+        {
+          label: t('accountMonthlyHoursShiftCount', { count: summary.shiftsCount }),
+          value: `${summary.shiftsCount}`,
+        },
+      ];
       const statusHtml = statusCards
         .map(
           (item) => `
@@ -219,7 +257,12 @@ export default function MonthlyHoursScreen() {
         objectTotals.length > 0
           ? objectTotals
               .map(
-                (item) => `
+                (item) => {
+                  const locationProgress = Math.round(
+                    getCompletionRatio(item.workedMinutes ?? 0, item.plannedMinutes ?? 0) * 100
+                  );
+
+                  return `
                   <div class="location-row">
                     <div class="location-head">
                       <div>
@@ -232,18 +275,28 @@ export default function MonthlyHoursScreen() {
                         formatMinutesLabel(item.workedMinutes ?? 0, t)
                       )}</div>
                     </div>
-                    <div class="location-foot">
-                      <span>${escapeHtml(
-                        `${t('accountMonthlyHoursPlanned')}: ${formatMinutesLabel(item.plannedMinutes ?? 0, t)}`
-                      )}</span>
-                      <strong>${escapeHtml(
+                    <div class="location-progress-track">
+                      <div class="location-progress-fill" style="width:${locationProgress}%"></div>
+                    </div>
+                    <div class="location-stats">
+                      <div class="location-stat">
+                        <div class="location-stat-label">${escapeHtml(t('accountMonthlyHoursPlanned'))}</div>
+                        <div class="location-stat-value">${escapeHtml(
+                          formatMinutesLabel(item.plannedMinutes ?? 0, t)
+                        )}</div>
+                      </div>
+                      <div class="location-stat location-stat-right">
+                        <div class="location-stat-label">%</div>
+                        <div class="location-stat-value">${escapeHtml(
                         item.plannedMinutes && item.plannedMinutes > 0
-                          ? `${Math.round(((item.workedMinutes ?? 0) / item.plannedMinutes) * 100)}%`
+                          ? `${locationProgress}%`
                           : progressPercent
-                      )}</strong>
+                        )}</div>
+                      </div>
                     </div>
                   </div>
-                `
+                `;
+                }
               )
               .join('')
           : `<p class="empty">${escapeHtml(t('accountMonthlyHoursNoLocations'))}</p>`;
@@ -285,91 +338,392 @@ export default function MonthlyHoursScreen() {
           <head>
             <meta charset="utf-8" />
             <style>
-              body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; color: #0f172a; padding: 28px; }
-              .hero { background: linear-gradient(135deg, #0f2746, #172554 55%, #1e3a5f); color: white; border-radius: 24px; padding: 24px; }
-              .eyebrow { font-size: 12px; text-transform: uppercase; letter-spacing: 1.2px; opacity: 0.72; margin-bottom: 8px; }
-              .title { font-size: 34px; font-weight: 800; margin: 0 0 10px; }
-              .meta { font-size: 14px; opacity: 0.82; margin-bottom: 20px; }
-              .summary { display: table; width: 100%; }
-              .summary-cell { display: table-cell; vertical-align: top; }
-              .metric-label { font-size: 13px; opacity: 0.76; margin-bottom: 6px; }
-              .metric-value { font-size: 40px; font-weight: 800; }
-              .balance-card { border: 1px solid #334155; border-radius: 18px; padding: 16px; background: rgba(15, 23, 42, 0.28); text-align: right; }
-              .progress { margin-top: 22px; }
-              .track { height: 12px; border-radius: 999px; background: rgba(255,255,255,0.14); overflow: hidden; }
-              .fill { height: 100%; width: ${progressPercent}; background: linear-gradient(90deg, #818cf8, #38bdf8); }
-              .progress-meta { margin-top: 10px; display: table; width: 100%; font-size: 13px; opacity: 0.88; }
-              .progress-meta span:last-child { display: table-cell; text-align: right; }
-              .section { margin-top: 24px; border: 1px solid #dbe4f0; border-radius: 22px; padding: 20px; }
-              .section-title { font-size: 20px; font-weight: 800; margin: 0 0 16px; color: #0f172a; }
-              .stats-grid { display: table; width: 100%; border-spacing: 12px 12px; margin: -12px; }
-              .stat-box { display: inline-block; width: calc(50% - 12px); box-sizing: border-box; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 18px; padding: 16px; margin: 12px 12px 0 0; }
-              .stat-value { font-size: 28px; font-weight: 800; margin-bottom: 6px; }
-              .stat-label { font-size: 13px; color: #475569; }
-              .location-row { border-top: 1px solid #e2e8f0; padding-top: 14px; margin-top: 14px; }
-              .location-row:first-child { border-top: none; padding-top: 0; margin-top: 0; }
-              .location-head, .location-foot { display: table; width: 100%; }
-              .location-title { font-size: 18px; font-weight: 700; color: #0f172a; }
-              .location-meta { font-size: 13px; color: #64748b; margin-top: 4px; }
-              .worked-pill { display: table-cell; text-align: right; font-size: 15px; font-weight: 800; color: #2563eb; }
-              .location-foot { margin-top: 10px; font-size: 13px; color: #475569; }
-              .location-foot strong { display: table-cell; text-align: right; color: #0f172a; }
-              .timing-row { border-top: 1px solid #e2e8f0; padding-top: 14px; margin-top: 14px; }
-              .timing-row:first-child { border-top: none; padding-top: 0; margin-top: 0; }
-              .timing-head { display: table; width: 100%; margin-bottom: 10px; }
-              .timing-grid { display: table; width: 100%; border-spacing: 12px 0; margin: 0 -12px; }
-              .timing-grid-three .timing-box { width: calc(33.333% - 12px); }
-              .timing-box { display: inline-block; width: calc(50% - 12px); box-sizing: border-box; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 16px; padding: 14px; margin: 0 12px 0 0; }
-              .timing-label { font-size: 12px; color: #64748b; margin-bottom: 4px; }
-              .timing-value { font-size: 18px; font-weight: 800; color: #0f172a; }
-              .empty { color: #64748b; margin: 0; }
+              * { box-sizing: border-box; }
+              body {
+                margin: 0;
+                font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+                background: #eef3f8;
+                color: #0f172a;
+              }
+              .page {
+                padding: 28px;
+              }
+              .sheet {
+                max-width: 860px;
+                margin: 0 auto;
+              }
+              .hero {
+                background: linear-gradient(145deg, #13203f 0%, #172a52 52%, #0d152b 100%);
+                color: white;
+                border-radius: 30px;
+                padding: 28px;
+                box-shadow: 0 24px 60px rgba(15, 23, 42, 0.2);
+              }
+              .hero-top {
+                display: table;
+                width: 100%;
+                margin-bottom: 24px;
+              }
+              .hero-top-left,
+              .hero-top-right {
+                display: table-cell;
+                vertical-align: top;
+              }
+              .hero-top-right {
+                text-align: right;
+              }
+              .eyebrow {
+                font-size: 11px;
+                text-transform: uppercase;
+                letter-spacing: 1.6px;
+                opacity: 0.68;
+                margin-bottom: 10px;
+              }
+              .title {
+                font-size: 34px;
+                line-height: 1.06;
+                font-weight: 800;
+                margin: 0 0 8px;
+              }
+              .meta {
+                font-size: 14px;
+                opacity: 0.78;
+              }
+              .generated {
+                display: inline-block;
+                padding: 10px 14px;
+                border-radius: 999px;
+                background: rgba(255,255,255,0.08);
+                border: 1px solid rgba(255,255,255,0.1);
+                font-size: 12px;
+                color: rgba(255,255,255,0.82);
+              }
+              .hero-summary {
+                display: table;
+                width: 100%;
+                border-spacing: 14px 0;
+                margin: 0 -14px 18px;
+              }
+              .hero-summary-card {
+                display: inline-block;
+                vertical-align: top;
+                width: calc(33.333% - 14px);
+                margin: 0 14px 0 0;
+                padding: 18px;
+                border-radius: 22px;
+                background: rgba(255,255,255,0.08);
+                border: 1px solid rgba(255,255,255,0.1);
+              }
+              .hero-summary-label {
+                font-size: 12px;
+                color: rgba(226,232,240,0.72);
+                margin-bottom: 8px;
+              }
+              .hero-summary-value {
+                font-size: 28px;
+                line-height: 1.1;
+                font-weight: 800;
+                color: #f8fafc;
+              }
+              .balance-card {
+                padding: 18px;
+                border-radius: 24px;
+                background: ${balanceSurface};
+                border: 1px solid ${balanceBorder};
+              }
+              .balance-label {
+                font-size: 12px;
+                color: ${balanceHeading};
+                text-transform: uppercase;
+                letter-spacing: 1.1px;
+                margin-bottom: 10px;
+              }
+              .balance-value {
+                font-size: 32px;
+                font-weight: 800;
+                color: ${balanceTone};
+              }
+              .progress-card {
+                margin-top: 18px;
+                padding: 18px 20px;
+                border-radius: 24px;
+                background: rgba(255,255,255,0.08);
+                border: 1px solid rgba(255,255,255,0.1);
+              }
+              .progress-header {
+                display: table;
+                width: 100%;
+                margin-bottom: 12px;
+              }
+              .progress-header span {
+                display: table-cell;
+                font-size: 13px;
+                color: rgba(226,232,240,0.78);
+              }
+              .progress-header span:last-child {
+                text-align: right;
+                font-weight: 700;
+                color: #f8fafc;
+              }
+              .track {
+                height: 12px;
+                border-radius: 999px;
+                background: rgba(255,255,255,0.12);
+                overflow: hidden;
+              }
+              .fill {
+                height: 100%;
+                width: ${progressPercent};
+                background: linear-gradient(90deg, #60a5fa, #67e8f9);
+                border-radius: inherit;
+              }
+              .progress-meta {
+                display: table;
+                width: 100%;
+                margin-top: 12px;
+                font-size: 13px;
+                color: rgba(226,232,240,0.78);
+              }
+              .progress-meta span {
+                display: table-cell;
+              }
+              .progress-meta span:last-child {
+                text-align: right;
+                color: #f8fafc;
+                font-weight: 700;
+              }
+              .section {
+                margin-top: 22px;
+                background: #ffffff;
+                border: 1px solid #dbe4f0;
+                border-radius: 24px;
+                padding: 22px;
+                box-shadow: 0 16px 40px rgba(148, 163, 184, 0.08);
+              }
+              .section-header {
+                display: table;
+                width: 100%;
+                margin-bottom: 16px;
+              }
+              .section-title {
+                display: table-cell;
+                font-size: 20px;
+                font-weight: 800;
+                color: #0f172a;
+                margin: 0;
+              }
+              .section-subtitle {
+                display: table-cell;
+                text-align: right;
+                font-size: 12px;
+                color: #64748b;
+              }
+              .stat-box {
+                display: inline-block;
+                width: calc(50% - 12px);
+                box-sizing: border-box;
+                background: #f8fbff;
+                border: 1px solid #e2e8f0;
+                border-radius: 20px;
+                padding: 18px;
+                margin: 12px 12px 0 0;
+              }
+              .stat-value {
+                font-size: 30px;
+                line-height: 1;
+                font-weight: 800;
+                margin-bottom: 8px;
+              }
+              .stat-label {
+                font-size: 13px;
+                color: #475569;
+              }
+              .location-row,
+              .timing-row {
+                margin-top: 14px;
+                padding-top: 14px;
+                border-top: 1px solid #e2e8f0;
+              }
+              .location-row:first-child,
+              .timing-row:first-child {
+                margin-top: 0;
+                padding-top: 0;
+                border-top: none;
+              }
+              .location-head,
+              .timing-head {
+                display: table;
+                width: 100%;
+                margin-bottom: 12px;
+              }
+              .location-title {
+                font-size: 18px;
+                font-weight: 700;
+                color: #0f172a;
+              }
+              .location-meta {
+                font-size: 13px;
+                color: #64748b;
+                margin-top: 4px;
+              }
+              .worked-pill {
+                display: table-cell;
+                text-align: right;
+                vertical-align: top;
+                font-size: 15px;
+                font-weight: 800;
+                color: #2563eb;
+              }
+              .location-progress-track {
+                height: 10px;
+                border-radius: 999px;
+                background: #e8eef7;
+                overflow: hidden;
+                margin-bottom: 12px;
+              }
+              .location-progress-fill {
+                height: 100%;
+                background: linear-gradient(90deg, #60a5fa, #67e8f9);
+                border-radius: inherit;
+              }
+              .location-stats {
+                display: table;
+                width: 100%;
+              }
+              .location-stat {
+                display: table-cell;
+                width: 50%;
+              }
+              .location-stat-right {
+                text-align: right;
+              }
+              .location-stat-label {
+                font-size: 12px;
+                color: #64748b;
+                margin-bottom: 4px;
+              }
+              .location-stat-value {
+                font-size: 15px;
+                font-weight: 700;
+                color: #0f172a;
+              }
+              .timing-grid {
+                display: table;
+                width: 100%;
+                border-spacing: 12px 0;
+                margin: 0 -12px;
+              }
+              .timing-grid-three .timing-box {
+                width: calc(33.333% - 12px);
+              }
+              .timing-box {
+                display: inline-block;
+                width: calc(50% - 12px);
+                box-sizing: border-box;
+                background: #f8fbff;
+                border: 1px solid #e2e8f0;
+                border-radius: 18px;
+                padding: 14px;
+                margin: 0 12px 0 0;
+              }
+              .timing-label {
+                font-size: 12px;
+                color: #64748b;
+                margin-bottom: 6px;
+              }
+              .timing-value {
+                font-size: 18px;
+                font-weight: 800;
+                color: #0f172a;
+              }
+              .footer {
+                margin-top: 16px;
+                text-align: center;
+                font-size: 12px;
+                color: #94a3b8;
+              }
+              .empty {
+                color: #64748b;
+                margin: 0;
+              }
             </style>
           </head>
           <body>
-            <div class="hero">
-              <div class="eyebrow">${escapeHtml(t('accountMonthlyHoursTitle'))}</div>
-              <h1 class="title">${escapeHtml(monthLabel)}</h1>
-              <div class="meta">${escapeHtml(t('accountMonthlyHoursShiftCount', { count: summary.shiftsCount }))}</div>
-              <div class="summary">
-                <div class="summary-cell">
-                  <div class="metric-label">${escapeHtml(t('accountMonthlyHoursWorked'))}</div>
-                  <div class="metric-value">${escapeHtml(formatMinutesLabel(summary.workedMinutes, t))}</div>
-                </div>
-                <div class="summary-cell">
+            <div class="page">
+              <div class="sheet">
+                <div class="hero">
+                  <div class="hero-top">
+                    <div class="hero-top-left">
+                      <div class="eyebrow">${escapeHtml(t('accountMonthlyHoursTitle'))}</div>
+                      <h1 class="title">${escapeHtml(monthLabel)}</h1>
+                      <div class="meta">${escapeHtml(t('accountMonthlyHoursShiftCount', { count: summary.shiftsCount }))}</div>
+                    </div>
+                    <div class="hero-top-right">
+                      <div class="generated">${escapeHtml(generatedOnLabel)}</div>
+                    </div>
+                  </div>
+                  <div class="hero-summary">
+                    ${reportSummaryCards
+                      .map(
+                        (card) => `
+                          <div class="hero-summary-card">
+                            <div class="hero-summary-label">${escapeHtml(card.label)}</div>
+                            <div class="hero-summary-value">${escapeHtml(card.value)}</div>
+                          </div>
+                        `
+                      )
+                      .join('')}
+                  </div>
                   <div class="balance-card">
-                    <div class="metric-label">${escapeHtml(t('accountMonthlyHoursBalance'))}</div>
-                    <div class="metric-value" style="font-size:32px;color:${balanceTone}">
-                      ${escapeHtml(formatDeltaMinutesLabel(summary.deltaMinutes, t))}
+                    <div class="balance-label">${escapeHtml(t('accountMonthlyHoursBalance'))}</div>
+                    <div class="balance-value">${escapeHtml(formatDeltaMinutesLabel(summary.deltaMinutes, t))}</div>
+                  </div>
+                  <div class="progress-card">
+                    <div class="progress-header">
+                      <span>${escapeHtml(t('accountMonthlyHoursPlanned'))}</span>
+                      <span>${escapeHtml(`${completionPercent}%`)}</span>
+                    </div>
+                    <div class="track"><div class="fill"></div></div>
+                    <div class="progress-meta">
+                      <span>${escapeHtml(
+                        `${t('accountMonthlyHoursPlanned')}: ${formatMinutesLabel(summary.plannedMinutes, t)}`
+                      )}</span>
+                      <span>${escapeHtml(progressPercent)}</span>
                     </div>
                   </div>
                 </div>
-              </div>
-              <div class="progress">
-                <div class="track"><div class="fill"></div></div>
-                <div class="progress-meta">
-                  <span>${escapeHtml(
-                    `${t('accountMonthlyHoursPlanned')}: ${formatMinutesLabel(summary.plannedMinutes, t)}`
-                  )}</span>
-                  <span>${escapeHtml(progressPercent)}</span>
+
+                <div class="section">
+                  <div class="section-header">
+                    <h2 class="section-title">${escapeHtml(t('accountMonthlyHoursBreakdownTitle'))}</h2>
+                    <div class="section-subtitle">${escapeHtml(t('accountMonthlyHoursPageHint'))}</div>
+                  </div>
+                  ${statusHtml}
                 </div>
+
+                <div class="section">
+                  <div class="section-header">
+                    <h2 class="section-title">${escapeHtml(t('accountMonthlyHoursLocationsTitle'))}</h2>
+                    <div class="section-subtitle">${escapeHtml(objectTotals.length ? `${objectTotals.length}` : '')}</div>
+                  </div>
+                  ${locationsHtml}
+                </div>
+
+                ${
+                  shiftTimingsHtml
+                    ? `<div class="section">
+                        <div class="section-header">
+                          <h2 class="section-title">${escapeHtml(t('accountMonthlyHoursClockTimesTitle'))}</h2>
+                          <div class="section-subtitle">${escapeHtml(t('accountMonthlyHoursWorked'))}</div>
+                        </div>
+                        ${shiftTimingsHtml}
+                      </div>`
+                    : ''
+                }
+
+                <div class="footer">Shiftor Employee</div>
               </div>
             </div>
-            <div class="section">
-              <h2 class="section-title">${escapeHtml(t('accountMonthlyHoursBreakdownTitle'))}</h2>
-              ${statusHtml}
-            </div>
-            <div class="section">
-              <h2 class="section-title">${escapeHtml(t('accountMonthlyHoursLocationsTitle'))}</h2>
-              ${locationsHtml}
-            </div>
-            ${
-              shiftTimingsHtml
-                ? `<div class="section">
-                    <h2 class="section-title">${escapeHtml(t('accountMonthlyHoursClockTimesTitle'))}</h2>
-                    ${shiftTimingsHtml}
-                  </div>`
-                : ''
-            }
           </body>
         </html>
       `;
