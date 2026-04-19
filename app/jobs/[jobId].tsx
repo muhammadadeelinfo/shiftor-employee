@@ -441,7 +441,7 @@ export default function JobDetailsScreen() {
   if (isLoading) {
     return (
       <View style={[styles.emptyRoot, { backgroundColor: theme.background, paddingTop: topContentPadding }]}>
-        <BackButton label={t('startupJobDetailsBack')} onPress={() => router.replace('/jobs')} />
+        <BackButton onPress={() => router.replace('/jobs')} />
         <View style={[styles.loadingCard, { backgroundColor: theme.surface, borderColor: theme.border }]}>
           <ActivityIndicator color={theme.primary} />
           <Text style={[styles.messageBody, { color: theme.textSecondary }]}>{t('startupJobDetailsLoading')}</Text>
@@ -453,7 +453,7 @@ export default function JobDetailsScreen() {
   if (!job) {
     return (
       <View style={[styles.emptyRoot, { backgroundColor: theme.background, paddingTop: topContentPadding }]}>
-        <BackButton label={t('startupJobDetailsBack')} onPress={() => router.replace('/jobs')} />
+        <BackButton onPress={() => router.replace('/jobs')} />
         <View style={[styles.messageCard, { backgroundColor: theme.surface, borderColor: theme.border }]}>
           <Text style={[styles.messageTitle, { color: theme.textPrimary }]}>{t('startupJobDetailsMissingTitle')}</Text>
           <Text style={[styles.messageBody, { color: theme.textSecondary }]}>
@@ -490,7 +490,7 @@ export default function JobDetailsScreen() {
         />
       }
     >
-      <BackButton label={t('startupJobDetailsBack')} fallbackHref="/jobs" />
+      <BackButton fallbackHref="/jobs" />
 
       <LinearGradient
         colors={[theme.heroGradientStart, theme.heroGradientEnd]}

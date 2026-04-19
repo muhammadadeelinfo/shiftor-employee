@@ -138,20 +138,6 @@ const styles = StyleSheet.create({
     paddingTop: 2,
     paddingHorizontal: 2,
   },
-  backButton: {
-    alignSelf: 'flex-start',
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    borderWidth: 1,
-    borderRadius: 999,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-  },
-  backText: {
-    fontSize: 14,
-    fontWeight: '600',
-  },
   pageTitle: {
     fontSize: 28,
     fontWeight: '900',

@@ -211,7 +211,7 @@ export default function LoginScreen() {
       <View style={styles.accentCircleSmall} />
       <SafeAreaView style={styles.safeArea}>
         {router.canGoBack() ? (
-          <BackButton label={t('loginBackToJobs')} disabled={loading} style={styles.pageBackButton} />
+          <BackButton disabled={loading} style={styles.pageBackButton} />
         ) : null}
         <KeyboardAvoidingView
           behavior={Platform.OS === 'ios' ? 'padding' : undefined}
@@ -393,22 +393,10 @@ const styles = StyleSheet.create({
     top: 12,
     left: 16,
     zIndex: 20,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
     borderRadius: 999,
     borderWidth: 1,
     borderColor: 'rgba(148,163,184,0.22)',
     backgroundColor: 'rgba(15,23,42,0.44)',
-    paddingHorizontal: 10,
-    minHeight: 34,
-  },
-  pageBackButtonText: {
-    color: '#cbd5e1',
-    fontSize: 10,
-    fontWeight: '700',
-    letterSpacing: 0.3,
-    textTransform: 'uppercase',
   },
   keyboardContainer: {
     width: '100%',

@@ -1,6 +1,6 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { type Href, useRouter } from 'expo-router';
-import { Pressable, StyleSheet, Text, type StyleProp, type ViewStyle } from 'react-native';
+import { Pressable, StyleSheet, type StyleProp, type ViewStyle } from 'react-native';
 import { useLanguage } from '@shared/context/LanguageContext';
 import { useTheme } from '@shared/themeContext';
 
@@ -57,9 +57,6 @@ export function BackButton({
       ]}
     >
       <Ionicons name="chevron-back" size={18} color={theme.textPrimary} />
-      <Text style={[styles.label, { color: theme.textPrimary }]} numberOfLines={1}>
-        {resolvedLabel}
-      </Text>
     </Pressable>
   );
 }
@@ -67,13 +64,12 @@ export function BackButton({
 const styles = StyleSheet.create({
   button: {
     alignSelf: 'flex-start',
-    flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    justifyContent: 'center',
     borderWidth: 1,
     borderRadius: 999,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
+    width: 42,
+    height: 42,
     shadowColor: '#000',
     shadowOpacity: 0.18,
     shadowOffset: { width: 0, height: 8 },
@@ -82,10 +78,5 @@ const styles = StyleSheet.create({
   },
   buttonPressed: {
     opacity: 0.88,
-  },
-  label: {
-    fontSize: 14,
-    fontWeight: '700',
-    letterSpacing: 0.1,
   },
 });

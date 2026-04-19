@@ -204,15 +204,6 @@ const styles = StyleSheet.create({
   headerRowCompact: {
     alignItems: 'center',
   },
-  backButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    borderWidth: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    flexShrink: 0,
-  },
   headerText: {
     flex: 1,
     minWidth: 0,

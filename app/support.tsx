@@ -113,20 +113,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: layoutTokens.screenHorizontal,
     gap: 16,
   },
-  backButton: {
-    alignSelf: 'flex-start',
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    borderWidth: 1,
-    borderRadius: 999,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-  },
-  backText: {
-    fontSize: 14,
-    fontWeight: '600',
-  },
   pageHeader: {
     gap: 6,
     paddingTop: 4,

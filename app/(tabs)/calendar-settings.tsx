@@ -184,15 +184,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
   },
-  backButton: {
-    width: 36,
-    height: 36,
-    borderRadius: 13,
-    borderWidth: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 10,
-  },
   headerText: {
     flex: 1,
   },

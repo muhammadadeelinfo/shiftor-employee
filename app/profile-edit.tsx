@@ -771,7 +771,7 @@ export default function ProfileEditScreen() {
     <SafeAreaView style={[styles.safeArea, { backgroundColor: theme.background }]} edges={['left', 'right']}>
       <ScrollView contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 24 }]}>
         <View style={[styles.card, { backgroundColor: theme.surface, borderColor: theme.borderSoft }]}>
-          <BackButton label={t('commonCancel') || 'Back'} fallbackHref="/account" disabled={saving} />
+          <BackButton fallbackHref="/account" disabled={saving} />
 
           <Text style={[styles.title, { color: theme.textPrimary }]}>{t('profileEditTitle')}</Text>
           <Text style={[styles.hint, { color: theme.textSecondary }]}>{t('profileEditHint')}</Text>
@@ -1082,11 +1082,6 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     paddingHorizontal: 10,
     marginBottom: 12,
-  },
-  backText: {
-    fontSize: 13,
-    fontWeight: '600',
-    marginLeft: 2,
   },
   title: {
     fontSize: 24,

@@ -633,14 +633,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 14,
   },
-  backButton: {
-    width: 42,
-    height: 42,
-    borderRadius: 14,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
-  },
   headerCopy: {
     flex: 1,
     gap: 4,
