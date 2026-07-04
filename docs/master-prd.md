@@ -33,7 +33,7 @@ The app is built with Expo, React Native, Expo Router, Supabase, React Query, an
 The repository currently includes these main app routes:
 
 - Auth and onboarding: welcome, onboarding, login, signup redirect, startup route.
-- Main tabs: My Shifts, Calendar, Jobs, QR Clock-In, Account, About.
+- Main tabs: Home, Shifts, Calendar, QR Clock-In/Out, Account.
 - Detail/support screens: shift details, calendar day details, job details, notifications, profile edit, employee documents, monthly hours, vacation requests, support, not found.
 
 ## 6. Developed Features
@@ -56,7 +56,17 @@ Status: Developed
 - Maps backend shift records into app display models.
 - Supports realtime subscription to employee shift assignment changes.
 - Supports employee confirmation of assigned shifts by updating `confirmationStatus` and `confirmedAt`.
+- Caches assigned shifts for degraded offline/weak-network list and calendar viewing.
 - Provides fallback sample shifts when shift detail fetching is unavailable.
+
+### Home Dashboard
+
+Status: Developed
+
+- Authenticated startup route opens the employee dashboard.
+- Dashboard summarizes next shift, active clock status, unread notifications, pending vacation, latest document, and quick actions.
+- Greeting prefers real employee/profile names and avoids raw email-style login aliases.
+- Dashboard is responsive for phone/tablet layouts and uses existing theme/i18n patterns.
 
 ### Calendar
 
@@ -85,6 +95,7 @@ Status: Developed, backend-dependent
 - QR token parsing utility exists.
 - Employee presence is read from the `employees` table using multiple possible employee/user id columns for compatibility.
 - Active check-in state, worked duration, and clock-in/clock-out reminders are surfaced.
+- Scanner has guided states for ready, checking, confirm clock-out, success, and error recovery.
 - QR submit flow depends on backend API configuration and server-side validation.
 
 ### Account and Profile
@@ -134,7 +145,16 @@ Status: Developed
 - Supabase `notifications` table SQL is included.
 - Realtime notifications subscribe by employee id.
 - Supports unread count, grouping by recency, category display, target navigation, mark one read, and mark all read.
+- Push token registration, notification tap routing, Supabase token schema, and employee preference toggles are started.
 - Shift notification utilities and tests exist.
+
+### Feedback and Rating Prompts
+
+Status: Developed
+
+- Support screen includes structured in-app feedback capture and email handoff.
+- Smart rating prompt foundation appears after positive moments instead of app launch.
+- Feedback/rating utilities are reusable across shift confirmation, QR, documents, and vacation flows.
 
 ### Company Linking
 
@@ -201,7 +221,59 @@ The current test command is `npm run test`.
 - Fallback shift detail data should not be treated as production data.
 - Generated/native folders and local build artifacts exist in the working copy; master product documentation should stay in `docs/`.
 
-## 10. Planned Features
+## 10. Feature Status Matrix
+
+This matrix is the launch-readiness source of truth. It links each major workflow to the responsible surface and the next action needed before production release.
+
+| Workflow | Current status | Primary owner | Dependencies | Next action |
+| --- | --- | --- | --- | --- |
+| Authentication and route guarding | Developed | Mobile, Supabase | Supabase auth configuration | Verify login/logout on physical iOS and Android devices. |
+| Home dashboard | Developed | Mobile | Shifts, notifications, employee profile, vacation, documents | Add analytics for dashboard activation and action taps. |
+| Shift list and shift details | Developed | Mobile, Supabase | `shift_assignments`, `shifts`, realtime updates | Define production acceptance criteria and remove reliance on fallback sample data for production builds. |
+| Shift confirmation | Developed | Mobile, Supabase | Assignment metadata and update permissions | Confirm RLS/update rules in Supabase and test employee confirmation on real data. |
+| Calendar | Developed | Mobile | Shift feed, cached shift data | Add physical-device QA for small screens, tablets, and German text expansion. |
+| QR clock-in/out | Developed, backend-dependent | Mobile, Employee API, Supabase | `/api/objects/qr-clock-in`, QR token format, presence fields | Document exact API contract and run end-to-end backend validation. |
+| Account and profile | Developed | Mobile, Supabase, Storage | Employee table compatibility, profile photo bucket | Verify profile update permissions and avatar upload/download on production bucket. |
+| Monthly hours | Developed, backend-dependent | Mobile, Employee API | `/api/employee/monthly-hours` | Confirm endpoint response contract and add backend-unavailable empty/error state polish. |
+| Employee documents | Developed, backend-dependent | Mobile, Employee API, Supabase Storage, Admin | Upload bucket, list/register/download endpoints, admin review workflow | Document upload lifecycle and add document status tracking once backend supports review states. |
+| Vacation requests | Developed, backend/admin-dependent | Mobile, Supabase, Admin | `vacation_requests`, approval workflow, approval letter generation | Add deeper submission-state tests and confirm admin approval/rejection flow. |
+| Notifications | Developed | Mobile, Supabase, Admin/API senders | `notifications`, push token table, push delivery service | Validate push delivery for shift updates, reminders, vacation, documents, and urgent announcements. |
+| Push preferences | Developed, backend-dependent | Mobile, Supabase, push service | Device token registration table and send logic | Connect preferences to server-side notification targeting. |
+| Feedback and rating prompts | Developed | Mobile, Support operations | Local feedback capture, mail support handoff, app store rating APIs | Add support triage process and review-response workflow. |
+| Company linking | Backend schema developed, mobile flow needs confirmation | Mobile, Supabase, Admin | Join-code SQL, employee-company link workflow | Confirm whether employee join-code UI is required and build/request-status flow if yes. |
+| Support | Developed, needs operations process | Mobile, Support operations | Support email/process ownership | Add categories, attachments, and ticket status tracking if support volume grows. |
+| Store listing and ASO | Planned | Product, Design, Release | Store screenshots, preview video, metadata, localization | Produce English/German screenshots, preview script, subtitle, short description, and release notes. |
+| Privacy and compliance | Planned | Product, Legal, Release | App privacy labels, Play data safety, in-app explanations | Add plain-language privacy summary and validate data disclosures before release. |
+| Analytics and growth metrics | Planned | Product, Engineering | Analytics provider, privacy-safe event schema | Define event tracking for activation, engagement, reliability, retention, and support outcomes. |
+| Physical-device QA | Planned | QA, Release | iOS and Android test devices | Execute device matrix before public release. |
+
+## 11. Launch Readiness Dashboard
+
+Status: In Progress
+
+Use this dashboard before every release candidate. A release is not market-ready until all blocking items are resolved or explicitly accepted by product ownership.
+
+| Area | Current readiness | Blocker level | Required before launch |
+| --- | --- | --- | --- |
+| Core navigation and auth | Strong | Medium | Physical-device login, logout, route-guard, and restart verification. |
+| Daily employee workflow | Strong | Medium | Real-data validation for Home, Shifts, Calendar, QR, Notifications, Documents, and Vacation. |
+| Backend/API contracts | Partial | High | QR, documents, monthly hours, push delivery, and admin approval flows must have documented contracts. |
+| Offline/degraded behavior | Partial | Medium | Shift list and calendar have cache support; backend-dependent screens still need clearer unavailable states. |
+| Monitoring and reliability | Partial | High | Confirm Sentry project/env, crash-free baseline, slow-screen tracking, and post-release review process. |
+| Store conversion assets | Not started | High | Produce localized screenshots, preview video/script, metadata, keywords, and release notes. |
+| Ratings and feedback | Partial | Medium | In-app feedback and smart prompts exist; support triage and public review response process remain. |
+| Privacy/compliance | Partial | High | Verify App Store privacy labels, Play data safety, camera/notification explanations, and account deletion visibility. |
+| Device coverage | Not started | High | Test on physical iOS, physical Android, small screen, large screen, tablet, dark mode, and German locale. |
+
+Immediate next release-readiness actions:
+
+1. Document QR clock-in/out API contract and run end-to-end validation with real backend data.
+2. Add clearer unavailable/error states for documents, monthly hours, vacation, and company-linking dependencies.
+3. Create store screenshot plan and capture English/German screenshots for Home, Shifts, Calendar, QR, Documents, Vacation, Notifications, and Account.
+4. Define privacy-safe analytics events for login, first shift viewed, QR success/failure, document upload, vacation request, notification open, feedback submit, and rating prompt.
+5. Execute physical-device QA and record pass/fail results in release docs.
+
+## 12. Planned Features
 
 These items are proposed next-plan entries based on the current repository state. Confirm priority before implementation.
 
@@ -209,12 +281,11 @@ These items are proposed next-plan entries based on the current repository state
 
 - Document the exact backend API contract for QR clock-in/clock-out.
 - Confirm and complete employee company join-code flow in the mobile app if it is not already user-accessible.
-- Add a feature status matrix that links each employee workflow to its owner: mobile, Employee API, Supabase, or Shiftor Admin.
 - Add production acceptance criteria for shift confirmation, vacation requests, documents, and QR clock-in.
 - Verify all release-critical flows on a physical iOS and Android device.
-- Build a top-ranking readiness dashboard for app quality, store conversion, retention, reviews, crash-free usage, and release blockers.
-- Add a structured in-app feedback flow so unhappy users can contact support before leaving a public low-star review.
 - Add Apple and Google store listing optimization tasks: localized screenshots, preview video, keyword review, subtitle/short description testing, and release-note quality.
+- Add privacy-safe analytics/event tracking requirements for activation, retention, reliability, support, and store conversion.
+- Add a plain-language privacy summary and verify App Store privacy labels plus Play data safety disclosures.
 
 ### Medium Priority
 
@@ -222,10 +293,9 @@ These items are proposed next-plan entries based on the current repository state
 - Add clearer empty/error states for backend-dependent screens when API endpoints are unavailable.
 - Add audit-friendly documentation for document upload/download lifecycle.
 - Add deeper tests for vacation request submission states and document upload validation.
-- Add analytics/event tracking requirements for core employee actions.
-- Add smart rating prompts after successful moments, such as confirmed shift, completed clock-out, approved vacation view, or successful document upload.
 - Add onboarding completion metrics and improve first-session activation for employees and guest job seekers.
 - Add support response templates and an internal review-response workflow for App Store Connect and Google Play Console.
+- Add richer support flow with categories, attachments, and status tracking.
 
 ### Future Ideas
 
@@ -240,7 +310,7 @@ These items are proposed next-plan entries based on the current repository state
 - Employee achievement or reliability signals where appropriate and privacy-safe.
 - Admin-configurable employee announcements and urgent shift coverage requests.
 
-## 11. Market Ranking Growth Plan
+## 13. Market Ranking Growth Plan
 
 Goal: make Shiftor Employee competitive in App Store and Google Play ranking by improving product quality, user retention, store conversion, rating quality, and operational feedback loops. This plan should be measured continuously after launch.
 
@@ -253,22 +323,22 @@ Goal: make Shiftor Employee competitive in App Store and Google Play ranking by 
 
 ### Product Quality Priorities
 
-Status: Planned
+Status: In Progress
 
 - Reach production-grade stability before broad launch.
 - Track crash-free sessions, app startup time, slow screens, failed API calls, failed QR scans, notification delivery failures, and document upload failures.
 - Add performance budgets for launch, tab switch, shift list load, calendar month render, QR scanner open, document upload, and monthly-hours load.
 - Add graceful degraded states when Supabase or Employee API endpoints are unavailable.
-- Add offline caching for assigned shifts, shift details, and calendar days so employees can still inspect their schedule with weak connectivity.
+- Add offline caching for assigned shifts, shift details, and calendar days so employees can still inspect their schedule with weak connectivity. Assigned shift/calendar cache is started; shift detail cache remains planned.
 - Add background refresh and push notification reliability checks for shift updates.
 - Add device matrix testing for small Android phones, large Android phones, iPhone SE-sized screens, modern iPhones, tablets, dark mode, and German text expansion.
 
 ### Retention and Daily Use Features
 
-Status: Planned
+Status: In Progress
 
-- Add push notifications for new shifts, changed shifts, removed shifts, upcoming shift reminders, clock-out reminders, vacation approval/rejection, document status, and urgent admin announcements.
-- Add home dashboard summarizing next shift, active clock-in state, unread notifications, pending vacation requests, and required documents.
+- Add push notifications for new shifts, changed shifts, removed shifts, upcoming shift reminders, clock-out reminders, vacation approval/rejection, document status, and urgent admin announcements. Mobile token registration and preference UI are started; server-side send workflow remains planned.
+- Add home dashboard summarizing next shift, active clock-in state, unread notifications, pending vacation requests, and required documents. Initial dashboard is developed.
 - Add employee availability management so employees can tell managers when they are available or unavailable.
 - Add shift swap/request coverage workflow if it fits the Shiftor Admin product model.
 - Add time correction request workflow for missed or incorrect clock-ins.
@@ -292,10 +362,10 @@ Status: Planned
 
 ### Ratings, Reviews, and Support Plan
 
-Status: Planned
+Status: In Progress
 
-- Ask for ratings only after positive completed actions, not at app launch or after errors.
-- Add in-app feedback before public review prompt: bug, missing shift, login issue, QR issue, payroll/monthly hours issue, document issue, vacation issue, other.
+- Ask for ratings only after positive completed actions, not at app launch or after errors. Smart prompt foundation is developed.
+- Add in-app feedback before public review prompt: bug, missing shift, login issue, QR issue, payroll/monthly hours issue, document issue, vacation issue, other. Initial feedback capture is developed.
 - Build an internal process to respond to public reviews within 24-48 hours.
 - Tag review themes and turn repeated complaints into roadmap items.
 - Add support links from error states so users can report problems with context.
@@ -343,7 +413,7 @@ Status: Planned
 - Each release has a post-release review of crashes, ratings, reviews, support tickets, and conversion metrics.
 - Store screenshots and preview video are updated whenever the primary product experience changes.
 
-## 12. Acceptance Criteria by Major Workflow
+## 14. Acceptance Criteria by Major Workflow
 
 ### Employee Login
 
@@ -395,7 +465,7 @@ Status: Planned
 - All user-facing app screens should have translation keys.
 - Missing interpolation or missing key regressions should be caught by tests.
 
-## 13. Documentation Map
+## 15. Documentation Map
 
 - `README.md`: project setup, commands, environment, scripts.
 - `docs/master-prd.md`: product status, roadmap, and project record.
@@ -407,22 +477,23 @@ Status: Planned
 - `docs/app-store-privacy-draft.md`: App privacy draft.
 - `docs/google-play-release-checklist.md`: Google Play release checklist.
 
-## 14. Reference Guidance
+## 16. Reference Guidance
 
 - Apple App Store product page guidance: app name, icon, subtitle, previews, screenshots, description, keywords, ratings/reviews, categories, localization, product page optimization, and custom product pages.
 - Apple App Review Guidelines: safety, performance, business, design, legal, privacy, and review compliance.
 - Android Core App Quality: stability, platform compatibility, SDK maintenance, production build quality, permissions, and major-feature testing.
 - Android Vitals: user-perceived crash rate, user-perceived ANR rate, wake locks, battery usage, and Play visibility impact.
 
-## 15. Maintenance Rules
+## 17. Maintenance Rules
 
 - Update this PRD whenever a feature is added, removed, renamed, or moved behind a backend dependency.
 - Use these statuses: Planned, In Progress, Developed, Backend-dependent, Blocked, Deprecated.
 - Keep technical command details in `README.md`; keep product decisions and feature status here.
 - Add a dated changelog entry for meaningful product-scope changes.
 
-## 16. Changelog
+## 18. Changelog
 
+- 2026-07-04: Added feature status matrix and launch readiness dashboard with owners, dependencies, blockers, and next release actions.
 - 2026-07-04: Added market ranking growth plan covering product quality, retention, ASO, ratings/reviews, privacy, metrics, and competitive differentiators.
 - 2026-07-04: Started market-ranking implementation with in-app feedback capture and smart rating prompt foundation.
 - 2026-07-04: Started push notifications v1 with device token registration, tap deep-link routing, employee preference toggles, and Supabase token schema.
