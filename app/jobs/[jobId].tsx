@@ -165,7 +165,7 @@ export default function JobDetailsScreen() {
               value: job.salaryText,
             }
           : null,
-      ].filter(Boolean) as Array<{ icon: keyof typeof Ionicons.glyphMap; label: string; value: string }>,
+      ].filter(Boolean) as { icon: keyof typeof Ionicons.glyphMap; label: string; value: string }[],
     [job?.employmentType, job?.location, job?.salaryText, t]
   );
 

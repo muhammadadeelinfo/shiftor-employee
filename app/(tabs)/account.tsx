@@ -51,45 +51,14 @@ import {
   getEmployeeApiBaseUrl,
   type MonthlyHoursResponse,
 } from '@features/account/monthlyHours';
-
-const normalizeContactString = (value?: unknown) =>
-  typeof value === 'string' && value.trim() ? value.trim() : undefined;
-
-const capitalizeFirstLetter = (value: string) => {
-  const trimmed = value.trim();
-  if (!trimmed) return value;
-  return `${trimmed.charAt(0).toUpperCase()}${trimmed.slice(1)}`;
-};
-
-type EmployeeProfile = Record<string, unknown>;
-const getProfilePhotoCacheKey = (userId: string) => `employee-profile-photo:${userId}`;
-const getCanonicalPublicStorageUrl = (baseUrl: string, bucket: string, path: string) =>
-  `${baseUrl.replace(/\/+$/, '')}/storage/v1/object/public/${encodeURIComponent(bucket)}/${path
-    .split('/')
-    .map((part) => encodeURIComponent(part))
-    .join('/')}`;
-const deriveStoragePathFromUrl = (url: string | null | undefined, bucket: string) => {
-  if (!url) return null;
-  try {
-    const parsed = new URL(url);
-    const markerPublic = `/storage/v1/object/public/${bucket}/`;
-    const markerSign = `/storage/v1/object/sign/${bucket}/`;
-    const markerRender = `/storage/v1/render/image/public/${bucket}/`;
-    const path = parsed.pathname;
-    if (path.includes(markerPublic)) {
-      return decodeURIComponent(path.split(markerPublic)[1] || '').trim() || null;
-    }
-    if (path.includes(markerSign)) {
-      return decodeURIComponent(path.split(markerSign)[1] || '').trim() || null;
-    }
-    if (path.includes(markerRender)) {
-      return decodeURIComponent(path.split(markerRender)[1] || '').trim() || null;
-    }
-    return null;
-  } catch {
-    return null;
-  }
-};
+import {
+  capitalizeFirstLetter,
+  deriveStoragePathFromUrl,
+  getCanonicalPublicStorageUrl,
+  getProfilePhotoCacheKey,
+  normalizeContactString,
+  type EmployeeProfile,
+} from '@features/account/accountProfileUtils';
 
 const notificationPreferenceLabelKeys: Record<
   NotificationPreferenceKey,
@@ -125,7 +94,7 @@ const fetchEmployeeProfile = async (
     return null;
   }
 
-  const candidateLookups: Array<{ column: string; value: string }> = [
+  const candidateLookups: { column: string; value: string }[] = [
     { column: 'id', value: employeeId },
     { column: 'employeeId', value: employeeId },
     { column: 'employee_id', value: employeeId },
@@ -619,13 +588,13 @@ export default function AccountScreen() {
       ]
     : [];
   const addressParts = formatAddress(contactAddress);
-  const contactFields: Array<{
+  const contactFields: {
     label: string;
     value: string;
     icon: 'mail-outline' | 'call-outline' | 'location-outline';
     mapAddress?: string;
     valueLines?: string[];
-  }> = [
+  }[] = [
     { label: t('emailLabel'), value: user?.email ?? noValueLabel, icon: 'mail-outline' as const },
     { label: t('phoneLabel'), value: contactPhone ?? noValueLabel, icon: 'call-outline' as const },
     {
@@ -988,6 +957,18 @@ export default function AccountScreen() {
               ) : null}
               {!isGuest ? (
                 <View style={styles.toolsList}>
+                  <TouchableOpacity
+                    style={[styles.toolsRow, { borderColor: theme.borderSoft }]}
+                    onPress={() => router.push('/company-link')}
+                  >
+                    <View style={[styles.toolsIconWrap, { backgroundColor: theme.surfaceMuted }]}>
+                      <Ionicons name="business-outline" size={16} color={theme.primary} />
+                    </View>
+                    <Text style={[styles.toolsLabel, { color: theme.textPrimary }]}>
+                      {t('companyLinkTitle')}
+                    </Text>
+                    <Ionicons name="chevron-forward" size={16} color={theme.textSecondary} />
+                  </TouchableOpacity>
                   <TouchableOpacity
                     style={[styles.toolsRow, { borderColor: theme.borderSoft }]}
                     onPress={() => router.push('/employee-documents')}

@@ -118,7 +118,7 @@ export default function MonthlyHoursScreen() {
   } | null>(null);
   const canGoToNextMonth = selectedMonthKey < currentMonthKey;
 
-  const { data, error, isLoading } = useQuery({
+  const { data, error, isLoading, refetch } = useQuery({
     queryKey: ['employeeMonthlyHoursPage', user?.id, selectedMonthKey, apiBaseUrl],
     queryFn: () =>
       fetchMonthlyHours({
@@ -886,13 +886,18 @@ export default function MonthlyHoursScreen() {
 
             </>
           ) : (
-            <Text style={[styles.stateText, { color: 'rgba(226, 232, 240, 0.78)' }]}>
-              {apiBaseUrl
-                ? error instanceof Error
-                  ? error.message
-                  : t('accountMonthlyHoursUnavailable')
-                : t('accountMonthlyHoursUnavailable')}
-            </Text>
+            <View style={styles.stateBlock}>
+              <Text style={[styles.stateText, { color: 'rgba(226, 232, 240, 0.78)' }]}> 
+                {apiBaseUrl
+                  ? error instanceof Error
+                    ? error.message
+                    : t('accountMonthlyHoursUnavailable')
+                  : t('accountMonthlyHoursUnavailable')}
+              </Text>
+              {apiBaseUrl ? (
+                <PrimaryButton title={t('retry')} onPress={() => void refetch()} />
+              ) : null}
+            </View>
           )}
         </LinearGradient>
 

@@ -158,10 +158,11 @@ Status: Developed
 
 ### Company Linking
 
-Status: Backend schema developed, mobile flow needs confirmation
+Status: Developed, backend/admin-dependent
 
 - Supabase SQL exists for company join codes, employee company links, audit logs, and `request_employee_company_link`.
-- The mobile app has auth/onboarding surfaces, but the exact employee-facing company join-code flow should be confirmed against current UI.
+- Employees can submit a company code from Account and view pending, active, or rejected request status.
+- Production use requires the company-linking SQL and an admin approval/rejection workflow.
 
 ### Localization
 
@@ -215,7 +216,7 @@ The current test command is `npm run test`.
 
 - Product ownership is split between this mobile app, Shiftor Admin, Supabase schema, and Employee API endpoints.
 - Some mobile features are implemented as clients but require backend/admin-side workflows to be production-complete.
-- Company linking UI status should be reviewed and either documented as complete or planned.
+- Company linking requires production SQL deployment and end-to-end admin approval validation.
 - QR clock-in success depends on server-side token format, eligibility checks, and clock-in/clock-out endpoint behavior.
 - Monthly hours and employee documents depend on `API_BASE_URL` endpoints that are not implemented in this mobile repository.
 - Fallback shift detail data should not be treated as production data.
@@ -228,11 +229,11 @@ This matrix is the launch-readiness source of truth. It links each major workflo
 | Workflow | Current status | Primary owner | Dependencies | Next action |
 | --- | --- | --- | --- | --- |
 | Authentication and route guarding | Developed | Mobile, Supabase | Supabase auth configuration | Verify login/logout on physical iOS and Android devices. |
-| Home dashboard | Developed | Mobile | Shifts, notifications, employee profile, vacation, documents | Add analytics for dashboard activation and action taps. |
-| Shift list and shift details | Developed | Mobile, Supabase | `shift_assignments`, `shifts`, realtime updates | Define production acceptance criteria and remove reliance on fallback sample data for production builds. |
+| Home dashboard | Developed | Mobile | Shifts, notifications, employee profile, vacation, documents | Add analytics for dashboard activation and action taps; the privacy-safe event foundation is implemented. |
+| Shift list and shift details | Developed | Mobile, Supabase | `shift_assignments`, `shifts`, realtime updates | Validate real-data acceptance criteria; unsafe sample-detail fallback has been removed. |
 | Shift confirmation | Developed | Mobile, Supabase | Assignment metadata and update permissions | Confirm RLS/update rules in Supabase and test employee confirmation on real data. |
 | Calendar | Developed | Mobile | Shift feed, cached shift data | Add physical-device QA for small screens, tablets, and German text expansion. |
-| QR clock-in/out | Developed, backend-dependent | Mobile, Employee API, Supabase | `/api/objects/qr-clock-in`, QR token format, presence fields | Document exact API contract and run end-to-end backend validation. |
+| QR clock-in/out | Developed, backend-dependent | Mobile, Employee API, Supabase | `/api/objects/qr-clock-in`, QR token format, presence fields | API contract is documented; run end-to-end validation with production-like QR data. |
 | Account and profile | Developed | Mobile, Supabase, Storage | Employee table compatibility, profile photo bucket | Verify profile update permissions and avatar upload/download on production bucket. |
 | Monthly hours | Developed, backend-dependent | Mobile, Employee API | `/api/employee/monthly-hours` | Confirm endpoint response contract and add backend-unavailable empty/error state polish. |
 | Employee documents | Developed, backend-dependent | Mobile, Employee API, Supabase Storage, Admin | Upload bucket, list/register/download endpoints, admin review workflow | Document upload lifecycle and add document status tracking once backend supports review states. |
@@ -240,11 +241,11 @@ This matrix is the launch-readiness source of truth. It links each major workflo
 | Notifications | Developed | Mobile, Supabase, Admin/API senders | `notifications`, push token table, push delivery service | Validate push delivery for shift updates, reminders, vacation, documents, and urgent announcements. |
 | Push preferences | Developed, backend-dependent | Mobile, Supabase, push service | Device token registration table and send logic | Connect preferences to server-side notification targeting. |
 | Feedback and rating prompts | Developed | Mobile, Support operations | Local feedback capture, mail support handoff, app store rating APIs | Add support triage process and review-response workflow. |
-| Company linking | Backend schema developed, mobile flow needs confirmation | Mobile, Supabase, Admin | Join-code SQL, employee-company link workflow | Confirm whether employee join-code UI is required and build/request-status flow if yes. |
+| Company linking | Developed, backend/admin-dependent | Mobile, Supabase, Admin | Join-code SQL, employee-company link workflow | Apply production SQL and validate approval/rejection with the Admin workflow. |
 | Support | Developed, needs operations process | Mobile, Support operations | Support email/process ownership | Add categories, attachments, and ticket status tracking if support volume grows. |
-| Store listing and ASO | Planned | Product, Design, Release | Store screenshots, preview video, metadata, localization | Produce English/German screenshots, preview script, subtitle, short description, and release notes. |
-| Privacy and compliance | Planned | Product, Legal, Release | App privacy labels, Play data safety, in-app explanations | Add plain-language privacy summary and validate data disclosures before release. |
-| Analytics and growth metrics | Planned | Product, Engineering | Analytics provider, privacy-safe event schema | Define event tracking for activation, engagement, reliability, retention, and support outcomes. |
+| Store listing and ASO | In Progress | Product, Design, Release | Store screenshots, preview video, metadata, localization | Screenshot plan exists; capture English/German assets and finalize preview script, metadata, and release notes. |
+| Privacy and compliance | In Progress | Product, Legal, Release | App privacy labels, Play data safety, in-app explanations | Plain-language summary is shipped; validate App Store and Play disclosures before release. |
+| Analytics and growth metrics | In Progress | Product, Engineering | Supabase event RPC, privacy-safe event schema | Event allowlist and client sanitization are implemented; deploy SQL, enable production config, and add dashboards. |
 | Physical-device QA | Planned | QA, Release | iOS and Android test devices | Execute device matrix before public release. |
 
 ## 11. Launch Readiness Dashboard
@@ -257,20 +258,20 @@ Use this dashboard before every release candidate. A release is not market-ready
 | --- | --- | --- | --- |
 | Core navigation and auth | Strong | Medium | Physical-device login, logout, route-guard, and restart verification. |
 | Daily employee workflow | Strong | Medium | Real-data validation for Home, Shifts, Calendar, QR, Notifications, Documents, and Vacation. |
-| Backend/API contracts | Partial | High | QR, documents, monthly hours, push delivery, and admin approval flows must have documented contracts. |
+| Backend/API contracts | Partial | High | Mobile contracts are documented; live QR, documents, monthly hours, push delivery, and admin approval validation remains. |
 | Offline/degraded behavior | Partial | Medium | Shift list and calendar have cache support; backend-dependent screens still need clearer unavailable states. |
 | Monitoring and reliability | Partial | High | Confirm Sentry project/env, crash-free baseline, slow-screen tracking, and post-release review process. |
-| Store conversion assets | Not started | High | Produce localized screenshots, preview video/script, metadata, keywords, and release notes. |
+| Store conversion assets | In Progress | High | Screenshot plan exists; produce localized captures, preview video/script, metadata, keywords, and release notes. |
 | Ratings and feedback | Partial | Medium | In-app feedback and smart prompts exist; support triage and public review response process remain. |
-| Privacy/compliance | Partial | High | Verify App Store privacy labels, Play data safety, camera/notification explanations, and account deletion visibility. |
+| Privacy/compliance | Partial | High | In-app summary and account deletion visibility exist; verify App Store privacy labels, Play data safety, and permission disclosures. |
 | Device coverage | Not started | High | Test on physical iOS, physical Android, small screen, large screen, tablet, dark mode, and German locale. |
 
 Immediate next release-readiness actions:
 
-1. Document QR clock-in/out API contract and run end-to-end validation with real backend data.
-2. Add clearer unavailable/error states for documents, monthly hours, vacation, and company-linking dependencies.
-3. Create store screenshot plan and capture English/German screenshots for Home, Shifts, Calendar, QR, Documents, Vacation, Notifications, and Account.
-4. Define privacy-safe analytics events for login, first shift viewed, QR success/failure, document upload, vacation request, notification open, feedback submit, and rating prompt.
+1. Deploy and verify company-linking plus privacy-safe analytics SQL in the production Supabase project.
+2. Run live contract validation for QR, documents, monthly hours, vacation approval, push delivery, and profile/storage RLS.
+3. Add clearer unavailable/error states for documents, monthly hours, vacation, and company-linking dependencies.
+4. Capture the planned English/German store screenshots and finalize localized listing metadata.
 5. Execute physical-device QA and record pass/fail results in release docs.
 
 ## 12. Planned Features
@@ -279,17 +280,17 @@ These items are proposed next-plan entries based on the current repository state
 
 ### High Priority
 
-- Document the exact backend API contract for QR clock-in/clock-out.
-- Confirm and complete employee company join-code flow in the mobile app if it is not already user-accessible.
+- Validate the documented QR clock-in/out contract against production-like backend data.
+- Deploy and validate the completed employee company join-code request/status workflow.
 - Add production acceptance criteria for shift confirmation, vacation requests, documents, and QR clock-in.
 - Verify all release-critical flows on a physical iOS and Android device.
 - Add Apple and Google store listing optimization tasks: localized screenshots, preview video, keyword review, subtitle/short description testing, and release-note quality.
-- Add privacy-safe analytics/event tracking requirements for activation, retention, reliability, support, and store conversion.
-- Add a plain-language privacy summary and verify App Store privacy labels plus Play data safety disclosures.
+- Deploy the privacy-safe analytics schema and build activation, retention, reliability, support, and conversion dashboards.
+- Verify App Store privacy labels plus Play data safety disclosures against the implemented plain-language privacy summary.
 
 ### Medium Priority
 
-- Add a user-facing view of company-link request status if company linking is part of employee onboarding.
+- Add company names and admin rejection reasons to the company-link status view when the backend exposes them safely.
 - Add clearer empty/error states for backend-dependent screens when API endpoints are unavailable.
 - Add audit-friendly documentation for document upload/download lifecycle.
 - Add deeper tests for vacation request submission states and document upload validation.
@@ -493,6 +494,7 @@ Status: Planned
 
 ## 18. Changelog
 
+- 2026-07-04: Removed unsafe sample shift fallback, added CI/lint/full type-check gates, completed employee company-link request/status UI, introduced opt-in privacy-safe analytics, aligned Expo SDK dependencies, and documented backend/device/store acceptance plans.
 - 2026-07-04: Added feature status matrix and launch readiness dashboard with owners, dependencies, blockers, and next release actions.
 - 2026-07-04: Added market ranking growth plan covering product quality, retention, ASO, ratings/reviews, privacy, metrics, and competitive differentiators.
 - 2026-07-04: Started market-ranking implementation with in-app feedback capture and smart rating prompt foundation.

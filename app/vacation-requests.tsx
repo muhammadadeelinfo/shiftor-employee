@@ -28,6 +28,7 @@ import { getContentMaxWidth, shouldStackForCompactWidth } from '@shared/utils/re
 import { downloadRemoteDocument } from '@shared/utils/nativeDocumentOpen';
 import { recordPositiveRatingMoment } from '@shared/utils/ratingPrompt';
 import { getUserFacingErrorMessage } from '@shared/utils/userFacingError';
+import { trackAppEvent } from '@shared/utils/analytics';
 import {
   buildVacationApprovalDocumentFileName,
   fetchVacationApprovalLetterUrl,
@@ -73,7 +74,7 @@ export default function VacationRequestsScreen() {
     staleTime: 60_000,
   });
 
-  const { data: requests = [], isLoading, error } = useQuery({
+  const { data: requests = [], isLoading, error, refetch } = useQuery({
     queryKey: ['vacationRequests', employeeId],
     queryFn: () => fetchVacationRequests(employeeId),
     enabled: Boolean(employeeId),
@@ -145,6 +146,7 @@ export default function VacationRequestsScreen() {
         endDate: endValue,
         note,
       });
+      void trackAppEvent('vacation_submitted');
       setNote('');
       setActiveView('approved');
       await queryClient.invalidateQueries({ queryKey: ['vacationRequests', employeeId] });
@@ -412,9 +414,12 @@ export default function VacationRequestsScreen() {
                 </Text>
               </View>
             ) : error ? (
-              <Text style={[styles.stateText, { color: theme.fail }]}>
-                {getUserFacingErrorMessage(error, { fallback: t('vacationRequestsLoadFailed') })}
-              </Text>
+              <View style={styles.stateBlock}>
+                <Text style={[styles.stateText, { color: theme.fail }]}> 
+                  {getUserFacingErrorMessage(error, { fallback: t('vacationRequestsLoadFailed') })}
+                </Text>
+                <PrimaryButton title={t('retry')} onPress={() => void refetch()} />
+              </View>
             ) : approvedRequests.length === 0 ? (
               <Text style={[styles.stateText, { color: theme.textSecondary }]}>
                 {t('vacationRequestsApprovedEmpty')}

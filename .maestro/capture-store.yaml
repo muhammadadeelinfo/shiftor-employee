@@ -1,0 +1,19 @@
+appId: host.exp.Exponent
+---
+- takeScreenshot: "artifacts/store-screenshots/en-01-home"
+- tapOn:
+    point: "30%,96%"
+- waitForAnimationToEnd
+- takeScreenshot: "artifacts/store-screenshots/en-02-shifts"
+- tapOn:
+    point: "50%,96%"
+- waitForAnimationToEnd
+- takeScreenshot: "artifacts/store-screenshots/en-03-calendar"
+- tapOn:
+    point: "70%,96%"
+- waitForAnimationToEnd
+- takeScreenshot: "artifacts/store-screenshots/en-04-clock"
+- tapOn:
+    point: "90%,96%"
+- waitForAnimationToEnd
+- takeScreenshot: "artifacts/store-screenshots/en-05-account"

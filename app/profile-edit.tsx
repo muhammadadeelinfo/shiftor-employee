@@ -120,7 +120,7 @@ const fetchEmployeeProfile = async (
 ): Promise<EmployeeProfile | null> => {
   if (!supabase) return null;
 
-  const candidateLookups: Array<{ column: string; value: string }> = [
+  const candidateLookups: { column: string; value: string }[] = [
     { column: 'id', value: employeeId },
     { column: 'employeeId', value: employeeId },
     { column: 'employee_id', value: employeeId },
@@ -247,7 +247,7 @@ const updateEmployeeProfileRecord = async (
     [photoPathColumn]: updates.photoPath || null,
   };
 
-  const lookupCandidates: Array<{ column: string; value: string | undefined }> = [
+  const lookupCandidates: { column: string; value: string | undefined }[] = [
     { column: 'id', value: getStringField(employeeRecord ?? undefined, 'id') ?? userId },
     { column: 'employeeId', value: getStringField(employeeRecord ?? undefined, 'employeeId') ?? userId },
     { column: 'employee_id', value: getStringField(employeeRecord ?? undefined, 'employee_id') ?? userId },
@@ -521,7 +521,7 @@ export default function ProfileEditScreen() {
           setAddressSuggestions([]);
           return;
         }
-        const payload = (await response.json()) as Array<{ display_name?: string }>;
+        const payload = (await response.json()) as { display_name?: string }[];
         const suggestions = payload
           .map((item) => (typeof item.display_name === 'string' ? item.display_name.trim() : ''))
           .filter(Boolean)

@@ -8,27 +8,6 @@ import {
 } from './shiftMapping';
 export type { Shift } from './shiftMapping';
 
-const fallbackShifts: Shift[] = [
-  {
-    id: 'shift-1',
-    title: 'Morning Lobby Coverage',
-    location: 'Headquarters Lobby',
-    start: '2026-01-25T08:00:00Z',
-    end: '2026-01-25T12:00:00Z',
-    status: 'scheduled',
-    description: 'Greet visitors, issue badges, and keep the area tidy.',
-  },
-  {
-    id: 'shift-2',
-    title: 'Warehouse AMS Team',
-    location: 'Warehouse B',
-    start: '2026-01-24T16:00:00Z',
-    end: '2026-01-24T20:00:00Z',
-    status: 'in-progress',
-    description: 'Cycle-count oversight and loading dock coordination.',
-  },
-];
-
 const isMissingColumnError = (error: unknown) =>
   typeof error === 'object' &&
   error !== null &&
@@ -132,12 +111,17 @@ type ShiftSubscription = {
   unsubscribe: () => void;
 };
 
+let shiftSubscriptionSequence = 0;
+
 export const subscribeToShiftUpdates = (employeeId: string, onUpdate: () => void): ShiftSubscription => {
   if (!supabase || !employeeId) {
     return { unsubscribe: () => {} };
   }
 
-  const assignmentChannel = supabase.channel(`shift_assignments:${employeeId}`);
+  shiftSubscriptionSequence += 1;
+  const assignmentChannel = supabase.channel(
+    `shift_assignments:${employeeId}:${shiftSubscriptionSequence}`
+  );
   assignmentChannel.on(
     'postgres_changes',
     {
@@ -158,26 +142,18 @@ export const subscribeToShiftUpdates = (employeeId: string, onUpdate: () => void
 
 export const getShiftById = async (shiftId: string): Promise<Shift | undefined> => {
   if (!supabase) {
-    return fallbackShifts.find((shift) => shift.id === shiftId) ?? fallbackShifts[0];
+    throw new Error('Supabase client not configured');
   }
 
-  try {
-    const { data, error } = await supabase
-      .from('shifts')
-      .select('*, object:objectId (title, address)')
-      .eq('id', shiftId)
-      .maybeSingle();
+  const { data, error } = await supabase
+    .from('shifts')
+    .select('*, object:objectId (title, address)')
+    .eq('id', shiftId)
+    .maybeSingle();
 
-    if (error) {
-      throw error;
-    }
-
-    if (data) {
-      return mapShiftRecord(data);
-    }
-  } catch (error) {
-    console.warn('Shift detail fetch failed', error);
+  if (error) {
+    throw error;
   }
 
-  return fallbackShifts.find((shift) => shift.id === shiftId) ?? fallbackShifts[0];
+  return data ? mapShiftRecord(data) : undefined;
 };

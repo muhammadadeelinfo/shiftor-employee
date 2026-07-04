@@ -11,7 +11,7 @@ const dictionary = {
 
 assert.strictEqual(getTranslationValue(dictionary, 'existing'), 'Localized value');
 
-const events: Array<{ key: string; reason: 'missing' | 'empty' }> = [];
+const events: { key: string; reason: 'missing' | 'empty' }[] = [];
 setMissingTranslationHandler((payload) => {
   events.push(payload);
 });

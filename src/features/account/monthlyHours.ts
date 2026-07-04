@@ -24,14 +24,14 @@ export type MonthlyHoursResponse = {
     lastName: string | null;
     email: string | null;
   };
-  rows?: Array<unknown>;
+  rows?: unknown[];
   summary: MonthlyHoursSummary;
-  objectTotals: Array<unknown>;
-  shifts?: Array<unknown>;
-  shiftTotals?: Array<unknown>;
-  shiftEntries?: Array<unknown>;
-  entries?: Array<unknown>;
-  items?: Array<unknown>;
+  objectTotals: unknown[];
+  shifts?: unknown[];
+  shiftTotals?: unknown[];
+  shiftEntries?: unknown[];
+  entries?: unknown[];
+  items?: unknown[];
 };
 
 type Translate = (key: any, params?: Record<string, string | number>) => string;

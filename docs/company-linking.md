@@ -26,12 +26,13 @@ Codes are case-insensitive in the RPC. Optional controls are available:
 
 ## 3. User flow
 
-1. User self-signs up in app and enters optional company code.
-2. App stores that code in Supabase user metadata.
-3. On first login, app calls `request_employee_company_link(join_code, full_name)`.
+1. Authenticated employee opens **Account → Company connection**.
+2. The screen pre-fills a company code from user metadata when one exists, or accepts a code supplied by the employer.
+3. The app calls `request_employee_company_link(join_code, full_name)` when the employee submits.
 4. A row is created in `employee_company_links` with `status = 'pending'`.
 5. Invalid/expired/exhausted/rate-limited attempts are returned with explicit statuses.
 6. If the user is already active in another company, request is treated as `switch` and returned as `requestedAction = 'switch'`.
+7. The employee can revisit the screen to view pending, active, or rejected status.
 
 ## 4. Approve links (admin workflow)
 

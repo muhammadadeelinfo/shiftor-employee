@@ -23,6 +23,7 @@ import { getContentMaxWidth, shouldStackForCompactWidth } from '@shared/utils/re
 import { downloadRemoteDocument } from '@shared/utils/nativeDocumentOpen';
 import { recordPositiveRatingMoment } from '@shared/utils/ratingPrompt';
 import { getUserFacingErrorMessage } from '@shared/utils/userFacingError';
+import { trackAppEvent } from '@shared/utils/analytics';
 import {
   EMPLOYEE_DOCUMENT_TYPES,
   fetchEmployeeDocumentDownloadUrl,
@@ -84,6 +85,7 @@ export default function EmployeeDocumentsScreen() {
     data: documents = [],
     isLoading,
     error,
+    refetch,
   } = useQuery({
     queryKey: ['employeeDocuments', employeeId, session?.access_token],
     queryFn: () =>
@@ -218,6 +220,7 @@ export default function EmployeeDocumentsScreen() {
         documentType: selectedDocumentType,
         asset: selectedAsset,
       });
+      void trackAppEvent('document_uploaded', { type: selectedDocumentType });
       setSelectedAsset(null);
       await queryClient.invalidateQueries({
         queryKey: ['employeeDocuments', employeeId, session.access_token],
@@ -488,9 +491,10 @@ export default function EmployeeDocumentsScreen() {
             </View>
           ) : error ? (
             <View style={styles.stateBlock}>
-              <Text style={[styles.stateText, { color: theme.fail }]}>
+              <Text style={[styles.stateText, { color: theme.fail }]}> 
                 {getUserFacingErrorMessage(error, { fallback: t('certificateOfSicknessLoadFailed') })}
               </Text>
+              <PrimaryButton title={t('retry')} onPress={() => void refetch()} />
             </View>
           ) : documents.length === 0 ? (
             <View style={styles.stateBlock}>

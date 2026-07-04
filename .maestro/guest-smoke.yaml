@@ -1,0 +1,17 @@
+appId: com.shiftor.employee
+---
+- launchApp:
+    clearState: true
+- extendedWaitUntil:
+    visible: "Shiftor Employee"
+    timeout: 20000
+- tapOn:
+    text: "Skip"
+    optional: true
+- tapOn:
+    text: "Browse jobs"
+    optional: true
+- extendedWaitUntil:
+    visible: ".*(Job Offers|Browse jobs|Login).*"
+    timeout: 15000
+- takeScreenshot: guest-smoke

@@ -8,8 +8,10 @@ const files = [
   'app/(tabs)/account.tsx',
   'app/vacation-requests.tsx',
   'app/employee-documents.tsx',
+  'app/company-link.tsx',
+  'app/(tabs)/about.tsx',
 ];
-const keyPattern = /t\('([A-Za-z0-9_]+)'/g;
+const keyPattern = /(?:^|[^A-Za-z0-9_])t\('([A-Za-z0-9_]+)'/g;
 
 const keys = new Set<string>();
 for (const file of files) {

@@ -24,6 +24,7 @@ import { PrimaryButton } from '@shared/components/PrimaryButton';
 import { supabase } from '@lib/supabaseClient';
 import { useRouter } from 'expo-router';
 import { useLanguage } from '@shared/context/LanguageContext';
+import { trackAppEvent } from '@shared/utils/analytics';
 import {
   buildSupportMailto,
   SUPPORT_EMAIL,
@@ -112,6 +113,7 @@ export default function LoginScreen() {
         throw error;
       }
 
+      void trackAppEvent('login_succeeded');
       router.replace('/my-shifts');
     } catch (error) {
       console.warn('Sign-in failed', error);

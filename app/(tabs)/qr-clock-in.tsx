@@ -15,6 +15,7 @@ import { supabase } from '@lib/supabaseClient';
 import { parseQrClockInCode } from '@shared/utils/qrClockIn';
 import { recordPositiveRatingMoment } from '@shared/utils/ratingPrompt';
 import { useShiftFeed } from '@features/shifts/useShiftFeed';
+import { trackAppEvent } from '@shared/utils/analytics';
 
 type EmployeePresence = {
   isLoggedIn: boolean;
@@ -84,7 +85,7 @@ const fetchEmployeePresence = async (
     return null;
   }
 
-  const candidateLookups: Array<{ column: string; value: string }> = [
+  const candidateLookups: { column: string; value: string }[] = [
     { column: 'id', value: employeeId },
     { column: 'employeeId', value: employeeId },
     { column: 'employee_id', value: employeeId },
@@ -417,6 +418,7 @@ export default function QrClockInScreen() {
 
       const workedDuration = formatWorkedDuration(payload.clockIn?.workedMs);
       const isClockOut = payload.clockIn?.action === 'clock_out';
+      void trackAppEvent('qr_completed', { action: isClockOut ? 'clock_out' : 'clock_in' });
       const message = isClockOut
         ? t('qrClockOutSuccessMessage', {
             duration: workedDuration ?? t('qrClockOutWorkedUnknown'),

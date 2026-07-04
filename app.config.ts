@@ -31,6 +31,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
       'company-assets',
     sentryDsn: process.env.SENTRY_DSN ?? '',
     sentryEnabled: process.env.SENTRY_ENABLED === 'true',
+    analyticsEnabled: process.env.ANALYTICS_ENABLED === 'true',
     expoStage: process.env.EXPO_STAGE ?? 'production',
     easProjectId: process.env.EAS_PROJECT_ID ?? '',
     authRedirectUrl: process.env.AUTH_REDIRECT_URL ?? '',

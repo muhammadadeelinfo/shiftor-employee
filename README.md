@@ -104,7 +104,13 @@ npx expo start -c
 - `npm run android:dev` - run Android target in a custom development build
 - `npm run web` - run web target
 - `npm run test` - run full test suite
+- `npm run typecheck` - type-check the full application
+- `npm run lint` - run the Expo/React lint baseline
+- `npm run quality` - run type-check, lint, and all tests
+- `npm run e2e:smoke` - run the guest smoke flow on an installed simulator/device build
 - `npm run check-db-config` - validate DB/env wiring
+- `npm run check:observability` - report production Sentry/analytics readiness
+- `npm run check:observability:strict` - fail unless production observability is configured
 - `npm run release:check` - release preflight (tests + env/db config + Expo config parse)
 - `npm run release:check:ios` - release preflight plus iOS simulator health check
 - `npm run health:ios-sim` - iOS simulator health check

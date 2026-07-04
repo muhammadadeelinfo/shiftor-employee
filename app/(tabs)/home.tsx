@@ -107,7 +107,7 @@ const fetchEmployeeNameProfile = async (
     return null;
   }
 
-  const candidateLookups: Array<{ column: string; value: string }> = [
+  const candidateLookups: { column: string; value: string }[] = [
     { column: 'id', value: employeeId },
     { column: 'employeeId', value: employeeId },
     { column: 'employee_id', value: employeeId },

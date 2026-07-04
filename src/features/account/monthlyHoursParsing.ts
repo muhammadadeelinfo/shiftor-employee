@@ -10,12 +10,12 @@ export type MonthlyHoursShiftTiming = {
 };
 
 type MonthlyHoursShiftPayload = {
-  rows?: Array<unknown>;
-  shifts?: Array<unknown>;
-  shiftTotals?: Array<unknown>;
-  shiftEntries?: Array<unknown>;
-  entries?: Array<unknown>;
-  items?: Array<unknown>;
+  rows?: unknown[];
+  shifts?: unknown[];
+  shiftTotals?: unknown[];
+  shiftEntries?: unknown[];
+  entries?: unknown[];
+  items?: unknown[];
 };
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>

@@ -76,6 +76,12 @@ export default function AboutScreen() {
         </View>
 
         <View style={[styles.sectionCard, { borderColor: theme.border, backgroundColor: theme.surfaceElevated }]}>
+          <Text style={[styles.sectionTitle, { color: theme.textPrimary }]}>{t('privacySummaryTitle')}</Text>
+          <Text style={[styles.sectionBody, { color: theme.textSecondary }]}>{t('privacySummaryBody')}</Text>
+          <Text style={[styles.sectionBody, { color: theme.textSecondary }]}>{t('privacySummarySensitiveBody')}</Text>
+        </View>
+
+        <View style={[styles.sectionCard, { borderColor: theme.border, backgroundColor: theme.surfaceElevated }]}>
           <Text style={[styles.sectionTitle, { color: theme.textPrimary }]}>Legal</Text>
           <Text style={[styles.sectionBody, { color: theme.textSecondary }]}>
             Review the privacy and usage policies for the mobile app.
