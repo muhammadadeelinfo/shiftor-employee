@@ -14,6 +14,7 @@ import { useQuery } from '@tanstack/react-query';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useAuth } from '@hooks/useSupabaseAuth';
+import { supabase } from '@lib/supabaseClient';
 import { useShiftFeed } from '@features/shifts/useShiftFeed';
 import { getShiftPhase } from '@shared/utils/shiftPhase';
 import { useNotifications } from '@shared/context/NotificationContext';
@@ -28,6 +29,8 @@ import {
 import {
   fetchEmployeeDocuments,
 } from '@features/account/employeeDocuments';
+
+type EmployeeNameProfile = Record<string, unknown>;
 
 const formatShiftTime = (value: string) => {
   const parsed = new Date(value);
@@ -51,6 +54,30 @@ const formatRelativeDate = (value?: string | null) => {
 const normalizeNamePart = (value: unknown) =>
   typeof value === 'string' && value.trim() ? value.trim() : '';
 
+const getStringField = (source?: Record<string, unknown>, key?: string) => {
+  if (!source || !key) return undefined;
+  const value = source[key];
+  return typeof value === 'string' && value.trim() ? value.trim() : undefined;
+};
+
+const isMissingColumnError = (error: unknown) =>
+  typeof error === 'object' &&
+  error !== null &&
+  'code' in error &&
+  (error as { code?: string }).code === '42703';
+
+const NON_NAME_ALIAS_PARTS = new Set([
+  'app',
+  'employee',
+  'employees',
+  'mail',
+  'shiftor',
+  'staff',
+  'team',
+  'user',
+  'work',
+]);
+
 const titleCaseName = (value: string) =>
   value
     .split(/\s+/)
@@ -58,38 +85,130 @@ const titleCaseName = (value: string) =>
     .map((part) => `${part.charAt(0).toUpperCase()}${part.slice(1)}`)
     .join(' ');
 
+const formatNameCandidate = (value: unknown) => {
+  const normalized = normalizeNamePart(value);
+  if (!normalized) return '';
+  const localPart = normalized.includes('@') ? normalized.split('@')[0] : normalized;
+  const nameParts = localPart
+    .replace(/[._-]+/g, ' ')
+    .split(/\s+/)
+    .map((part) => part.trim())
+    .filter((part) => part && !NON_NAME_ALIAS_PARTS.has(part.toLowerCase()) && !/^\d+$/.test(part));
+  if (!nameParts.length) return '';
+  return titleCaseName(nameParts.join(' '));
+};
+
+const fetchEmployeeNameProfile = async (
+  employeeId: string,
+  email?: string | null,
+  metadata?: Record<string, unknown>
+): Promise<EmployeeNameProfile | null> => {
+  if (!supabase) {
+    return null;
+  }
+
+  const candidateLookups: Array<{ column: string; value: string }> = [
+    { column: 'id', value: employeeId },
+    { column: 'employeeId', value: employeeId },
+    { column: 'employee_id', value: employeeId },
+    { column: 'userId', value: employeeId },
+    { column: 'user_id', value: employeeId },
+    { column: 'auth_user_id', value: employeeId },
+    { column: 'authUserId', value: employeeId },
+    { column: 'profile_id', value: employeeId },
+    { column: 'profileId', value: employeeId },
+  ];
+  if (email) {
+    candidateLookups.push({ column: 'email', value: email });
+  }
+
+  const metadataEmployeeIds = [
+    getStringField(metadata, 'employee_id'),
+    getStringField(metadata, 'employeeId'),
+    getStringField(metadata, 'profile_id'),
+    getStringField(metadata, 'profileId'),
+  ].filter((value): value is string => Boolean(value));
+  metadataEmployeeIds.forEach((value) => {
+    candidateLookups.push({ column: 'id', value });
+    candidateLookups.push({ column: 'employee_id', value });
+    candidateLookups.push({ column: 'employeeId', value });
+  });
+
+  const seenLookups = new Set<string>();
+  for (const lookup of candidateLookups) {
+    const dedupeKey = `${lookup.column}:${lookup.value}`;
+    if (seenLookups.has(dedupeKey)) {
+      continue;
+    }
+    seenLookups.add(dedupeKey);
+
+    const { data, error } = await supabase
+      .from('employees')
+      .select('*')
+      .eq(lookup.column, lookup.value)
+      .limit(1);
+
+    if (error) {
+      if (isMissingColumnError(error)) {
+        continue;
+      }
+      console.warn('Failed to load employee name profile', error);
+      return null;
+    }
+
+    if (Array.isArray(data) && data.length > 0) {
+      return data[0] as EmployeeNameProfile;
+    }
+  }
+
+  return null;
+};
+
 const getDashboardDisplayName = ({
   context,
+  profile,
   metadata,
   email,
 }: {
   context?: { firstName: string | null; lastName: string | null } | null;
+  profile?: EmployeeNameProfile | null;
   metadata?: Record<string, unknown>;
   email?: string | null;
 }) => {
-  const contextName = [context?.firstName, context?.lastName]
-    .map(normalizeNamePart)
+  const profileName = [
+    profile?.firstName ?? profile?.first_name,
+    profile?.lastName ?? profile?.last_name,
+  ]
+    .map(formatNameCandidate)
     .filter(Boolean)
     .join(' ');
-  if (contextName) return titleCaseName(contextName);
+  if (profileName) return profileName;
 
-  const metadataFullName =
-    normalizeNamePart(metadata?.full_name) ||
-    normalizeNamePart(metadata?.fullName) ||
-    normalizeNamePart(metadata?.name);
-  if (metadataFullName) return titleCaseName(metadataFullName);
+  const contextName = [context?.firstName, context?.lastName]
+    .map(formatNameCandidate)
+    .filter(Boolean)
+    .join(' ');
+  if (contextName) return contextName;
+
+  const profileFullName = formatNameCandidate(profile?.full_name);
+  if (profileFullName) return profileFullName;
 
   const metadataName = [
     metadata?.firstName ?? metadata?.first_name,
     metadata?.lastName ?? metadata?.last_name,
   ]
-    .map(normalizeNamePart)
+    .map(formatNameCandidate)
     .filter(Boolean)
     .join(' ');
-  if (metadataName) return titleCaseName(metadataName);
+  if (metadataName) return metadataName;
 
-  const emailName = email?.split('@')[0]?.replace(/[._-]+/g, ' ').trim();
-  return emailName ? titleCaseName(emailName) : 'Employee';
+  const metadataFullName =
+    formatNameCandidate(metadata?.full_name) ||
+    formatNameCandidate(metadata?.fullName) ||
+    formatNameCandidate(metadata?.name);
+  if (metadataFullName) return metadataFullName;
+
+  return formatNameCandidate(email) || 'Employee';
 };
 
 export default function HomeDashboardScreen() {
@@ -127,6 +246,21 @@ export default function HomeDashboardScreen() {
     staleTime: 5 * 60 * 1000,
   });
 
+  const { data: employeeNameProfile } = useQuery({
+    queryKey: [
+      'homeEmployeeNameProfile',
+      employeeId,
+      user?.email,
+      metadata?.employee_id,
+      metadata?.employeeId,
+      metadata?.profile_id,
+      metadata?.profileId,
+    ],
+    queryFn: () => fetchEmployeeNameProfile(employeeId, user?.email, metadata),
+    enabled: Boolean(employeeId),
+    staleTime: 60 * 1000,
+  });
+
   const { data: vacationRequests = [] } = useQuery({
     queryKey: ['homeVacationRequests', employeeId],
     queryFn: () => fetchVacationRequests(employeeId),
@@ -149,6 +283,7 @@ export default function HomeDashboardScreen() {
   const latestDocument = employeeDocuments[0] ?? null;
   const displayName = getDashboardDisplayName({
     context: vacationContext,
+    profile: employeeNameProfile,
     metadata,
     email: user?.email,
   });
