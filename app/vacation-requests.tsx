@@ -26,6 +26,7 @@ import { useLanguage, type TranslationKey } from '@shared/context/LanguageContex
 import { layoutTokens } from '@shared/theme/layout';
 import { getContentMaxWidth, shouldStackForCompactWidth } from '@shared/utils/responsiveLayout';
 import { downloadRemoteDocument } from '@shared/utils/nativeDocumentOpen';
+import { recordPositiveRatingMoment } from '@shared/utils/ratingPrompt';
 import { getUserFacingErrorMessage } from '@shared/utils/userFacingError';
 import {
   buildVacationApprovalDocumentFileName,
@@ -147,7 +148,24 @@ export default function VacationRequestsScreen() {
       setNote('');
       setActiveView('approved');
       await queryClient.invalidateQueries({ queryKey: ['vacationRequests', employeeId] });
-      Alert.alert(t('vacationRequestsTitle'), t('vacationRequestsSubmitted'));
+      Alert.alert(t('vacationRequestsTitle'), t('vacationRequestsSubmitted'), [
+        {
+          text: t('commonContinue'),
+          onPress: () => {
+            void recordPositiveRatingMoment({
+              moment: 'vacation-submitted',
+              copy: {
+                title: t('ratingPromptTitle'),
+                body: t('ratingPromptBody'),
+                rateAction: t('ratingPromptRateAction'),
+                feedbackAction: t('ratingPromptFeedbackAction'),
+                laterAction: t('ratingPromptLaterAction'),
+              },
+              onFeedback: () => router.push('/support'),
+            });
+          },
+        },
+      ]);
     } catch (submitError) {
       const fallbackMessage =
         submitError instanceof Error && submitError.message === 'Vacation requests are not available yet.'

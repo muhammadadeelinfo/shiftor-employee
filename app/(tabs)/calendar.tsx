@@ -169,7 +169,7 @@ export default function CalendarScreen() {
   const insets = useSafeAreaInsets();
   const tabBarHeight = useBottomTabBarHeight();
   const isIOS = Platform.OS === 'ios';
-  const { orderedShifts, isLoading, error, refetch } = useShiftFeed();
+  const { orderedShifts, isLoading, error, refetch, isUsingCachedShifts, cachedShiftsAt } = useShiftFeed();
   const [visibleMonth, setVisibleMonth] = useState(() => startOfMonth(new Date()));
   const calendarFlip = useRef(new Animated.Value(0)).current;
   const hasManuallyChangedMonth = useRef(false);
@@ -432,6 +432,18 @@ export default function CalendarScreen() {
       <PrimaryButton title={t('retrySync')} onPress={() => refetch()} style={styles.retryButton} />
     </View>
   ) : null;
+  const cachedShiftNotice = isUsingCachedShifts ? (
+    <View style={[styles.cachedNotice, { backgroundColor: theme.surfaceMuted, borderColor: theme.borderSoft }]}>
+      <Ionicons name="cloud-offline-outline" size={15} color={theme.caution} />
+      <Text style={[styles.cachedNoticeText, { color: theme.textSecondary }]}>
+        {t('shiftCacheShowingCached', {
+          time: cachedShiftsAt
+            ? new Date(cachedShiftsAt).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })
+            : t('notProvided'),
+        })}
+      </Text>
+    </View>
+  ) : null;
 
   const { addNotification } = useNotifications();
   const [showEmptyModal, setShowEmptyModal] = useState(false);
@@ -570,9 +582,9 @@ export default function CalendarScreen() {
             </View>
           </View>
         </View>
-        {errorView}
+        {isUsingCachedShifts ? cachedShiftNotice : errorView}
         {showSkeletons && renderSkeletons()}
-        {!error && (
+        {(!error || isUsingCachedShifts) && (
           <Animated.View
             {...calendarPanResponder.panHandlers}
             style={[
@@ -1301,6 +1313,22 @@ const styles = StyleSheet.create({
   retryButton: {
     alignSelf: 'flex-start',
     paddingHorizontal: 18,
+  },
+  cachedNotice: {
+    borderWidth: 1,
+    borderRadius: 14,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    marginBottom: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  cachedNoticeText: {
+    flex: 1,
+    fontSize: 12,
+    lineHeight: 17,
+    fontWeight: '600',
   },
   listEmptyState: {
     alignItems: 'center',

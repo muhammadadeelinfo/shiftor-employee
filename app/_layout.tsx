@@ -45,6 +45,7 @@ import { useQuery } from '@tanstack/react-query';
 import { getShifts, type Shift } from '@features/shifts/shiftsService';
 import { useShiftNotifications } from '@shared/hooks/useShiftNotifications';
 import { getStartupRoute } from '@shared/utils/startupRoute';
+import { resolveTargetPath } from '@shared/utils/notificationUtils';
 
 void SplashScreen.preventAutoHideAsync().catch(() => {
   /* splash screen is optional in dev */
@@ -111,7 +112,7 @@ const saveReportToDevice = async (
 };
 
 function LayoutContentInner() {
-  const pushToken = useExpoPushToken();
+  useExpoPushToken();
   const pathname = usePathname();
   const router = useRouter();
   const { t } = useLanguage();
@@ -332,10 +333,15 @@ function LayoutContentInner() {
     }
 
     let isMounted = true;
+    let responseSubscription: { remove: () => void } | null = null;
 
     (async () => {
       try {
-        const { setNotificationHandler } = await import('expo-notifications');
+        const {
+          addNotificationResponseReceivedListener,
+          getLastNotificationResponseAsync,
+          setNotificationHandler,
+        } = await import('expo-notifications');
         if (!isMounted) return;
 
         setNotificationHandler({
@@ -347,6 +353,26 @@ function LayoutContentInner() {
             shouldShowList: true,
           }),
         });
+
+        const openNotificationTarget = (data?: Record<string, unknown>) => {
+          const targetPath = resolveTargetPath(data);
+          if (targetPath) {
+            router.push(targetPath);
+          }
+        };
+
+        const lastResponse = await getLastNotificationResponseAsync();
+        if (isMounted) {
+          openNotificationTarget(
+            lastResponse?.notification.request.content.data as Record<string, unknown> | undefined
+          );
+        }
+
+        responseSubscription = addNotificationResponseReceivedListener((response) => {
+          openNotificationTarget(
+            response.notification.request.content.data as Record<string, unknown> | undefined
+          );
+        });
       } catch (error) {
         console.warn('Failed to initialize notification handler.', error);
       }
@@ -354,14 +380,9 @@ function LayoutContentInner() {
 
     return () => {
       isMounted = false;
+      responseSubscription?.remove();
     };
-  }, []);
-
-  useEffect(() => {
-    if (pushToken) {
-      console.log('Push token registered', pushToken);
-    }
-  }, [pushToken]);
+  }, [router]);
 
   const formatShiftTime = (shift: Shift) => {
     const start = new Date(shift.start);

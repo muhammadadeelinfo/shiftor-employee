@@ -16,7 +16,7 @@ import { PrimaryButton } from '@shared/components/PrimaryButton';
 import { useTheme } from '@shared/themeContext';
 import { useAuth } from '@hooks/useSupabaseAuth';
 import { useNotifications } from '@shared/context/NotificationContext';
-import { useLanguage } from '@shared/context/LanguageContext';
+import { useLanguage, type TranslationKey } from '@shared/context/LanguageContext';
 import { languageDefinitions } from '@shared/utils/languageUtils';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
@@ -34,6 +34,14 @@ import {
 import Constants from 'expo-constants';
 import { formatAddress } from '@shared/utils/address';
 import { getUserFacingErrorMessage } from '@shared/utils/userFacingError';
+import {
+  defaultNotificationPreferences,
+  loadNotificationPreferences,
+  notificationPreferenceKeys,
+  saveNotificationPreferences,
+  type NotificationPreferenceKey,
+  type NotificationPreferences,
+} from '@shared/utils/notificationPreferences';
 import {
   fetchMonthlyHours,
   formatDeltaMinutesLabel,
@@ -81,6 +89,24 @@ const deriveStoragePathFromUrl = (url: string | null | undefined, bucket: string
   } catch {
     return null;
   }
+};
+
+const notificationPreferenceLabelKeys: Record<
+  NotificationPreferenceKey,
+  TranslationKey
+> = {
+  shiftUpdates: 'pushPreferenceShiftUpdates',
+  shiftReminders: 'pushPreferenceShiftReminders',
+  vacationDocuments: 'pushPreferenceVacationDocuments',
+};
+
+const notificationPreferenceDescriptionKeys: Record<
+  NotificationPreferenceKey,
+  TranslationKey
+> = {
+  shiftUpdates: 'pushPreferenceShiftUpdatesHint',
+  shiftReminders: 'pushPreferenceShiftRemindersHint',
+  vacationDocuments: 'pushPreferenceVacationDocumentsHint',
 };
 
 const isMissingColumnError = (error: unknown) =>
@@ -316,6 +342,7 @@ export default function AccountScreen() {
   const greetingLineHeight = Math.round(greetingFontSize * 1.12);
   const isGuest = !user;
   const employeeId = user?.id;
+  const [notificationPreferences, setNotificationPreferences] = useState<NotificationPreferences | null>(null);
   const apiBaseUrl = getEmployeeApiBaseUrl();
   const currentMonthKey = useMemo(() => formatMonthKey(new Date()), []);
   const metadata = user?.user_metadata;
@@ -348,6 +375,50 @@ export default function AccountScreen() {
     refetchOnMount: 'always',
     refetchOnWindowFocus: true,
   });
+
+  useEffect(() => {
+    let isActive = true;
+    loadNotificationPreferences(employeeId)
+      .then((preferences) => {
+        if (isActive) {
+          setNotificationPreferences(preferences);
+        }
+      })
+      .catch(() => {
+        if (isActive) {
+          setNotificationPreferences(null);
+        }
+      });
+    return () => {
+      isActive = false;
+    };
+  }, [employeeId]);
+
+  const toggleNotificationPreference = useCallback(
+    (key: NotificationPreferenceKey) => {
+      setNotificationPreferences((current) => {
+        const next = {
+          ...(current ?? defaultNotificationPreferences),
+          [key]: !(current?.[key] ?? true),
+        };
+        void saveNotificationPreferences(next, employeeId).then(async (saved) => {
+          if (!supabase || !employeeId) return;
+          const { error } = await supabase
+            .from('employee_push_tokens')
+            .update({
+              preferences: saved,
+              updated_at: new Date().toISOString(),
+            })
+            .eq('employee_id', employeeId);
+          if (error && !/employee_push_tokens|schema cache|could not find the table/i.test(error.message)) {
+            console.warn('Failed to sync push preferences', error);
+          }
+        });
+        return next;
+      });
+    },
+    [employeeId]
+  );
   const mergedMetadataRecord = {
     ...(appMetadataRecord ?? {}),
     ...(metadataRecord ?? {}),
@@ -1043,6 +1114,52 @@ export default function AccountScreen() {
                   ) : null}
                   <Ionicons name="chevron-forward" size={16} color={theme.textSecondary} />
                 </TouchableOpacity>
+                {notificationPreferenceKeys.map((key) => {
+                  const enabled = notificationPreferences?.[key] ?? defaultNotificationPreferences[key];
+                  return (
+                    <TouchableOpacity
+                      key={key}
+                      style={[styles.toolsRow, styles.preferenceRow, { borderColor: theme.borderSoft }]}
+                      activeOpacity={0.85}
+                      onPress={() => toggleNotificationPreference(key)}
+                    >
+                      <View style={[styles.toolsIconWrap, { backgroundColor: theme.surfaceMuted }]}>
+                        <Ionicons
+                          name={enabled ? 'notifications' : 'notifications-off-outline'}
+                          size={16}
+                          color={enabled ? theme.primary : theme.textSecondary}
+                        />
+                      </View>
+                      <View style={styles.preferenceTextBlock}>
+                        <Text style={[styles.toolsLabel, styles.pushPreferenceLabel, { color: theme.textPrimary }]}>
+                          {t(notificationPreferenceLabelKeys[key])}
+                        </Text>
+                        <Text style={[styles.preferenceHint, { color: theme.textSecondary }]}>
+                          {t(notificationPreferenceDescriptionKeys[key])}
+                        </Text>
+                      </View>
+                      <View
+                        style={[
+                          styles.preferenceToggle,
+                          {
+                            backgroundColor: enabled ? theme.primary : theme.surfaceMuted,
+                            borderColor: enabled ? theme.primary : theme.borderSoft,
+                          },
+                        ]}
+                      >
+                        <View
+                          style={[
+                            styles.preferenceToggleKnob,
+                            {
+                              alignSelf: enabled ? 'flex-end' : 'flex-start',
+                              backgroundColor: enabled ? '#fff' : theme.textSecondary,
+                            },
+                          ]}
+                        />
+                      </View>
+                    </TouchableOpacity>
+                  );
+                })}
               </View>
             </View>
 
@@ -1551,6 +1668,35 @@ const styles = StyleSheet.create({
     flexShrink: 1,
     fontSize: 14,
     fontWeight: '600',
+  },
+  preferenceRow: {
+    minHeight: 64,
+    paddingVertical: 10,
+  },
+  preferenceTextBlock: {
+    flex: 1,
+    minWidth: 0,
+    gap: 3,
+  },
+  pushPreferenceLabel: {
+    flex: 0,
+  },
+  preferenceHint: {
+    fontSize: 12,
+    lineHeight: 16,
+  },
+  preferenceToggle: {
+    width: 38,
+    height: 22,
+    borderRadius: 999,
+    borderWidth: 1,
+    padding: 2,
+    justifyContent: 'center',
+  },
+  preferenceToggleKnob: {
+    width: 16,
+    height: 16,
+    borderRadius: 8,
   },
   toolsBadge: {
     minWidth: 20,

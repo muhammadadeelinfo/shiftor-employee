@@ -37,6 +37,9 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     legalPrivacyUrl: process.env.LEGAL_PRIVACY_URL ?? '',
     legalTermsUrl: process.env.LEGAL_TERMS_URL ?? '',
     legalSupportUrl: process.env.LEGAL_SUPPORT_URL ?? '',
+    iosAppStoreId: process.env.IOS_APP_STORE_ID ?? '',
+    iosAppStoreUrl: process.env.IOS_APP_STORE_URL ?? '',
+    androidPlayStoreUrl: process.env.ANDROID_PLAY_STORE_URL ?? '',
     apiBaseUrl: process.env.API_BASE_URL ?? '',
     enableLocationInDev: process.env.ENABLE_LOCATION_IN_DEV === 'true',
     eas: {

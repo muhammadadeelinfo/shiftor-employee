@@ -27,6 +27,7 @@ import { layoutTokens } from '@shared/theme/layout';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useAuth } from '@hooks/useSupabaseAuth';
 import { buildShiftPlanCalendarContent, buildShiftPlanFileName } from '@shared/utils/shiftPlanExport';
+import { recordPositiveRatingMoment } from '@shared/utils/ratingPrompt';
 
 const getMonthLabel = (date: Date) => date.toLocaleDateString([], { month: 'long', year: 'numeric' });
 
@@ -53,7 +54,7 @@ export default function MyShiftsScreen() {
   const showTabletGrid = isTabletLandscape && width >= 1180;
   const horizontalPadding = isTablet ? 20 : layoutTokens.screenHorizontal;
   const isGuest = !user;
-  const { orderedShifts, isLoading, error, refetch } = useShiftFeed();
+  const { orderedShifts, isLoading, error, refetch, isUsingCachedShifts, cachedShiftsAt } = useShiftFeed();
   const [confirmingId, setConfirmingId] = useState<string | null>(null);
   const [confirmingAll, setConfirmingAll] = useState(false);
   const [isExportingPlan, setIsExportingPlan] = useState(false);
@@ -91,6 +92,18 @@ export default function MyShiftsScreen() {
   }, [isGuest, nextShift, t]);
 
   const showSkeletons = isLoading && !orderedShifts.length && !error;
+  const cachedShiftNotice = isUsingCachedShifts ? (
+    <View style={[styles.cachedNotice, { backgroundColor: theme.surfaceMuted, borderColor: theme.borderSoft }]}>
+      <Ionicons name="cloud-offline-outline" size={15} color={theme.caution} />
+      <Text style={[styles.cachedNoticeText, { color: theme.textSecondary }]}>
+        {t('shiftCacheShowingCached', {
+          time: cachedShiftsAt
+            ? new Date(cachedShiftsAt).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })
+            : t('notProvided'),
+        })}
+      </Text>
+    </View>
+  ) : null;
   const pendingAssignmentIds = useMemo(
     () =>
       orderedShifts
@@ -188,13 +201,24 @@ export default function MyShiftsScreen() {
         setConfirmingId(assignmentId);
         await confirmShiftAssignment(assignmentId);
         await refetch();
+        await recordPositiveRatingMoment({
+          moment: 'shift-confirmed',
+          copy: {
+            title: t('ratingPromptTitle'),
+            body: t('ratingPromptBody'),
+            rateAction: t('ratingPromptRateAction'),
+            feedbackAction: t('ratingPromptFeedbackAction'),
+            laterAction: t('ratingPromptLaterAction'),
+          },
+          onFeedback: () => router.push('/support'),
+        });
       } catch (error) {
         console.error('Shift confirmation failed', error);
       } finally {
         setConfirmingId((current) => (current === assignmentId ? null : current));
       }
     },
-    [refetch]
+    [refetch, router, t]
   );
 
   const handleConfirmAll = useCallback(async () => {
@@ -445,7 +469,7 @@ export default function MyShiftsScreen() {
             </View>
           </View>
         </View>
-        {errorView}
+        {isUsingCachedShifts ? cachedShiftNotice : errorView}
         <ScrollView
           ref={listScrollRef}
           contentContainerStyle={listContentStyle}
@@ -454,7 +478,7 @@ export default function MyShiftsScreen() {
           refreshControl={<RefreshControl refreshing={isLoading} onRefresh={() => refetch()} />}
         >
           {showSkeletons && renderSkeletons()}
-          {!error &&
+          {(!error || isUsingCachedShifts) &&
             (showTabletGrid
               ? shiftRows.map((row, rowIndex) => (
                   <View key={`row-${rowIndex}`} style={styles.gridRow}>
@@ -618,6 +642,22 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.2,
     shadowOffset: { width: 0, height: 6 },
     shadowRadius: 12,
+  },
+  cachedNotice: {
+    borderWidth: 1,
+    borderRadius: 14,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    marginBottom: layoutTokens.sectionGap,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  cachedNoticeText: {
+    flex: 1,
+    fontSize: 12,
+    lineHeight: 17,
+    fontWeight: '600',
   },
   listEmptyState: {
     alignItems: 'center',

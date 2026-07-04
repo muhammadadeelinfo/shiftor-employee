@@ -21,6 +21,7 @@ import { useAuth } from '@hooks/useSupabaseAuth';
 import { useLanguage } from '@shared/context/LanguageContext';
 import { getContentMaxWidth, shouldStackForCompactWidth } from '@shared/utils/responsiveLayout';
 import { downloadRemoteDocument } from '@shared/utils/nativeDocumentOpen';
+import { recordPositiveRatingMoment } from '@shared/utils/ratingPrompt';
 import { getUserFacingErrorMessage } from '@shared/utils/userFacingError';
 import {
   EMPLOYEE_DOCUMENT_TYPES,
@@ -221,7 +222,24 @@ export default function EmployeeDocumentsScreen() {
       await queryClient.invalidateQueries({
         queryKey: ['employeeDocuments', employeeId, session.access_token],
       });
-      Alert.alert(t('certificateOfSicknessTitle'), t('certificateOfSicknessSubmitted'));
+      Alert.alert(t('certificateOfSicknessTitle'), t('certificateOfSicknessSubmitted'), [
+        {
+          text: t('commonContinue'),
+          onPress: () => {
+            void recordPositiveRatingMoment({
+              moment: 'document-uploaded',
+              copy: {
+                title: t('ratingPromptTitle'),
+                body: t('ratingPromptBody'),
+                rateAction: t('ratingPromptRateAction'),
+                feedbackAction: t('ratingPromptFeedbackAction'),
+                laterAction: t('ratingPromptLaterAction'),
+              },
+              onFeedback: () => router.push('/support'),
+            });
+          },
+        },
+      ]);
     } catch (submitError) {
       const fallbackMessage =
         submitError instanceof Error && submitError.message === 'DOCUMENT_TYPE_UNAVAILABLE'

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Alert, Linking, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
+import { Alert, Linking, Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import { Camera, CameraView, BarcodeScanningResult, PermissionResponse } from 'expo-camera';
 import { useRouter } from 'expo-router';
 import Constants from 'expo-constants';
@@ -13,6 +13,7 @@ import { layoutTokens } from '@shared/theme/layout';
 import { useAuth } from '@hooks/useSupabaseAuth';
 import { supabase } from '@lib/supabaseClient';
 import { parseQrClockInCode } from '@shared/utils/qrClockIn';
+import { recordPositiveRatingMoment } from '@shared/utils/ratingPrompt';
 import { useShiftFeed } from '@features/shifts/useShiftFeed';
 
 type EmployeePresence = {
@@ -20,6 +21,8 @@ type EmployeePresence = {
   lastCheckInAt?: string | null;
   lastCheckInTag?: string | null;
 };
+
+type ScanStatus = 'ready' | 'checking' | 'confirm' | 'success' | 'error';
 
 const CLOCK_IN_REMINDER_WINDOW_MS = 60 * 60 * 1000;
 const CLOCK_OUT_REMINDER_WINDOW_MS = 30 * 60 * 1000;
@@ -162,6 +165,7 @@ export default function QrClockInScreen() {
   const [scannedData, setScannedData] = useState<string | null>(null);
   const [isScanning, setIsScanning] = useState(true);
   const [scanFeedback, setScanFeedback] = useState<string | null>(null);
+  const [scanStatus, setScanStatus] = useState<ScanStatus>('ready');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [employeePresence, setEmployeePresence] = useState<EmployeePresence | null>(null);
   const [clockTickMs, setClockTickMs] = useState(() => Date.now());
@@ -306,6 +310,49 @@ export default function QrClockInScreen() {
     });
   }, [activeShift, clockTickMs, employeePresence?.isLoggedIn, orderedShifts, t]);
 
+  const scanStatusMeta = useMemo(() => {
+    if (scanStatus === 'checking' || isSubmitting) {
+      return {
+        icon: 'sync-outline',
+        title: t('qrScanStatusCheckingTitle'),
+        body: t('qrScanStatusCheckingBody'),
+        color: theme.primary,
+      };
+    }
+    if (scanStatus === 'confirm') {
+      return {
+        icon: 'log-out-outline',
+        title: t('qrScanStatusConfirmTitle'),
+        body: scanFeedback ?? t('qrScanStatusConfirmBody'),
+        color: theme.caution,
+      };
+    }
+    if (scanStatus === 'success') {
+      return {
+        icon: 'checkmark-circle-outline',
+        title: t('qrScanStatusSuccessTitle'),
+        body: scanFeedback ?? t('qrScanStatusSuccessBody'),
+        color: theme.success,
+      };
+    }
+    if (scanStatus === 'error') {
+      return {
+        icon: 'alert-circle-outline',
+        title: t('qrScanStatusErrorTitle'),
+        body: scanFeedback ?? t('qrScanStatusErrorBody'),
+        color: theme.fail,
+      };
+    }
+    return {
+      icon: 'scan-outline',
+      title: t('qrScanStatusReadyTitle'),
+      body: activeShift
+        ? t('qrScanStatusReadyClockOutBody', { shift: activeShift.title })
+        : t('qrScanStatusReadyBody'),
+      color: theme.primary,
+    };
+  }, [activeShift, isSubmitting, scanFeedback, scanStatus, t, theme.caution, theme.fail, theme.primary, theme.success]);
+
   const refreshPresence = async () => {
     if (!user?.id) {
       setEmployeePresence(null);
@@ -319,10 +366,12 @@ export default function QrClockInScreen() {
     setScannedData(rawData);
     setIsScanning(false);
     setIsSubmitting(true);
+    setScanStatus('checking');
 
     if (!apiBaseUrl) {
       const message = t('qrClockInMissingApiBaseUrl');
       setScanFeedback(message);
+      setScanStatus('error');
       Alert.alert(t('qrClockInInvalidTitle'), message);
       setIsSubmitting(false);
       return;
@@ -331,6 +380,7 @@ export default function QrClockInScreen() {
     if (!session?.access_token) {
       const message = t('qrClockInSessionRequired');
       setScanFeedback(message);
+      setScanStatus('error');
       Alert.alert(t('qrClockInInvalidTitle'), message);
       setIsSubmitting(false);
       return;
@@ -360,6 +410,7 @@ export default function QrClockInScreen() {
       if (!response.ok || !payload.clockIn?.shiftId) {
         const message = resolveQrClockInErrorMessage(response.status, payload.error);
         setScanFeedback(message);
+        setScanStatus('error');
         Alert.alert(t('qrClockInInvalidTitle'), message);
         return;
       }
@@ -372,15 +423,30 @@ export default function QrClockInScreen() {
           })
         : t('qrClockInSuccessMessage');
       setScanFeedback(message);
+      setScanStatus('success');
       Alert.alert(isClockOut ? t('qrClockOutSuccessTitle') : t('qrClockInSuccessTitle'), message, [
         {
           text: t('commonContinue'),
-          onPress: () => router.push(`/shift-details/${payload.clockIn?.shiftId}`),
+          onPress: () => {
+            void recordPositiveRatingMoment({
+              moment: isClockOut ? 'qr-clock-out' : 'qr-clock-in',
+              copy: {
+                title: t('ratingPromptTitle'),
+                body: t('ratingPromptBody'),
+                rateAction: t('ratingPromptRateAction'),
+                feedbackAction: t('ratingPromptFeedbackAction'),
+                laterAction: t('ratingPromptLaterAction'),
+              },
+              onFeedback: () => router.push('/support'),
+            });
+            router.push(`/shift-details/${payload.clockIn?.shiftId}`);
+          },
         },
       ]);
     } catch {
       const message = t('qrClockInSubmitFailed');
       setScanFeedback(message);
+      setScanStatus('error');
       Alert.alert(t('qrClockInInvalidTitle'), message);
     } finally {
       setIsSubmitting(false);
@@ -432,8 +498,19 @@ export default function QrClockInScreen() {
       setScannedData(data);
       setIsScanning(false);
       setScanFeedback(message);
+      setScanStatus('confirm');
       Alert.alert(t('qrClockOutConfirmTitle'), message, [
-        { text: t('commonCancel'), style: 'cancel' },
+        {
+          text: t('commonCancel'),
+          style: 'cancel',
+          onPress: () => {
+            setScannedData(null);
+            setScanFeedback(null);
+            setScanStatus('ready');
+            lastScanRef.current = null;
+            setIsScanning(true);
+          },
+        },
         {
           text: t('qrClockOutConfirmAction'),
           onPress: () => {
@@ -495,6 +572,19 @@ export default function QrClockInScreen() {
           </View>
           <Text style={[styles.instructions, { color: theme.textSecondary }]}>{t('qrInstructions')}</Text>
         </LinearGradient>
+        <View style={[styles.scanStatusCard, { backgroundColor: theme.surface, borderColor: theme.borderSoft }]}>
+          <View style={[styles.scanStatusIcon, { backgroundColor: `${scanStatusMeta.color}1f` }]}>
+            <Ionicons
+              name={scanStatusMeta.icon as any}
+              size={18}
+              color={scanStatusMeta.color}
+            />
+          </View>
+          <View style={styles.scanStatusTextBlock}>
+            <Text style={[styles.scanStatusTitle, { color: theme.textPrimary }]}>{scanStatusMeta.title}</Text>
+            <Text style={[styles.scanStatusBody, { color: theme.textSecondary }]}>{scanStatusMeta.body}</Text>
+          </View>
+        </View>
         {employeePresence?.isLoggedIn && checkedInAt ? (
           <View style={[styles.statusCard, { backgroundColor: theme.surface, borderColor: theme.borderSoft }]}>
             <Text style={[styles.statusTitle, { color: theme.textPrimary }]}>
@@ -530,7 +620,9 @@ export default function QrClockInScreen() {
               <View style={[styles.scanCorner, styles.scanCornerBottomLeft, { borderColor: theme.primary }]} />
               <View style={[styles.scanCorner, styles.scanCornerBottomRight, { borderColor: theme.primary }]} />
             </View>
-            <Text style={[styles.scanHint, { color: theme.textSecondary }]}>{t('qrInstructions')}</Text>
+            <Text style={[styles.scanHint, { color: theme.textSecondary }]}>
+              {isSubmitting ? t('qrScanOverlayChecking') : t('qrScanOverlayReady')}
+            </Text>
           </View>
         </View>
         {scannedData ? (
@@ -542,22 +634,31 @@ export default function QrClockInScreen() {
             ) : null}
           </View>
         ) : null}
-        {isSubmitting ? (
-          <View style={[styles.scanResult, { backgroundColor: theme.surface }]}>
-            <Text style={[styles.scanLabel, { color: theme.textSecondary }]}>{t('qrClockInSubmitting')}</Text>
-          </View>
-        ) : null}
         {!isScanning ? (
-          <PrimaryButton
-            title={t('scanAnotherBadge')}
-            onPress={() => {
-              setScannedData(null);
-              setScanFeedback(null);
-              lastScanRef.current = null;
-              setIsScanning(true);
-            }}
-            style={styles.button}
-          />
+          <View style={styles.recoveryActions}>
+            <PrimaryButton
+              title={scanStatus === 'error' ? t('qrTryAgainAction') : t('scanAnotherBadge')}
+              onPress={() => {
+                setScannedData(null);
+                setScanFeedback(null);
+                setScanStatus('ready');
+                lastScanRef.current = null;
+                setIsScanning(true);
+              }}
+              style={styles.recoveryPrimary}
+            />
+            {scanStatus === 'error' ? (
+              <Pressable
+                style={[styles.supportButton, { borderColor: theme.borderSoft, backgroundColor: theme.surface }]}
+                onPress={() => router.push('/support')}
+              >
+                <Ionicons name="help-circle-outline" size={16} color={theme.primary} />
+                <Text style={[styles.supportButtonText, { color: theme.textPrimary }]}>
+                  {t('qrContactSupportAction')}
+                </Text>
+              </Pressable>
+            ) : null}
+          </View>
         ) : null}
       </View>
     </SafeAreaView>
@@ -599,6 +700,35 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 13,
     lineHeight: 18,
+  },
+  scanStatusCard: {
+    marginBottom: 12,
+    padding: 12,
+    borderRadius: 14,
+    borderWidth: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  scanStatusIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  scanStatusTextBlock: {
+    flex: 1,
+    minWidth: 0,
+  },
+  scanStatusTitle: {
+    fontSize: 14,
+    fontWeight: '800',
+  },
+  scanStatusBody: {
+    marginTop: 3,
+    fontSize: 12,
+    lineHeight: 17,
   },
   statusCard: {
     marginBottom: 12,
@@ -713,6 +843,26 @@ const styles = StyleSheet.create({
     marginTop: 8,
     fontSize: 12,
     lineHeight: 18,
+  },
+  recoveryActions: {
+    marginTop: 18,
+    gap: 10,
+  },
+  recoveryPrimary: {
+    marginTop: 0,
+  },
+  supportButton: {
+    minHeight: 44,
+    borderRadius: 999,
+    borderWidth: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+  },
+  supportButtonText: {
+    fontSize: 14,
+    fontWeight: '700',
   },
   button: {
     marginTop: 24,

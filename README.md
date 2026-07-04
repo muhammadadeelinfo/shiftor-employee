@@ -64,6 +64,9 @@ ANDROID_VERSION_CODE=1
 EXPO_SCHEME=shiftoremployee
 AUTH_REDIRECT_URL=https://expo.dev/@your-account/shiftor-employee
 EAS_PROJECT_ID=
+IOS_APP_STORE_ID=
+IOS_APP_STORE_URL=
+ANDROID_PLAY_STORE_URL=
 EXPO_STAGE=development
 ENABLE_LOCATION_IN_DEV=false
 ```
@@ -89,6 +92,8 @@ npx expo start -c
 
 - The app expects `public.notifications` in Supabase for realtime notification feed and read-state handling.
 - Shift-related notification generation is handled in shared notification utilities/hooks and consumed by the in-app notifications UI.
+- Real device push registration uses `public.employee_push_tokens`; apply `supabase/push-notifications.sql` before enabling server-side Expo push delivery.
+- Push payload `data` should include `target`, `deepLink`, or `shiftId` so taps can open the right app screen.
 
 ## Scripts
 

@@ -21,6 +21,7 @@
   "include": [
     "src/lib/shiftConfirmationStatus.ts",
     "src/features/shifts/shiftMapping.ts",
+    "src/features/shifts/shiftCache.ts",
     "src/shared/utils/calendarSelectionUtils.ts",
     "src/shared/utils/languageUtils.ts",
     "src/shared/i18n/translations/en.ts",
@@ -53,6 +54,7 @@
     "tests/shiftConfirmationStatus.test.ts",
     "tests/runtimeHealthUtils.test.ts",
     "tests/shiftMapping.test.ts",
+    "tests/shiftCache.test.ts",
     "tests/qrClockIn.test.ts",
     "tests/calendarSelectionUtils.test.ts",
     "tests/languageUtils.test.ts",

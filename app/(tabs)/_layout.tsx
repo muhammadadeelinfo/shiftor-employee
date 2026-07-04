@@ -10,6 +10,11 @@ const iconConfig: Record<
   string,
   { active: string; inactive: string; labelKey: TranslationKey }
 > = {
+  home: {
+    active: 'home',
+    inactive: 'home-outline',
+    labelKey: 'tabHome',
+  },
   'my-shifts': {
     active: 'list',
     inactive: 'list-outline',
@@ -59,7 +64,7 @@ function ThemeAwareTabs({ insets }: { insets: ReturnType<typeof useSafeAreaInset
 
   return (
     <Tabs
-      initialRouteName="my-shifts"
+      initialRouteName="home"
       screenOptions={({ route }) => {
         const icon = iconConfig[route.name] ?? {
           active: 'square',
@@ -100,6 +105,7 @@ function ThemeAwareTabs({ insets }: { insets: ReturnType<typeof useSafeAreaInset
       }}
     >
       <Tabs.Screen name="jobs" options={{ href: null }} />
+      <Tabs.Screen name="home" />
       <Tabs.Screen name="my-shifts" />
       <Tabs.Screen name="calendar" />
       <Tabs.Screen name="about" options={{ href: null }} />

@@ -101,6 +101,7 @@ export const ShiftCard = ({
   isPrimary,
 }: Props) => {
   const [showFullAddress, setShowFullAddress] = useState(false);
+  const [showFullDescription, setShowFullDescription] = useState(false);
   const { theme } = useTheme();
   const { t } = useLanguage();
   const normalizedConfirmationStatus = normalizeShiftConfirmationStatus(shift.confirmationStatus);
@@ -122,6 +123,8 @@ export const ShiftCard = ({
     : t('locationTbd');
   const shiftPhase = getShiftPhase(shift.start, shift.end);
   const phaseMetadata = phaseMeta[shiftPhase];
+  const descriptionText = shift.description?.trim() || t('beOnTime');
+  const canExpandDescription = descriptionText.length > 96;
   const phaseGradientColors: [string, string, ...string[]] = [
     `${phaseMetadata.color}20`,
     `${phaseMetadata.color}70`,
@@ -276,7 +279,31 @@ export const ShiftCard = ({
           )}
         </Pressable>
 
-        <Text style={[styles.description, { color: theme.textSecondary }]}>{shift.description ?? t('beOnTime')}</Text>
+        <View style={styles.descriptionBlock}>
+          <Text
+            style={[styles.description, { color: theme.textSecondary }]}
+            numberOfLines={!canExpandDescription || showFullDescription ? undefined : 2}
+          >
+            {descriptionText}
+          </Text>
+          {canExpandDescription ? (
+            <Pressable
+              onPress={() => setShowFullDescription((prev) => !prev)}
+              accessibilityRole="button"
+              hitSlop={8}
+              style={styles.descriptionToggle}
+            >
+              <Text style={[styles.descriptionToggleText, { color: theme.primary }]}>
+                {showFullDescription ? t('showLess') : t('showMore')}
+              </Text>
+              <Ionicons
+                name={showFullDescription ? 'chevron-up-outline' : 'chevron-down-outline'}
+                size={14}
+                color={theme.primary}
+              />
+            </Pressable>
+          ) : null}
+        </View>
 
         <View style={styles.confirmSection}>
           {isConfirmed ? (
@@ -499,12 +526,25 @@ const styles = StyleSheet.create({
     color: '#475569',
     marginTop: 2,
   },
-  description: {
+  descriptionBlock: {
     marginTop: 10,
     marginBottom: 6,
+  },
+  description: {
     fontSize: 13,
     color: '#4b5563',
-    minHeight: 30,
+    lineHeight: 18,
+  },
+  descriptionToggle: {
+    alignSelf: 'flex-start',
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 6,
+    columnGap: 3,
+  },
+  descriptionToggleText: {
+    fontSize: 12,
+    fontWeight: '700',
   },
   confirmSection: {
     flexDirection: 'row',
