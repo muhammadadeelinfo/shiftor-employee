@@ -17,6 +17,7 @@ import { useRouter } from 'expo-router';
 import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '@hooks/useSupabaseAuth';
 import { BackButton } from '@shared/components/BackButton';
+import { PrimaryButton } from '@shared/components/PrimaryButton';
 import { useLanguage } from '@shared/context/LanguageContext';
 import { layoutTokens } from '@shared/theme/layout';
 import { useTheme } from '@shared/themeContext';
