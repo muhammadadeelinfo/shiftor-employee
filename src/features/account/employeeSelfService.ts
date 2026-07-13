@@ -174,3 +174,67 @@ export const submitShiftSwapRequest = async ({
   }
   return (payload as { request: ShiftSwapRequestRecord }).request;
 };
+
+export const fetchShiftSwapRequests = async ({
+  apiBaseUrl,
+  accessToken,
+  month,
+  t,
+}: {
+  apiBaseUrl: string;
+  accessToken?: string | null;
+  month?: string;
+  t: Translate;
+}): Promise<ShiftSwapRequestRecord[]> => {
+  const query = month ? `?month=${encodeURIComponent(month)}` : '';
+  const response = await fetch(buildEmployeeApiUrl(apiBaseUrl, `/api/employee/swap-requests${query}`), {
+    method: 'GET',
+    headers: {
+      Accept: 'application/json',
+      ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
+    },
+  });
+  const payload = await parseJson(response);
+  if (!response.ok) {
+    throw new Error(getErrorMessage(payload, t('swapRequestSubmitFailed')));
+  }
+  if (Array.isArray(payload)) {
+    return payload as ShiftSwapRequestRecord[];
+  }
+  if (
+    payload &&
+    typeof payload === 'object' &&
+    'requests' in payload &&
+    Array.isArray((payload as { requests?: unknown }).requests)
+  ) {
+    return (payload as { requests: ShiftSwapRequestRecord[] }).requests;
+  }
+  return [];
+};
+
+export const cancelShiftSwapRequest = async ({
+  apiBaseUrl,
+  accessToken,
+  requestId,
+  t,
+}: {
+  apiBaseUrl: string;
+  accessToken?: string | null;
+  requestId: string;
+  t: Translate;
+}): Promise<void> => {
+  const response = await fetch(
+    buildEmployeeApiUrl(apiBaseUrl, `/api/employee/swap-requests/${encodeURIComponent(requestId)}`),
+    {
+      method: 'DELETE',
+      headers: {
+        Accept: 'application/json',
+        ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
+      },
+    }
+  );
+  const payload = await parseJson(response);
+  if (!response.ok) {
+    throw new Error(getErrorMessage(payload, t('swapRequestCancelFailed')));
+  }
+};

@@ -18,6 +18,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
 import { useQuery } from '@tanstack/react-query';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useAuth } from '@hooks/useSupabaseAuth';
 import { BackButton } from '@shared/components/BackButton';
 import { PrimaryButton } from '@shared/components/PrimaryButton';
@@ -35,7 +36,12 @@ import {
   getMonthlyHoursShiftTimings,
   type MonthlyHoursShiftTiming,
 } from '@features/account/monthlyHours';
-import { submitShiftSwapRequest } from '@features/account/employeeSelfService';
+import {
+  cancelShiftSwapRequest,
+  fetchShiftSwapRequests,
+  submitShiftSwapRequest,
+  type ShiftSwapRequestRecord,
+} from '@features/account/employeeSelfService';
 
 type ObjectTotal = {
   objectId?: string | null;
@@ -48,6 +54,8 @@ type ObjectTotal = {
 type SwapCandidate = {
   assignmentId: string | null;
   shiftId: string;
+  swapRequestId: string;
+  swapRequestStatus: string;
   date: string;
   title: string;
   customer: string;
@@ -119,6 +127,12 @@ const getSwapCandidates = (rows?: unknown[]): SwapCandidate[] => {
     .map((row) => ({
       assignmentId: pickString(row, ['assignmentId', 'id']) || null,
       shiftId: pickString(row, ['shiftId']),
+      swapRequestId: pickString(row, ['swapRequestId', 'shiftSwapRequestId']),
+      swapRequestStatus: pickString(row, [
+        'swapRequestStatus',
+        'shiftSwapRequestStatus',
+        'requestStatus',
+      ]).toLowerCase(),
       date: pickString(row, ['date', 'shiftStartingDate']),
       title: pickString(row, ['objectTitle', 'objectName', 'title']) || 'Shift',
       customer: pickString(row, ['customer']),
@@ -127,6 +141,119 @@ const getSwapCandidates = (rows?: unknown[]): SwapCandidate[] => {
       status: pickString(row, ['status']),
     }))
     .filter((row) => row.shiftId && row.status !== 'blank' && row.status !== 'complete');
+};
+
+const getSwapCandidateKey = (candidate: Pick<SwapCandidate, 'assignmentId' | 'shiftId'>) =>
+  candidate.assignmentId || candidate.shiftId;
+
+const submittedSwapStorageKey = (userId: string, monthKey: string) =>
+  `shiftor:submitted-swap-requests:${userId}:${monthKey}`;
+
+type SubmittedSwapCache = {
+  keys: Set<string>;
+  requestIds: Map<string, string>;
+};
+
+const emptySubmittedSwapCache = (): SubmittedSwapCache => ({
+  keys: new Set(),
+  requestIds: new Map(),
+});
+
+const parseSubmittedSwapCache = (raw: string | null): SubmittedSwapCache => {
+  if (!raw) return emptySubmittedSwapCache();
+  try {
+    const parsed = JSON.parse(raw);
+    if (Array.isArray(parsed)) {
+      return {
+        keys: new Set(parsed.filter((value): value is string => typeof value === 'string' && Boolean(value))),
+        requestIds: new Map(),
+      };
+    }
+    if (!parsed || typeof parsed !== 'object') return emptySubmittedSwapCache();
+    const keys = Array.isArray(parsed.keys)
+      ? parsed.keys.filter((value: unknown): value is string => typeof value === 'string' && Boolean(value))
+      : [];
+    const requestIds = new Map<string, string>();
+    if (parsed.requestIds && typeof parsed.requestIds === 'object' && !Array.isArray(parsed.requestIds)) {
+      Object.entries(parsed.requestIds).forEach(([key, value]) => {
+        if (typeof value === 'string' && value) {
+          requestIds.set(key, value);
+        }
+      });
+    }
+    return { keys: new Set(keys), requestIds };
+  } catch {
+    return emptySubmittedSwapCache();
+  }
+};
+
+const serializeSubmittedSwapCache = (keys: Set<string>, requestIds: Map<string, string>) =>
+  JSON.stringify({
+    keys: [...keys],
+    requestIds: Object.fromEntries(requestIds),
+  });
+
+const isSwapRequestSubmitted = (
+  candidate: SwapCandidate,
+  submittedSwapKeys: Set<string>
+) =>
+  submittedSwapKeys.has(getSwapCandidateKey(candidate)) ||
+  Boolean(candidate.swapRequestId) ||
+  ['pending', 'submitted'].includes(candidate.swapRequestStatus);
+
+const getSubmittedSwapRequest = (
+  candidate: SwapCandidate,
+  serverRequestsByKey: Map<string, ShiftSwapRequestRecord>,
+  localRequestIdsByKey: Map<string, string>
+) => {
+  const keys = [candidate.assignmentId, candidate.shiftId, getSwapCandidateKey(candidate)].filter(
+    (value): value is string => Boolean(value)
+  );
+  for (const key of keys) {
+    const request = serverRequestsByKey.get(key);
+    if (request) return request;
+  }
+  for (const key of keys) {
+    const requestId = localRequestIdsByKey.get(key);
+    if (requestId) {
+      return { id: requestId, shiftId: candidate.shiftId, assignmentId: candidate.assignmentId };
+    }
+  }
+  return candidate.swapRequestId
+    ? { id: candidate.swapRequestId, shiftId: candidate.shiftId, assignmentId: candidate.assignmentId }
+    : null;
+};
+
+type SwapCardStatus = 'submitted' | 'accepted' | 'rejected';
+
+const getSwapCardStatusFromRequest = (status: string): SwapCardStatus | null => {
+  switch (status) {
+    case 'pending':
+    case 'submitted':
+      return 'submitted';
+    case 'approved':
+    case 'completed':
+      return 'accepted';
+    case 'rejected':
+      return 'rejected';
+    default:
+      return null;
+  }
+};
+
+const getSwapCardStatus = (
+  candidate: SwapCandidate,
+  submittedSwapKeys: Set<string>,
+  serverRequestsByKey: Map<string, ShiftSwapRequestRecord>
+): SwapCardStatus | null => {
+  const request =
+    serverRequestsByKey.get(candidate.assignmentId ?? '') ??
+    serverRequestsByKey.get(candidate.shiftId);
+  const requestStatus = request ? getSwapCardStatusFromRequest(request.status) : null;
+  if (requestStatus) return requestStatus;
+  const rowStatus = getSwapCardStatusFromRequest(candidate.swapRequestStatus);
+  if (rowStatus) return rowStatus;
+  return isSwapRequestSubmitted(candidate, submittedSwapKeys) ? 'submitted' : null;
 };
 
 const formatTimingWindow = (shift: MonthlyHoursShiftTiming, t: (key: any, params?: Record<string, string | number>) => string) => {
@@ -161,9 +288,12 @@ export default function MonthlyHoursScreen() {
   const [swapCandidate, setSwapCandidate] = useState<SwapCandidate | null>(null);
   const [swapReason, setSwapReason] = useState('');
   const [isSubmittingSwap, setIsSubmittingSwap] = useState(false);
+  const [submittedSwapKeys, setSubmittedSwapKeys] = useState<Set<string>>(() => new Set());
+  const [submittedSwapRequestIds, setSubmittedSwapRequestIds] = useState<Map<string, string>>(() => new Map());
+  const [cancellingSwapKey, setCancellingSwapKey] = useState<string | null>(null);
   const canGoToNextMonth = selectedMonthKey < currentMonthKey;
 
-  const { data, error, isLoading, refetch } = useQuery({
+  const { data, error, isLoading, refetch: refetchMonthlyHours } = useQuery({
     queryKey: ['employeeMonthlyHoursPage', user?.id, selectedMonthKey, apiBaseUrl],
     queryFn: () =>
       fetchMonthlyHours({
@@ -174,6 +304,19 @@ export default function MonthlyHoursScreen() {
       }),
     enabled: Boolean(user?.id && session?.access_token && apiBaseUrl),
     staleTime: 60_000,
+  });
+  const { data: swapRequests = [], refetch: refetchSwapRequests } = useQuery({
+    queryKey: ['employeeSwapRequests', user?.id, selectedMonthKey, apiBaseUrl],
+    queryFn: () =>
+      fetchShiftSwapRequests({
+        apiBaseUrl,
+        accessToken: session?.access_token,
+        month: selectedMonthKey,
+        t,
+      }),
+    enabled: Boolean(user?.id && session?.access_token && apiBaseUrl),
+    retry: false,
+    staleTime: 30_000,
   });
 
   const summary = data?.summary;
@@ -228,6 +371,34 @@ export default function MonthlyHoursScreen() {
   const objectTotals = getObjectTotals(data?.objectTotals);
   const shiftTimings = useMemo(() => getMonthlyHoursShiftTimings(data), [data]);
   const swapCandidates = useMemo(() => getSwapCandidates(data?.rows), [data?.rows]);
+  const serverSubmittedSwapKeys = useMemo(() => {
+    const keys = new Set<string>();
+    swapRequests
+      .filter((request) => ['pending', 'submitted'].includes(request.status))
+      .forEach((request) => {
+        keys.add(request.shiftId);
+        if (request.assignmentId) {
+          keys.add(request.assignmentId);
+        }
+      });
+    return keys;
+  }, [swapRequests]);
+  const serverSwapRequestsByKey = useMemo(() => {
+    const requestsByKey = new Map<string, ShiftSwapRequestRecord>();
+    swapRequests
+      .filter((request) => Boolean(getSwapCardStatusFromRequest(request.status)))
+      .forEach((request) => {
+        requestsByKey.set(request.shiftId, request);
+        if (request.assignmentId) {
+          requestsByKey.set(request.assignmentId, request);
+        }
+      });
+    return requestsByKey;
+  }, [swapRequests]);
+  const allSubmittedSwapKeys = useMemo(
+    () => new Set([...submittedSwapKeys, ...serverSubmittedSwapKeys]),
+    [serverSubmittedSwapKeys, submittedSwapKeys]
+  );
 
   const presentExportNotice = (
     title: string,
@@ -244,6 +415,32 @@ export default function MonthlyHoursScreen() {
     }, 3600);
     return () => clearTimeout(timeoutId);
   }, [exportNotice]);
+
+  useEffect(() => {
+    if (!user?.id) {
+      setSubmittedSwapKeys(new Set());
+      setSubmittedSwapRequestIds(new Map());
+      return;
+    }
+    let isActive = true;
+    AsyncStorage.getItem(submittedSwapStorageKey(user.id, selectedMonthKey))
+      .then((raw) => {
+        if (isActive) {
+          const cache = parseSubmittedSwapCache(raw);
+          setSubmittedSwapKeys(cache.keys);
+          setSubmittedSwapRequestIds(cache.requestIds);
+        }
+      })
+      .catch(() => {
+        if (isActive) {
+          setSubmittedSwapKeys(new Set());
+          setSubmittedSwapRequestIds(new Map());
+        }
+      });
+    return () => {
+      isActive = false;
+    };
+  }, [selectedMonthKey, user?.id]);
 
   const handleExportPdf = async () => {
     if (!summary || isExportingPdf) return;
@@ -734,7 +931,7 @@ export default function MonthlyHoursScreen() {
     }
     try {
       setIsSubmittingSwap(true);
-      await submitShiftSwapRequest({
+      const submittedRequest = await submitShiftSwapRequest({
         apiBaseUrl,
         accessToken: session.access_token,
         shiftId: swapCandidate.shiftId,
@@ -742,6 +939,29 @@ export default function MonthlyHoursScreen() {
         reason: swapReason,
         t,
       });
+      const submittedKeys = [
+        getSwapCandidateKey(swapCandidate),
+        submittedRequest.assignmentId,
+        submittedRequest.shiftId,
+      ].filter((value): value is string => Boolean(value));
+      setSubmittedSwapKeys((current) => {
+        const next = new Set(current);
+        submittedKeys.forEach((key) => next.add(key));
+        return next;
+      });
+      setSubmittedSwapRequestIds((current) => {
+        const next = new Map(current);
+        submittedKeys.forEach((key) => next.set(key, submittedRequest.id));
+        if (user?.id) {
+          AsyncStorage.setItem(
+            submittedSwapStorageKey(user.id, selectedMonthKey),
+            serializeSubmittedSwapCache(new Set([...submittedSwapKeys, ...submittedKeys]), next)
+          ).catch(() => {});
+        }
+        return next;
+      });
+      void refetchMonthlyHours();
+      void refetchSwapRequests();
       setSwapCandidate(null);
       setSwapReason('');
       presentExportNotice(t('swapRequestTitle'), t('swapRequestSubmitted'), 'success');
@@ -753,6 +973,78 @@ export default function MonthlyHoursScreen() {
     } finally {
       setIsSubmittingSwap(false);
     }
+  };
+
+  const clearSubmittedSwapState = (candidate: SwapCandidate) => {
+    const keysToRemove = [candidate.assignmentId, candidate.shiftId, getSwapCandidateKey(candidate)].filter(
+      (value): value is string => Boolean(value)
+    );
+    setSubmittedSwapKeys((current) => {
+      const next = new Set(current);
+      keysToRemove.forEach((key) => next.delete(key));
+      setSubmittedSwapRequestIds((currentIds) => {
+        const nextIds = new Map(currentIds);
+        keysToRemove.forEach((key) => nextIds.delete(key));
+        if (user?.id) {
+          AsyncStorage.setItem(
+            submittedSwapStorageKey(user.id, selectedMonthKey),
+            serializeSubmittedSwapCache(next, nextIds)
+          ).catch(() => {});
+        }
+        return nextIds;
+      });
+      return next;
+    });
+  };
+
+  const handleCancelSwapRequest = async (candidate: SwapCandidate) => {
+    const swapKey = getSwapCandidateKey(candidate);
+    const request = getSubmittedSwapRequest(
+      candidate,
+      serverSwapRequestsByKey,
+      submittedSwapRequestIds
+    );
+    if (!request?.id) {
+      Alert.alert(t('swapRequestCancelTitle'), t('swapRequestCancelUnavailable'));
+      return;
+    }
+    if (!apiBaseUrl || !session?.access_token) {
+      Alert.alert(t('swapRequestCancelTitle'), t('swapRequestUnavailable'));
+      return;
+    }
+    try {
+      setCancellingSwapKey(swapKey);
+      await cancelShiftSwapRequest({
+        apiBaseUrl,
+        accessToken: session.access_token,
+        requestId: request.id,
+        t,
+      });
+      clearSubmittedSwapState(candidate);
+      void refetchMonthlyHours();
+      void refetchSwapRequests();
+      presentExportNotice(t('swapRequestCancelTitle'), t('swapRequestCancelled'), 'success');
+    } catch (cancelError) {
+      Alert.alert(
+        t('swapRequestCancelTitle'),
+        cancelError instanceof Error ? cancelError.message : t('swapRequestCancelFailed')
+      );
+    } finally {
+      setCancellingSwapKey((current) => (current === swapKey ? null : current));
+    }
+  };
+
+  const confirmCancelSwapRequest = (candidate: SwapCandidate) => {
+    Alert.alert(t('swapRequestCancelTitle'), t('swapRequestCancelBody'), [
+      { text: t('commonBack'), style: 'cancel' },
+      {
+        text: t('swapRequestCancelAction'),
+        style: 'destructive',
+        onPress: () => {
+          void handleCancelSwapRequest(candidate);
+        },
+      },
+    ]);
   };
 
   return (
@@ -970,7 +1262,7 @@ export default function MonthlyHoursScreen() {
                   : t('accountMonthlyHoursUnavailable')}
               </Text>
               {apiBaseUrl ? (
-                <PrimaryButton title={t('retry')} onPress={() => void refetch()} />
+                <PrimaryButton title={t('retry')} onPress={() => void refetchMonthlyHours()} />
               ) : null}
             </View>
           )}
@@ -1020,38 +1312,99 @@ export default function MonthlyHoursScreen() {
               </View>
             </View>
             <View style={styles.swapList}>
-              {swapCandidates.map((item) => (
-                <View
-                  key={`${item.shiftId}-${item.assignmentId ?? 'assignment'}`}
-                  style={[
-                    styles.swapRow,
-                    { backgroundColor: theme.surface, borderColor: theme.borderSoft },
-                  ]}
-                >
-                  <View style={styles.swapCopy}>
-                    <Text style={[styles.swapTitle, { color: theme.textPrimary }]}>
-                      {item.title}
-                    </Text>
-                    <Text style={[styles.swapMeta, { color: theme.textSecondary }]}>
-                      {[item.customer, item.date, `${item.plannedStartTime || '—'} - ${item.plannedEndTime || '—'}`]
-                        .filter(Boolean)
-                        .join(' · ')}
-                    </Text>
-                  </View>
-                  <TouchableOpacity
-                    style={[styles.swapAction, { backgroundColor: theme.surfaceMuted, borderColor: theme.borderSoft }]}
-                    onPress={() => {
-                      setSwapCandidate(item);
-                      setSwapReason('');
-                    }}
+              {swapCandidates.map((item) => {
+                const swapStatus = getSwapCardStatus(item, allSubmittedSwapKeys, serverSwapRequestsByKey);
+                const isSubmitted = swapStatus === 'submitted';
+                const hasResolvedStatus = Boolean(swapStatus);
+                const swapKey = getSwapCandidateKey(item);
+                const isCancelling = cancellingSwapKey === swapKey;
+                const statusTone =
+                  swapStatus === 'accepted'
+                    ? theme.success
+                    : swapStatus === 'rejected'
+                      ? theme.fail
+                      : theme.success;
+                const actionTone = hasResolvedStatus ? statusTone : theme.primary;
+                const statusLabel =
+                  swapStatus === 'accepted'
+                    ? t('swapRequestStatusAccepted')
+                    : swapStatus === 'rejected'
+                      ? t('swapRequestStatusRejected')
+                      : t('swapRequestSubmittedBadge');
+                const actionIcon =
+                  isCancelling
+                    ? 'hourglass-outline'
+                    : swapStatus === 'accepted'
+                      ? 'checkmark-done-outline'
+                      : swapStatus === 'rejected'
+                        ? 'close-circle-outline'
+                        : isSubmitted
+                          ? 'checkmark-circle-outline'
+                          : 'swap-horizontal-outline';
+                return (
+                  <View
+                    key={`${item.shiftId}-${item.assignmentId ?? 'assignment'}`}
+                    style={[
+                      styles.swapRow,
+                      hasResolvedStatus && styles.swapRowSubmitted,
+                      {
+                        backgroundColor: hasResolvedStatus ? `${statusTone}1f` : theme.surface,
+                        borderColor: hasResolvedStatus ? statusTone : theme.borderSoft,
+                      },
+                    ]}
                   >
-                    <Ionicons name="swap-horizontal-outline" size={15} color={theme.primary} />
-                    <Text style={[styles.swapActionText, { color: theme.primary }]}>
-                      {t('swapRequestAction')}
-                    </Text>
-                  </TouchableOpacity>
-                </View>
-              ))}
+                    <View style={styles.swapCopy}>
+                      <Text style={[styles.swapTitle, { color: theme.textPrimary }]}>
+                        {item.title}
+                      </Text>
+                      <Text style={[styles.swapMeta, { color: theme.textSecondary }]}>
+                        {[item.customer, item.date, `${item.plannedStartTime || '—'} - ${item.plannedEndTime || '—'}`]
+                          .filter(Boolean)
+                          .join(' · ')}
+                      </Text>
+                    </View>
+                    <TouchableOpacity
+                      style={[
+                        styles.swapAction,
+                        hasResolvedStatus && styles.swapActionSubmitted,
+                        {
+                          backgroundColor: hasResolvedStatus ? `${statusTone}26` : theme.surfaceMuted,
+                          borderColor: hasResolvedStatus ? statusTone : theme.borderSoft,
+                        },
+                      ]}
+                      onPress={() => {
+                        if (isSubmitted) {
+                          confirmCancelSwapRequest(item);
+                          return;
+                        }
+                        if (hasResolvedStatus) return;
+                        setSwapCandidate(item);
+                        setSwapReason('');
+                      }}
+                      disabled={isCancelling || (hasResolvedStatus && !isSubmitted)}
+                      accessibilityState={{ disabled: isCancelling }}
+                    >
+                      <Ionicons
+                        name={actionIcon}
+                        size={15}
+                        color={actionTone}
+                      />
+                      <Text
+                        style={[
+                          styles.swapActionText,
+                          { color: actionTone },
+                        ]}
+                      >
+                        {isCancelling
+                          ? t('swapRequestCancelling')
+                          : hasResolvedStatus
+                            ? statusLabel
+                            : t('swapRequestAction')}
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+                );
+              })}
             </View>
           </View>
         ) : null}
@@ -1889,6 +2242,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 12,
   },
+  swapRowSubmitted: {
+    borderWidth: 1.5,
+  },
   swapCopy: {
     flex: 1,
     minWidth: 0,
@@ -1910,6 +2266,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
+  },
+  swapActionSubmitted: {
+    opacity: 1,
   },
   swapActionText: {
     fontSize: 12,
