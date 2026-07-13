@@ -20,7 +20,7 @@ import { confirmShiftAssignment } from '@features/shifts/shiftsService';
 import { normalizeShiftConfirmationStatus } from '@lib/shiftConfirmationStatus';
 import { getShiftPhase } from '@shared/utils/shiftPhase';
 import { useLanguage } from '@shared/context/LanguageContext';
-import { useRouter } from 'expo-router';
+import { useFocusEffect, useRouter } from 'expo-router';
 import { useTheme } from '@shared/themeContext';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { layoutTokens } from '@shared/theme/layout';
@@ -59,6 +59,7 @@ export default function MyShiftsScreen() {
   const [confirmingAll, setConfirmingAll] = useState(false);
   const [isExportingPlan, setIsExportingPlan] = useState(false);
   const [layoutTick, setLayoutTick] = useState(0);
+  const [focusTick, setFocusTick] = useState(0);
   const listScrollRef = useRef<ScrollView>(null);
   const shiftLayouts = useRef(new Map<string, number>());
   const lastAutoScrolledShiftId = useRef<string | null>(null);
@@ -66,7 +67,7 @@ export default function MyShiftsScreen() {
   const now = new Date();
   const liveShift = orderedShifts.find((shift) => getShiftPhase(shift.start, shift.end, now) === 'live');
   const nextShift = orderedShifts.find((shift) => new Date(shift.start) > now);
-  const focusedShiftId = liveShift?.id ?? nextShift?.id;
+  const focusedShiftId = nextShift?.id ?? liveShift?.id;
 
   const referenceShift = orderedShifts.find((shift) => shift.id === focusedShiftId) ?? orderedShifts[0];
   const referenceMonth = referenceShift ? new Date(referenceShift.start) : now;
@@ -312,6 +313,13 @@ export default function MyShiftsScreen() {
     setLayoutTick((tick) => tick + 1);
   }, [shiftIdentityKey]);
 
+  useFocusEffect(
+    useCallback(() => {
+      lastAutoScrolledShiftId.current = null;
+      setFocusTick((tick) => tick + 1);
+    }, [])
+  );
+
   useEffect(() => {
     if (!focusedShiftId) return;
     if (lastAutoScrolledShiftId.current === focusedShiftId) return;
@@ -319,7 +327,7 @@ export default function MyShiftsScreen() {
     if (targetOffset === undefined) return;
     listScrollRef.current?.scrollTo({ y: Math.max(targetOffset - 12, 0), animated: true });
     lastAutoScrolledShiftId.current = focusedShiftId;
-  }, [focusedShiftId, layoutTick]);
+  }, [focusedShiftId, focusTick, layoutTick]);
 
   const errorView = error ? (
     <View style={styles.errorCard}>
