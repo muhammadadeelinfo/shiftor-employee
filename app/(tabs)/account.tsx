@@ -983,6 +983,18 @@ export default function AccountScreen() {
                   </TouchableOpacity>
                   <TouchableOpacity
                     style={[styles.toolsRow, { borderColor: theme.borderSoft }]}
+                    onPress={() => router.push('/availability')}
+                  >
+                    <View style={[styles.toolsIconWrap, { backgroundColor: theme.surfaceMuted }]}>
+                      <Ionicons name="calendar-clear-outline" size={16} color={theme.primary} />
+                    </View>
+                    <Text style={[styles.toolsLabel, { color: theme.textPrimary }]}>
+                      {t('accountAvailability')}
+                    </Text>
+                    <Ionicons name="chevron-forward" size={16} color={theme.textSecondary} />
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[styles.toolsRow, { borderColor: theme.borderSoft }]}
                     onPress={() => router.push('/vacation-requests')}
                   >
                     <View style={[styles.toolsIconWrap, { backgroundColor: theme.surfaceMuted }]}>

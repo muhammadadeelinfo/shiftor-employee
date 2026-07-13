@@ -1,9 +1,13 @@
 import { useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
+  Alert,
+  Modal,
+  Pressable,
   ScrollView,
   StyleSheet,
   Text,
+  TextInput,
   TouchableOpacity,
   useWindowDimensions,
   View,
@@ -13,7 +17,6 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
-import { useRouter } from 'expo-router';
 import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '@hooks/useSupabaseAuth';
 import { BackButton } from '@shared/components/BackButton';
@@ -32,6 +35,7 @@ import {
   getMonthlyHoursShiftTimings,
   type MonthlyHoursShiftTiming,
 } from '@features/account/monthlyHours';
+import { submitShiftSwapRequest } from '@features/account/employeeSelfService';
 
 type ObjectTotal = {
   objectId?: string | null;
@@ -39,6 +43,17 @@ type ObjectTotal = {
   plannedMinutes?: number;
   workedMinutes?: number;
   shiftsCount?: number;
+};
+
+type SwapCandidate = {
+  assignmentId: string | null;
+  shiftId: string;
+  date: string;
+  title: string;
+  customer: string;
+  plannedStartTime: string;
+  plannedEndTime: string;
+  status: string;
 };
 
 const getObjectTotals = (value: unknown): ObjectTotal[] => {
@@ -87,6 +102,33 @@ const formatTimingTime = (value?: string | null) => {
   });
 };
 
+const pickString = (source: Record<string, unknown>, keys: string[]) => {
+  for (const key of keys) {
+    const value = source[key];
+    if (typeof value === 'string' && value.trim()) {
+      return value.trim();
+    }
+  }
+  return '';
+};
+
+const getSwapCandidates = (rows?: unknown[]): SwapCandidate[] => {
+  if (!Array.isArray(rows)) return [];
+  return rows
+    .filter((row): row is Record<string, unknown> => Boolean(row) && typeof row === 'object' && !Array.isArray(row))
+    .map((row) => ({
+      assignmentId: pickString(row, ['assignmentId', 'id']) || null,
+      shiftId: pickString(row, ['shiftId']),
+      date: pickString(row, ['date', 'shiftStartingDate']),
+      title: pickString(row, ['objectTitle', 'objectName', 'title']) || 'Shift',
+      customer: pickString(row, ['customer']),
+      plannedStartTime: pickString(row, ['plannedStartTime', 'startTime']),
+      plannedEndTime: pickString(row, ['plannedEndTime', 'endTime']),
+      status: pickString(row, ['status']),
+    }))
+    .filter((row) => row.shiftId && row.status !== 'blank' && row.status !== 'complete');
+};
+
 const formatTimingWindow = (shift: MonthlyHoursShiftTiming, t: (key: any, params?: Record<string, string | number>) => string) => {
   const start = formatTimingTime(shift.start);
   const end = formatTimingTime(shift.end);
@@ -102,7 +144,6 @@ const getCompletionRatio = (workedMinutes?: number | null, plannedMinutes?: numb
 };
 
 export default function MonthlyHoursScreen() {
-  const router = useRouter();
   const { user, session } = useAuth();
   const { theme } = useTheme();
   const { t, language } = useLanguage();
@@ -117,6 +158,9 @@ export default function MonthlyHoursScreen() {
     body: string;
     tone: 'success' | 'error';
   } | null>(null);
+  const [swapCandidate, setSwapCandidate] = useState<SwapCandidate | null>(null);
+  const [swapReason, setSwapReason] = useState('');
+  const [isSubmittingSwap, setIsSubmittingSwap] = useState(false);
   const canGoToNextMonth = selectedMonthKey < currentMonthKey;
 
   const { data, error, isLoading, refetch } = useQuery({
@@ -183,6 +227,7 @@ export default function MonthlyHoursScreen() {
     : [];
   const objectTotals = getObjectTotals(data?.objectTotals);
   const shiftTimings = useMemo(() => getMonthlyHoursShiftTimings(data), [data]);
+  const swapCandidates = useMemo(() => getSwapCandidates(data?.rows), [data?.rows]);
 
   const presentExportNotice = (
     title: string,
@@ -681,6 +726,35 @@ export default function MonthlyHoursScreen() {
     }
   };
 
+  const handleSubmitSwapRequest = async () => {
+    if (!swapCandidate) return;
+    if (!apiBaseUrl || !session?.access_token) {
+      Alert.alert(t('swapRequestTitle'), t('swapRequestUnavailable'));
+      return;
+    }
+    try {
+      setIsSubmittingSwap(true);
+      await submitShiftSwapRequest({
+        apiBaseUrl,
+        accessToken: session.access_token,
+        shiftId: swapCandidate.shiftId,
+        assignmentId: swapCandidate.assignmentId,
+        reason: swapReason,
+        t,
+      });
+      setSwapCandidate(null);
+      setSwapReason('');
+      presentExportNotice(t('swapRequestTitle'), t('swapRequestSubmitted'), 'success');
+    } catch (swapError) {
+      Alert.alert(
+        t('swapRequestTitle'),
+        swapError instanceof Error ? swapError.message : t('swapRequestSubmitFailed')
+      );
+    } finally {
+      setIsSubmittingSwap(false);
+    }
+  };
+
   return (
     <SafeAreaView style={[styles.safeArea, { backgroundColor: theme.background }]} edges={['left', 'right']}>
       <ScrollView
@@ -927,6 +1001,55 @@ export default function MonthlyHoursScreen() {
                   </View>
                   <Text style={[styles.statusValue, { color: item.tone }]}>{item.value}</Text>
                   <Text style={[styles.statusLabel, { color: theme.textSecondary }]}>{item.label}</Text>
+                </View>
+              ))}
+            </View>
+          </View>
+        ) : null}
+
+        {swapCandidates.length > 0 ? (
+          <View style={[styles.panel, { backgroundColor: theme.surfaceElevated, borderColor: theme.borderSoft }]}>
+            <View style={styles.panelHeader}>
+              <View style={styles.panelHeaderCopy}>
+                <Text style={[styles.panelTitle, { color: theme.textPrimary }]}>
+                  {t('swapRequestPanelTitle')}
+                </Text>
+                <Text style={[styles.panelSubtitle, { color: theme.textSecondary }]}>
+                  {t('swapRequestPanelHint')}
+                </Text>
+              </View>
+            </View>
+            <View style={styles.swapList}>
+              {swapCandidates.map((item) => (
+                <View
+                  key={`${item.shiftId}-${item.assignmentId ?? 'assignment'}`}
+                  style={[
+                    styles.swapRow,
+                    { backgroundColor: theme.surface, borderColor: theme.borderSoft },
+                  ]}
+                >
+                  <View style={styles.swapCopy}>
+                    <Text style={[styles.swapTitle, { color: theme.textPrimary }]}>
+                      {item.title}
+                    </Text>
+                    <Text style={[styles.swapMeta, { color: theme.textSecondary }]}>
+                      {[item.customer, item.date, `${item.plannedStartTime || '—'} - ${item.plannedEndTime || '—'}`]
+                        .filter(Boolean)
+                        .join(' · ')}
+                    </Text>
+                  </View>
+                  <TouchableOpacity
+                    style={[styles.swapAction, { backgroundColor: theme.surfaceMuted, borderColor: theme.borderSoft }]}
+                    onPress={() => {
+                      setSwapCandidate(item);
+                      setSwapReason('');
+                    }}
+                  >
+                    <Ionicons name="swap-horizontal-outline" size={15} color={theme.primary} />
+                    <Text style={[styles.swapActionText, { color: theme.primary }]}>
+                      {t('swapRequestAction')}
+                    </Text>
+                  </TouchableOpacity>
                 </View>
               ))}
             </View>
@@ -1257,6 +1380,57 @@ export default function MonthlyHoursScreen() {
           </LinearGradient>
         </View>
       ) : null}
+      <Modal
+        visible={Boolean(swapCandidate)}
+        animationType="fade"
+        transparent
+        onRequestClose={() => setSwapCandidate(null)}
+      >
+        <Pressable style={styles.modalBackdrop} onPress={() => setSwapCandidate(null)}>
+          <Pressable
+            style={[styles.swapModal, { backgroundColor: theme.surfaceElevated, borderColor: theme.borderSoft }]}
+            onPress={(event) => event.stopPropagation()}
+          >
+            <Text style={[styles.modalEyebrow, { color: theme.primary }]}>{t('swapRequestTitle')}</Text>
+            <Text style={[styles.modalTitle, { color: theme.textPrimary }]}>
+              {swapCandidate?.title ?? t('swapRequestAction')}
+            </Text>
+            <Text style={[styles.modalHint, { color: theme.textSecondary }]}>
+              {swapCandidate
+                ? [swapCandidate.date, `${swapCandidate.plannedStartTime || '—'} - ${swapCandidate.plannedEndTime || '—'}`]
+                    .filter(Boolean)
+                    .join(' · ')
+                : ''}
+            </Text>
+            <TextInput
+              value={swapReason}
+              onChangeText={setSwapReason}
+              placeholder={t('swapRequestReasonPlaceholder')}
+              placeholderTextColor={theme.textSecondary}
+              multiline
+              maxLength={1000}
+              style={[
+                styles.swapInput,
+                {
+                  color: theme.textPrimary,
+                  backgroundColor: theme.surfaceMuted,
+                  borderColor: theme.borderSoft,
+                },
+              ]}
+            />
+            <View style={styles.modalActions}>
+              <TouchableOpacity style={styles.modalSecondary} onPress={() => setSwapCandidate(null)}>
+                <Text style={[styles.modalSecondaryText, { color: theme.textSecondary }]}>{t('commonCancel')}</Text>
+              </TouchableOpacity>
+              <PrimaryButton
+                title={isSubmittingSwap ? t('swapRequestSubmitting') : t('swapRequestSubmit')}
+                onPress={() => void handleSubmitSwapRequest()}
+                disabled={isSubmittingSwap}
+              />
+            </View>
+          </Pressable>
+        </Pressable>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -1668,6 +1842,11 @@ const styles = StyleSheet.create({
     flex: 1,
     gap: 4,
   },
+  panelSubtitle: {
+    marginTop: 4,
+    fontSize: 13,
+    lineHeight: 18,
+  },
   panelTitle: {
     fontSize: 18,
     fontWeight: '800',
@@ -1698,6 +1877,43 @@ const styles = StyleSheet.create({
   panelBadgeText: {
     fontSize: 11,
     fontWeight: '700',
+  },
+  swapList: {
+    gap: 10,
+  },
+  swapRow: {
+    borderWidth: 1,
+    borderRadius: 18,
+    padding: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  swapCopy: {
+    flex: 1,
+    minWidth: 0,
+  },
+  swapTitle: {
+    fontSize: 15,
+    fontWeight: '800',
+  },
+  swapMeta: {
+    marginTop: 4,
+    fontSize: 12,
+    lineHeight: 17,
+  },
+  swapAction: {
+    borderWidth: 1,
+    borderRadius: 999,
+    paddingHorizontal: 11,
+    paddingVertical: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  swapActionText: {
+    fontSize: 12,
+    fontWeight: '800',
   },
   statusGrid: {
     flexDirection: 'row',
@@ -1934,5 +2150,59 @@ const styles = StyleSheet.create({
   emptyText: {
     fontSize: 14,
     lineHeight: 20,
+  },
+  modalBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(2, 8, 23, 0.72)',
+    justifyContent: 'center',
+    padding: 18,
+  },
+  swapModal: {
+    borderWidth: 1,
+    borderRadius: 26,
+    padding: 18,
+    gap: 12,
+  },
+  modalEyebrow: {
+    fontSize: 12,
+    fontWeight: '900',
+    letterSpacing: 1,
+    textTransform: 'uppercase',
+  },
+  modalTitle: {
+    fontSize: 22,
+    fontWeight: '900',
+    letterSpacing: -0.4,
+  },
+  modalHint: {
+    fontSize: 13,
+    lineHeight: 18,
+  },
+  swapInput: {
+    minHeight: 120,
+    borderWidth: 1,
+    borderRadius: 18,
+    padding: 12,
+    fontSize: 15,
+    lineHeight: 21,
+    textAlignVertical: 'top',
+  },
+  modalActions: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    alignItems: 'center',
+    gap: 12,
+    flexWrap: 'wrap',
+  },
+  modalSecondary: {
+    minHeight: 44,
+    paddingHorizontal: 14,
+    borderRadius: 22,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  modalSecondaryText: {
+    fontSize: 14,
+    fontWeight: '800',
   },
 });
