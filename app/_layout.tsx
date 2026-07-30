@@ -33,6 +33,7 @@ import { useExpoPushToken } from '@hooks/useExpoPushToken';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { AppErrorBoundary } from '@shared/components/AppErrorBoundary';
+import { AppUpdateGate } from '@shared/components/AppUpdateGate';
 import { NotificationProvider } from '@shared/context/NotificationContext';
 import {
   LanguageProvider,
@@ -1134,7 +1135,9 @@ export default function RootLayout() {
             <NotificationProvider>
               <ThemeProvider>
                 <CalendarSelectionProvider>
-                  <LayoutContent />
+                  <AppUpdateGate>
+                    <LayoutContent />
+                  </AppUpdateGate>
                 </CalendarSelectionProvider>
               </ThemeProvider>
             </NotificationProvider>
