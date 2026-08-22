@@ -43,6 +43,36 @@ export type ShiftSwapRequestRecord = {
   createdAt: string;
 };
 
+export type EmployeeOpenShiftRequestStatus = 'pending' | 'approved' | 'rejected' | 'cancelled';
+
+export type EmployeeOpenShiftRecord = {
+  id: string;
+  companyId: string;
+  objectId: string | null;
+  objectTitle: string;
+  objectAddress: string | null;
+  shiftDescription: string | null;
+  shiftStartingDate: string | null;
+  shiftStartingTime: string | null;
+  shiftEndingTime: string | null;
+  requiredWorkers: number;
+  assignedWorkers: number;
+  openSlots: number;
+  requestStatus: EmployeeOpenShiftRequestStatus | null;
+  requestId: string | null;
+};
+
+export type EmployeeOpenShiftRequestRecord = {
+  id: string;
+  companyId: string;
+  shiftId: string;
+  employeeId: string;
+  note: string | null;
+  status: EmployeeOpenShiftRequestStatus;
+  reviewNote: string | null;
+  createdAt: string;
+};
+
 type Translate = (key: any, params?: Record<string, string | number>) => string;
 
 const buildEmployeeApiUrl = (apiBaseUrl: string, path: string) => {
@@ -237,4 +267,64 @@ export const cancelShiftSwapRequest = async ({
   if (!response.ok) {
     throw new Error(getErrorMessage(payload, t('swapRequestCancelFailed')));
   }
+};
+
+export const fetchEmployeeOpenShifts = async ({
+  apiBaseUrl,
+  accessToken,
+  t,
+}: {
+  apiBaseUrl: string;
+  accessToken?: string | null;
+  t: Translate;
+}): Promise<EmployeeOpenShiftRecord[]> => {
+  const response = await fetch(buildEmployeeApiUrl(apiBaseUrl, '/api/employee/open-shifts'), {
+    method: 'GET',
+    headers: {
+      Accept: 'application/json',
+      ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
+    },
+  });
+  const payload = await parseJson(response);
+  if (!response.ok) {
+    throw new Error(getErrorMessage(payload, t('openShiftsLoadFailed')));
+  }
+  if (
+    payload &&
+    typeof payload === 'object' &&
+    'shifts' in payload &&
+    Array.isArray((payload as { shifts?: unknown }).shifts)
+  ) {
+    return (payload as { shifts: EmployeeOpenShiftRecord[] }).shifts;
+  }
+  return [];
+};
+
+export const requestEmployeeOpenShift = async ({
+  apiBaseUrl,
+  accessToken,
+  shiftId,
+  note,
+  t,
+}: {
+  apiBaseUrl: string;
+  accessToken?: string | null;
+  shiftId: string;
+  note?: string;
+  t: Translate;
+}): Promise<EmployeeOpenShiftRequestRecord> => {
+  const response = await fetch(buildEmployeeApiUrl(apiBaseUrl, '/api/employee/open-shifts'), {
+    method: 'POST',
+    headers: {
+      Accept: 'application/json',
+      'Content-Type': 'application/json',
+      ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
+    },
+    body: JSON.stringify({ shiftId, note }),
+  });
+  const payload = await parseJson(response);
+  if (!response.ok) {
+    throw new Error(getErrorMessage(payload, t('openShiftsRequestFailed')));
+  }
+  return (payload as { request: EmployeeOpenShiftRequestRecord }).request;
 };
