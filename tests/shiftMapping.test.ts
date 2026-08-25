@@ -39,6 +39,17 @@ assert.strictEqual(overnightMapped.start, '2026-03-01T22:00:00.000Z');
 assert.strictEqual(overnightMapped.end, '2026-03-02T06:00:00.000Z');
 assert.strictEqual(overnightMapped.status, 'completed');
 
+const timeOnlyMapped = mapShiftRecord({
+  id: 'shift-time-only',
+  title: 'Office shift',
+  shiftStartingDate: '2026-08-12',
+  shiftStartingTime: '06:00',
+  shiftEndingTime: '18:00',
+});
+
+assert.strictEqual(timeOnlyMapped.start, new Date('2026-08-12T06:00').toISOString());
+assert.strictEqual(timeOnlyMapped.end, new Date('2026-08-12T18:00').toISOString());
+
 const fallbackMapped = mapShiftRecord({ id: 'shift-fallback' });
 assert.strictEqual(fallbackMapped.title, 'Shift');
 assert.strictEqual(fallbackMapped.location, 'TBD');

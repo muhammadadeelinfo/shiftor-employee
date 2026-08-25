@@ -86,14 +86,40 @@ const pickFirstValue = (row: Record<string, unknown>, keys: string[]): unknown =
 };
 
 export const mapShiftRecord = (raw: Record<string, unknown>): Shift => {
+  const startDateValue = pickFirstValue(raw, [
+    'shiftStartingDate',
+    'shiftstartingdate',
+    'start_date',
+    'start',
+    'start_at',
+  ]);
+  const startTimeValue = pickFirstValue(raw, [
+    'shiftStartingTime',
+    'shiftstartingtime',
+    'start_time',
+    'startTime',
+  ]);
+  const endDateValue = pickFirstValue(raw, [
+    'shiftEndingDate',
+    'shiftendingdate',
+    'end_date',
+    'end',
+    'end_at',
+  ]);
+  const endTimeValue = pickFirstValue(raw, [
+    'shiftEndingTime',
+    'shiftendingtime',
+    'end_time',
+    'endTime',
+  ]);
   const start = normalizeTimestampPair(
-    pickFirstValue(raw, ['shiftStartingDate', 'shiftstartingdate', 'start_date', 'start', 'start_at']),
-    pickFirstValue(raw, ['shiftStartingTime', 'shiftstartingtime', 'start_time', 'startTime']),
+    startDateValue,
+    startTimeValue,
     defaultShiftStartIso
   );
   let end = normalizeTimestampPair(
-    pickFirstValue(raw, ['shiftEndingDate', 'shiftendingdate', 'end_date', 'end', 'end_at']),
-    pickFirstValue(raw, ['shiftEndingTime', 'shiftendingtime', 'end_time', 'endTime']),
+    endDateValue ?? (endTimeValue ? startDateValue : undefined),
+    endTimeValue,
     defaultShiftEndIso
   );
   end = ensureShiftEndAfterStart(start, end);
