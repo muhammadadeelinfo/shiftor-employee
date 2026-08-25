@@ -677,7 +677,7 @@ export default function CalendarScreen() {
                                   >
                                     <Ionicons
                                       name={shiftTypeIconMap[type].name}
-                                      size={11}
+                                      size={16}
                                       color={shiftTypeIconMap[type].color}
                                     />
                                   </View>
@@ -963,9 +963,9 @@ const styles = StyleSheet.create({
     gap: 3,
   },
   shiftIcon: {
-    width: 20,
-    height: 20,
-    borderRadius: 10,
+    width: 30,
+    height: 30,
+    borderRadius: 15,
     backgroundColor: '#fff',
     alignItems: 'center',
     justifyContent: 'center',
@@ -976,8 +976,8 @@ const styles = StyleSheet.create({
     elevation: 3,
   },
   shiftIconPlaceholder: {
-    width: 20,
-    height: 20,
+    width: 30,
+    height: 30,
   },
   todayDot: {
     marginTop: 5,
