@@ -80,6 +80,8 @@ export const enTranslations = {
       '{successCount} shifts were confirmed, but {failedCount} failed. Please try again.',
     confirmAllShiftsResultFailureBody:
       'We could not confirm your shifts right now. Please try again.',
+    viewPastShifts: 'View past shifts',
+    hidePastShifts: 'Hide past shifts',
     phasePast: 'Past shift',
     phaseLive: 'Live now',
     phaseUpcoming: 'Upcoming',

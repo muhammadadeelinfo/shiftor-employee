@@ -80,6 +80,8 @@ export const deTranslations = {
       '{successCount} Schichten wurden bestätigt, aber {failedCount} sind fehlgeschlagen. Bitte versuche es erneut.',
     confirmAllShiftsResultFailureBody:
       'Deine Schichten konnten gerade nicht bestätigt werden. Bitte versuche es erneut.',
+    viewPastShifts: 'Vergangene Schichten anzeigen',
+    hidePastShifts: 'Vergangene Schichten ausblenden',
     phasePast: 'Vergangene Schicht',
     phaseLive: 'Jetzt live',
     phaseUpcoming: 'Kommend',

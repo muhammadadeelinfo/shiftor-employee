@@ -58,18 +58,33 @@ export default function MyShiftsScreen() {
   const [confirmingId, setConfirmingId] = useState<string | null>(null);
   const [confirmingAll, setConfirmingAll] = useState(false);
   const [isExportingPlan, setIsExportingPlan] = useState(false);
+  const [showPastShifts, setShowPastShifts] = useState(false);
   const [layoutTick, setLayoutTick] = useState(0);
   const [focusTick, setFocusTick] = useState(0);
   const listScrollRef = useRef<ScrollView>(null);
   const shiftLayouts = useRef(new Map<string, number>());
   const lastAutoScrolledShiftId = useRef<string | null>(null);
+  const pendingPastScrollToEnd = useRef(false);
+  const pendingCurrentListScrollToTop = useRef(false);
 
-  const now = new Date();
-  const liveShift = orderedShifts.find((shift) => getShiftPhase(shift.start, shift.end, now) === 'live');
-  const nextShift = orderedShifts.find((shift) => new Date(shift.start) > now);
+  const now = useMemo(() => new Date(), []);
+  const pastShifts = useMemo(
+    () => orderedShifts.filter((shift) => getShiftPhase(shift.start, shift.end, now) === 'past'),
+    [now, orderedShifts]
+  );
+  const currentAndUpcomingShifts = useMemo(
+    () => orderedShifts.filter((shift) => getShiftPhase(shift.start, shift.end, now) !== 'past'),
+    [now, orderedShifts]
+  );
+  const visibleShifts = useMemo(
+    () => (showPastShifts ? [...currentAndUpcomingShifts, ...pastShifts] : currentAndUpcomingShifts),
+    [currentAndUpcomingShifts, pastShifts, showPastShifts]
+  );
+  const liveShift = currentAndUpcomingShifts.find((shift) => getShiftPhase(shift.start, shift.end, now) === 'live');
+  const nextShift = currentAndUpcomingShifts.find((shift) => new Date(shift.start) > now);
   const focusedShiftId = nextShift?.id ?? liveShift?.id;
 
-  const referenceShift = orderedShifts.find((shift) => shift.id === focusedShiftId) ?? orderedShifts[0];
+  const referenceShift = visibleShifts.find((shift) => shift.id === focusedShiftId) ?? visibleShifts[0];
   const referenceMonth = referenceShift ? new Date(referenceShift.start) : now;
   const monthLabel = getMonthLabel(referenceMonth);
 
@@ -88,22 +103,23 @@ export default function MyShiftsScreen() {
   ) : null;
   const pendingAssignmentIds = useMemo(
     () =>
-      orderedShifts
+      visibleShifts
         .filter((shift) => {
           if (!shift.assignmentId) return false;
           const normalized = normalizeShiftConfirmationStatus(shift.confirmationStatus);
           return normalized === 'published';
         })
         .map((shift) => shift.assignmentId as string),
-    [orderedShifts]
+    [visibleShifts]
   );
   const pendingAssignmentIdSet = useMemo(
     () => new Set(pendingAssignmentIds),
     [pendingAssignmentIds]
   );
+  const hasPastShifts = pastShifts.length > 0;
   const shiftIdentityKey = useMemo(
-    () => orderedShifts.map((shift) => `${shift.id}:${shift.start}:${shift.end}`).join('|'),
-    [orderedShifts]
+    () => visibleShifts.map((shift) => `${shift.id}:${shift.start}:${shift.end}`).join('|'),
+    [visibleShifts]
   );
 
   const renderListEmptyState = () => (
@@ -245,7 +261,7 @@ export default function MyShiftsScreen() {
 
   const handleExportShiftPlan = useCallback(async () => {
     if (isExportingPlan) return;
-    if (!orderedShifts.length) {
+    if (!visibleShifts.length) {
       Alert.alert(t('shiftPlanExportTitle'), t('shiftPlanExportEmptyBody'));
       return;
     }
@@ -257,9 +273,9 @@ export default function MyShiftsScreen() {
         throw new Error('Document directory unavailable');
       }
 
-      const fileName = buildShiftPlanFileName(orderedShifts);
+      const fileName = buildShiftPlanFileName(visibleShifts);
       const fileUri = `${directory}${fileName}`;
-      const content = buildShiftPlanCalendarContent(orderedShifts);
+      const content = buildShiftPlanCalendarContent(visibleShifts);
 
       await FileSystem.writeAsStringAsync(fileUri, content, {
         encoding: FileSystem.EncodingType.UTF8,
@@ -286,7 +302,7 @@ export default function MyShiftsScreen() {
     } finally {
       setIsExportingPlan(false);
     }
-  }, [isExportingPlan, orderedShifts, t]);
+  }, [isExportingPlan, visibleShifts, t]);
 
   useEffect(() => {
     shiftLayouts.current.clear();
@@ -301,14 +317,60 @@ export default function MyShiftsScreen() {
     }, [])
   );
 
-  useEffect(() => {
+  const scrollToFocusedShift = useCallback(() => {
     if (!focusedShiftId) return;
+    if (showPastShifts || pendingPastScrollToEnd.current || pendingCurrentListScrollToTop.current) return;
     if (lastAutoScrolledShiftId.current === focusedShiftId) return;
     const targetOffset = shiftLayouts.current.get(focusedShiftId);
     if (targetOffset === undefined) return;
-    listScrollRef.current?.scrollTo({ y: Math.max(targetOffset - 12, 0), animated: true });
+    const scrollToTarget = () =>
+      listScrollRef.current?.scrollTo({ y: Math.max(targetOffset - 12, 0), animated: true });
+    requestAnimationFrame(scrollToTarget);
+    setTimeout(scrollToTarget, 80);
     lastAutoScrolledShiftId.current = focusedShiftId;
-  }, [focusedShiftId, focusTick, layoutTick]);
+  }, [focusedShiftId, showPastShifts]);
+
+  useEffect(() => {
+    scrollToFocusedShift();
+  }, [focusTick, layoutTick, scrollToFocusedShift]);
+
+  const scrollToPastShiftsEnd = useCallback(() => {
+    if (!showPastShifts || !pendingPastScrollToEnd.current) return;
+    requestAnimationFrame(() => {
+      listScrollRef.current?.scrollToEnd({ animated: true });
+      pendingPastScrollToEnd.current = false;
+    });
+  }, [showPastShifts]);
+
+  useEffect(() => {
+    scrollToPastShiftsEnd();
+  }, [scrollToPastShiftsEnd, shiftIdentityKey]);
+
+  const handleShiftListContentSizeChange = useCallback(() => {
+    scrollToPastShiftsEnd();
+    if (pendingCurrentListScrollToTop.current && !showPastShifts) {
+      const scrollToTop = () => listScrollRef.current?.scrollTo({ y: 0, animated: true });
+      requestAnimationFrame(scrollToTop);
+      setTimeout(scrollToTop, 80);
+      pendingCurrentListScrollToTop.current = false;
+      lastAutoScrolledShiftId.current = focusedShiftId ?? null;
+      return;
+    }
+    scrollToFocusedShift();
+  }, [focusedShiftId, scrollToFocusedShift, scrollToPastShiftsEnd, showPastShifts]);
+
+  const handleTogglePastShifts = useCallback(() => {
+    if (showPastShifts) {
+      pendingPastScrollToEnd.current = false;
+      pendingCurrentListScrollToTop.current = true;
+      lastAutoScrolledShiftId.current = null;
+      setShowPastShifts(false);
+      return;
+    }
+    pendingPastScrollToEnd.current = true;
+    pendingCurrentListScrollToTop.current = false;
+    setShowPastShifts(true);
+  }, [showPastShifts]);
 
   const errorView = error ? (
     <View style={styles.errorCard}>
@@ -330,11 +392,11 @@ export default function MyShiftsScreen() {
   const shiftRows = useMemo(() => {
     if (!showTabletGrid) return [];
     const rows: (typeof orderedShifts)[] = [];
-    for (let index = 0; index < orderedShifts.length; index += 2) {
-      rows.push(orderedShifts.slice(index, index + 2));
+    for (let index = 0; index < visibleShifts.length; index += 2) {
+      rows.push(visibleShifts.slice(index, index + 2));
     }
     return rows;
-  }, [orderedShifts, showTabletGrid]);
+  }, [visibleShifts, showTabletGrid]);
 
   const renderShiftCard = useCallback(
     (shift: (typeof orderedShifts)[number]) => {
@@ -454,6 +516,28 @@ export default function MyShiftsScreen() {
               </View>
             </View>
           ) : null}
+          {!isGuest && hasPastShifts ? (
+            <TouchableOpacity
+              onPress={handleTogglePastShifts}
+              activeOpacity={0.9}
+              style={[
+                styles.pastShiftsAction,
+                {
+                  backgroundColor: theme.surfaceMuted,
+                  borderColor: theme.borderSoft,
+                },
+              ]}
+            >
+              <Ionicons
+                name={showPastShifts ? 'eye-off-outline' : 'time-outline'}
+                size={14}
+                color={theme.primary}
+              />
+              <Text style={[styles.pastShiftsActionText, { color: theme.textPrimary }]}>
+                {showPastShifts ? t('hidePastShifts') : t('viewPastShifts')}
+              </Text>
+            </TouchableOpacity>
+          ) : null}
         </View>
         {isUsingCachedShifts ? cachedShiftNotice : errorView}
         <ScrollView
@@ -461,6 +545,7 @@ export default function MyShiftsScreen() {
           contentContainerStyle={listContentStyle}
           style={[styles.scrollView, { backgroundColor: theme.background }]}
           contentInsetAdjustmentBehavior="never"
+          onContentSizeChange={handleShiftListContentSizeChange}
           refreshControl={<RefreshControl refreshing={isLoading} onRefresh={() => refetch()} />}
         >
           {showSkeletons && renderSkeletons()}
@@ -472,8 +557,8 @@ export default function MyShiftsScreen() {
                     {row.length === 1 ? <View style={styles.gridSpacer} /> : null}
                   </View>
                 ))
-              : orderedShifts.map((shift) => renderShiftCard(shift)))}
-          {!error && !orderedShifts.length && !isLoading && renderListEmptyState()}
+              : visibleShifts.map((shift) => renderShiftCard(shift)))}
+          {!error && !visibleShifts.length && !isLoading && renderListEmptyState()}
         </ScrollView>
       </View>
     </SafeAreaView>
@@ -530,6 +615,22 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
+  },
+  pastShiftsAction: {
+    alignSelf: 'flex-start',
+    minHeight: 30,
+    borderRadius: 999,
+    borderWidth: 1,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    marginTop: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  pastShiftsActionText: {
+    fontSize: 12,
+    fontWeight: '700',
   },
   exportAction: {
     minHeight: 30,
