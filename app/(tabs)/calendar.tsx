@@ -15,7 +15,6 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { PrimaryButton } from '@shared/components/PrimaryButton';
 import { useShiftFeed } from '@features/shifts/useShiftFeed';
-import { getShiftPhase, phaseMeta, type ShiftPhase } from '@shared/utils/shiftPhase';
 import { useLanguage } from '@shared/context/LanguageContext';
 import { useCalendarSelection } from '@shared/context/CalendarSelectionContext';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -25,7 +24,6 @@ import { useRouter } from 'expo-router';
 import * as Calendar from 'expo-calendar';
 import { useTheme } from '@shared/themeContext';
 import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
-import { layoutTokens } from '@shared/theme/layout';
 import { useAuth } from '@hooks/useSupabaseAuth';
 
 const WEEKDAY_LABELS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
@@ -71,53 +69,6 @@ const dayKey = (date: Date) => {
 };
 const getMonthLabel = (date: Date) => date.toLocaleDateString([], { month: 'long', year: 'numeric' });
 
-const formatShiftTime = (shift: { start: string; end: string }) => {
-  const start = new Date(shift.start);
-  const end = new Date(shift.end);
-  const dateLabel = start.toLocaleDateString(undefined, {
-    weekday: 'short',
-    month: 'short',
-    day: 'numeric',
-  });
-  const startLabel = start.toLocaleTimeString(undefined, {
-    hour: 'numeric',
-    minute: '2-digit',
-  });
-  const endLabel = end.toLocaleTimeString(undefined, {
-    hour: 'numeric',
-    minute: '2-digit',
-  });
-  return { dateLabel, startLabel, endLabel };
-};
-
-const buildShiftLocation = (shift: {
-  location: string;
-  objectName?: string;
-  objectAddress?: string;
-}) => {
-  const rawParts = [
-    shift.objectName?.trim(),
-    shift.location?.trim(),
-    shift.objectAddress?.trim(),
-  ].filter((value): value is string => Boolean(value));
-  const seen = new Set<string>();
-  const uniqueParts: string[] = [];
-  rawParts.forEach((part) => {
-    const normalized = part.toLowerCase().replace(/\s+/g, ' ').trim();
-    if (!seen.has(normalized)) {
-      seen.add(normalized);
-      uniqueParts.push(part);
-    }
-  });
-  return uniqueParts.join(', ');
-};
-
-const PHASE_TRANSLATION_KEYS: Record<ShiftPhase, 'phasePast' | 'phaseLive' | 'phaseUpcoming'> = {
-  past: 'phasePast',
-  live: 'phaseLive',
-  upcoming: 'phaseUpcoming',
-};
-
 const shiftTypeIconMap = {
   morning: { name: 'sunny', color: '#facc15' },
   evening: { name: 'partly-sunny', color: '#fb923c' },
@@ -134,6 +85,12 @@ type LegendEntry = {
   colors?: string[];
   icon?: React.ComponentProps<typeof Ionicons>['name'];
   description?: string;
+};
+
+type LegendGroup = {
+  key: string;
+  title: string;
+  entries: LegendEntry[];
 };
 
 type ImportedCalendarEvent = {
@@ -161,16 +118,15 @@ export default function CalendarScreen() {
   const { theme } = useTheme();
   const { user } = useAuth();
   const { width, height } = useWindowDimensions();
-  const isTablet = width >= 768;
   const isLargeTablet = width >= 1024;
-  const isTabletLandscape = isLargeTablet && width > height;
-  const horizontalPadding = isTablet ? 20 : layoutTokens.screenHorizontal;
+  const horizontalPadding = 0;
   const isGuest = !user;
   const insets = useSafeAreaInsets();
   const tabBarHeight = useBottomTabBarHeight();
   const isIOS = Platform.OS === 'ios';
   const { orderedShifts, isLoading, error, refetch, isUsingCachedShifts, cachedShiftsAt } = useShiftFeed();
   const [visibleMonth, setVisibleMonth] = useState(() => startOfMonth(new Date()));
+  const [isLegendVisible, setLegendVisible] = useState(false);
   const calendarFlip = useRef(new Animated.Value(0)).current;
   const hasManuallyChangedMonth = useRef(false);
   const rotateY = calendarFlip.interpolate({
@@ -184,7 +140,7 @@ export default function CalendarScreen() {
   const [importedEventsByDay, setImportedEventsByDay] = useState<
     Record<string, ImportedCalendarEvent[]>
   >({});
-  const legendGroups = useMemo(
+  const legendGroups = useMemo<LegendGroup[]>(
     () => [
       {
         key: 'shifts',
@@ -236,7 +192,7 @@ export default function CalendarScreen() {
           },
         ],
       },
-    ] as const,
+    ],
     [t]
   );
 
@@ -282,21 +238,6 @@ export default function CalendarScreen() {
     });
     return map;
   }, [monthShifts]);
-
-  const dayPhaseMap = useMemo(() => {
-    const map = new Map<string, ShiftPhase>();
-    monthShifts.forEach((shift) => {
-      const shiftDate = new Date(shift.start);
-      if (Number.isNaN(shiftDate.getTime())) return;
-      const key = dayKey(shiftDate);
-      const phase = getShiftPhase(shift.start, shift.end, now);
-      const existing = map.get(key);
-      if (!existing || existing === 'past' || (existing === 'upcoming' && phase === 'live')) {
-        map.set(key, phase);
-      }
-    });
-    return map;
-  }, [monthShifts, now]);
 
   const calendarWeeks = useMemo(() => getCalendarWeeks(visibleMonth), [visibleMonth]);
   const showSkeletons = !isGuest && isLoading && !orderedShifts.length && !error;
@@ -507,67 +448,100 @@ export default function CalendarScreen() {
   const scrollContentStyle = [
     styles.scrollContent,
     {
-      paddingBottom: 20 + insets.bottom + tabBarHeight,
+      paddingBottom: 0,
       backgroundColor: theme.background,
     },
   ];
+  const calendarWrapperDynamicStyle = {
+    minHeight: Math.max(560, height - tabBarHeight - insets.bottom - (isIOS ? 154 : 132)),
+  };
+  const renderLegendEntry = (entry: LegendEntry) => (
+    <View
+      key={entry.key}
+      style={[
+        styles.legendEntryCard,
+        {
+          backgroundColor: theme.surfaceMuted,
+          borderColor: theme.borderSoft,
+        },
+      ]}
+    >
+      <View
+        style={[
+          styles.legendEntryIcon,
+          { backgroundColor: theme.surface, borderColor: theme.borderSoft },
+        ]}
+      >
+        {entry.variant === 'dot' && (
+          <View
+            style={[
+              styles.legendChipIcon,
+              { backgroundColor: entry.color ?? '#fff' },
+            ]}
+          />
+        )}
+        {entry.variant === 'multiDot' && (
+          <View style={styles.legendMultiIcon}>
+            {entry.colors?.map((color, index) => (
+              <View
+                key={`${entry.key}-${index}`}
+                style={[
+                  styles.legendDotMini,
+                  { backgroundColor: color },
+                ]}
+              />
+            ))}
+          </View>
+        )}
+        {entry.variant === 'icon' && entry.icon && (
+          <Ionicons name={entry.icon} size={16} color={entry.color} />
+        )}
+      </View>
+      <View style={styles.legendText}>
+        <Text style={[styles.legendLabel, { color: theme.textPrimary }]}>{entry.label}</Text>
+        {entry.description ? (
+          <Text style={[styles.legendDescription, { color: theme.textSecondary }]}>
+            {entry.description}
+          </Text>
+        ) : null}
+      </View>
+    </View>
+  );
 
   return (
     <SafeAreaView style={containerStyle} edges={['left', 'right']}>
       <LinearGradient colors={heroGradientColors} style={styles.background} />
       <View style={styles.contentFrame}>
-      <ScrollView
-        contentContainerStyle={scrollContentStyle}
-        refreshControl={<RefreshControl refreshing={isLoading} onRefresh={() => refetch()} />}
-        showsVerticalScrollIndicator={false}
-        contentInsetAdjustmentBehavior="never"
-        scrollIndicatorInsets={isIOS ? { bottom: tabBarHeight + insets.bottom } : undefined}
-        scrollEnabled
-        alwaysBounceVertical
-        bounces
-        directionalLockEnabled
-        keyboardDismissMode="on-drag"
-        decelerationRate={isIOS ? 'fast' : 'normal'}
-      >
-        <View
-          style={[
-            styles.monthCard,
-            isLargeTablet && styles.monthCardTablet,
-            {
-              backgroundColor: theme.surfaceElevated,
-              borderColor: theme.borderSoft,
-              paddingVertical: isIOS ? 8 : 6,
-            },
-            isIOS && styles.monthCardIOS,
-          ]}
+        <ScrollView
+          style={styles.calendarScroll}
+          contentContainerStyle={scrollContentStyle}
+          refreshControl={<RefreshControl refreshing={isLoading} onRefresh={() => refetch()} />}
+          showsVerticalScrollIndicator={false}
+          contentInsetAdjustmentBehavior="never"
+          scrollIndicatorInsets={isIOS ? { bottom: tabBarHeight + insets.bottom } : undefined}
+          scrollEnabled
+          alwaysBounceVertical
+          bounces
+          directionalLockEnabled
+          keyboardDismissMode="on-drag"
+          decelerationRate={isIOS ? 'fast' : 'normal'}
         >
-          <LinearGradient colors={monthCardGradientColors} style={styles.monthCardGradient} />
-          <View style={styles.monthNavRow}>
-            <Pressable
-              onPress={() => handleMonthChange(-1)}
-              style={[
-                styles.monthNavButton,
-                {
-                  backgroundColor: theme.surface,
-                  shadowColor: theme.primary,
-                  padding: isIOS ? 5 : 4,
-                },
-              ]}
-            >
-              <Ionicons name="chevron-back" size={20} color={theme.textSecondary} />
-            </Pressable>
-            <Text
-              style={[
-                styles.monthLabel,
-                { color: theme.textPrimary },
-                isIOS && styles.monthLabelIOS,
-              ]}
-            >
-              {monthLabel}
-            </Text>
-            <View style={styles.monthNavRightGroup}>
+          <View
+            style={[
+              styles.monthCard,
+              isLargeTablet && styles.monthCardTablet,
+              {
+                backgroundColor: theme.surfaceElevated,
+                borderColor: theme.borderSoft,
+                paddingVertical: isIOS ? 8 : 6,
+              },
+              isIOS && styles.monthCardIOS,
+            ]}
+          >
+            <LinearGradient colors={monthCardGradientColors} style={styles.monthCardGradient} />
+            <View style={styles.monthNavRow}>
               <Pressable
-                onPress={() => handleMonthChange(1)}
+                onPress={() => handleMonthChange(-1)}
                 style={[
                   styles.monthNavButton,
                   {
@@ -577,27 +551,66 @@ export default function CalendarScreen() {
                   },
                 ]}
               >
-                <Ionicons name="chevron-forward" size={20} color={theme.textSecondary} />
+                <Ionicons name="chevron-back" size={20} color={theme.textSecondary} />
               </Pressable>
+              <Text
+                style={[
+                  styles.monthLabel,
+                  { color: theme.textPrimary },
+                  isIOS && styles.monthLabelIOS,
+                ]}
+              >
+                {monthLabel}
+              </Text>
+              <View style={styles.monthNavRightGroup}>
+                <Pressable
+                  onPress={() => setLegendVisible(true)}
+                  accessibilityRole="button"
+                  accessibilityLabel={t('calendarLegendTitle')}
+                  style={[
+                    styles.monthNavButton,
+                    {
+                      backgroundColor: theme.surface,
+                      shadowColor: theme.primary,
+                      padding: isIOS ? 5 : 4,
+                    },
+                  ]}
+                >
+                  <Ionicons name="information-circle-outline" size={20} color={theme.textSecondary} />
+                </Pressable>
+                <Pressable
+                  onPress={() => handleMonthChange(1)}
+                  style={[
+                    styles.monthNavButton,
+                    {
+                      backgroundColor: theme.surface,
+                      shadowColor: theme.primary,
+                      padding: isIOS ? 5 : 4,
+                    },
+                  ]}
+                >
+                  <Ionicons name="chevron-forward" size={20} color={theme.textSecondary} />
+                </Pressable>
+              </View>
             </View>
           </View>
-        </View>
-        {isUsingCachedShifts ? cachedShiftNotice : errorView}
-        {showSkeletons && renderSkeletons()}
-        {(!error || isUsingCachedShifts) && (
-          <Animated.View
-            {...calendarPanResponder.panHandlers}
-            style={[
-              styles.calendarWrapper,
-              isLargeTablet && styles.calendarWrapperTablet,
-              {
-                transform: [{ perspective: 1000 }, { rotateY: rotateY }],
-                backgroundColor: theme.surfaceElevated,
-                borderColor: theme.borderSoft,
-              },
-              isIOS && styles.calendarWrapperIOS,
-            ]}
-          >
+          {isUsingCachedShifts ? cachedShiftNotice : errorView}
+          {showSkeletons && renderSkeletons()}
+          {(!error || isUsingCachedShifts) && (
+            <Animated.View
+              {...calendarPanResponder.panHandlers}
+              style={[
+                styles.calendarWrapper,
+                isLargeTablet && styles.calendarWrapperTablet,
+                calendarWrapperDynamicStyle,
+                {
+                  transform: [{ perspective: 1000 }, { rotateY: rotateY }],
+                  backgroundColor: theme.surfaceElevated,
+                  borderColor: theme.borderSoft,
+                },
+                isIOS && styles.calendarWrapperIOS,
+              ]}
+            >
               <View style={styles.calendarHeader}>
                 {WEEKDAY_LABELS.map((label) => (
                   <Text key={label} style={[styles.calendarHeaderLabel, { color: theme.textSecondary }]}>
@@ -613,7 +626,6 @@ export default function CalendarScreen() {
                       const dayShifts = shiftsByDay.get(key) ?? [];
                       const isCurrentMonth = day.getMonth() === visibleMonth.getMonth();
                       const isFocusedDay = focusedDayKey === key;
-                      const dayPhase = dayPhaseMap.get(key);
                       const shiftTypes = shiftTypesByDay.get(key);
                       const importedEvents = importedEventsByDay[key] ?? [];
                       const importedColors = importedEvents.map(
@@ -649,28 +661,31 @@ export default function CalendarScreen() {
                           >
                             {day.getDate()}
                           </Text>
-                          {shiftTypes && shiftTypes.size ? (
-                            <View style={styles.shiftIconRow}>
-                              {Array.from(shiftTypes).map((type) => (
-                                <View
-                                  key={type}
-                                  style={[
-                                    styles.shiftIcon,
-                                    {
-                                      backgroundColor: theme.surface,
-                                      shadowColor: theme.primary,
-                                    },
-                                  ]}
-                                >
-                                  <Ionicons
-                                    name={shiftTypeIconMap[type].name}
-                                    size={12}
-                                    color={shiftTypeIconMap[type].color}
-                                  />
-                                </View>
-                              ))}
-                            </View>
-                          ) : null}
+                          {isFocusedDay && <View style={[styles.todayDot, { backgroundColor: theme.primaryAccent }]} />}
+                          <View style={styles.shiftIconRow}>
+                            {shiftTypes && shiftTypes.size ? (
+                              Array.from(shiftTypes).map((type) => (
+                                  <View
+                                    key={type}
+                                    style={[
+                                      styles.shiftIcon,
+                                      {
+                                        backgroundColor: theme.surface,
+                                        shadowColor: theme.primary,
+                                      },
+                                    ]}
+                                  >
+                                    <Ionicons
+                                      name={shiftTypeIconMap[type].name}
+                                      size={11}
+                                      color={shiftTypeIconMap[type].color}
+                                    />
+                                  </View>
+                                ))
+                            ) : (
+                              <View style={styles.shiftIconPlaceholder} />
+                            )}
+                          </View>
                           {importedEvents.length > 0 && (
                             <View style={styles.importedEventRow}>
                               {importedColors.slice(0, 3).map((color, idx) => (
@@ -692,93 +707,59 @@ export default function CalendarScreen() {
                   </View>
                 ))}
               </View>
-          </Animated.View>
-        )}
-        <View
-          style={[
-            styles.legendCard,
-            isTabletLandscape && styles.legendCardTabletLandscape,
-            {
-              backgroundColor: theme.surface,
-              borderColor: theme.borderSoft,
-            },
-            isIOS && styles.legendCardIOS,
-          ]}
-        >
-          <LinearGradient
-            colors={[theme.surface, theme.surfaceMuted]}
-            style={styles.legendGradient}
-          />
-          <View style={styles.legendHeader}>
-            <Text style={[styles.legendTitle, { color: theme.textSecondary }]}>
-              {t('calendarLegendTitle')}
-            </Text>
-            <View style={[styles.legendHeaderDivider, { backgroundColor: theme.borderSoft }]} />
-          </View>
-          {legendGroups.map((group) => (
-            <View key={group.key} style={styles.legendGroup}>
-              <Text style={[styles.legendGroupTitle, { color: theme.textSecondary }]}>
-                {group.title}
-              </Text>
-              <View style={styles.legendList}>
-              {group.entries.map((entry) => (
-                <View
-                  key={entry.key}
-                  style={[
-                    styles.legendEntryCard,
-                    {
-                      backgroundColor: theme.surfaceMuted,
-                      borderColor: theme.borderSoft,
-                    },
-                  ]}
-                >
-                    <View
-                      style={[
-                        styles.legendEntryIcon,
-                        { backgroundColor: theme.surface, borderColor: theme.borderSoft },
-                      ]}
-                    >
-                  {entry.variant === 'dot' && (
-                        <View
-                          style={[
-                            styles.legendChipIcon,
-                            { backgroundColor: entry.color ?? '#fff' },
-                          ]}
-                        />
-                      )}
-                      {entry.variant === 'multiDot' && (
-                        <View style={styles.legendMultiIcon}>
-                          {entry.colors?.map((color, index) => (
-                            <View
-                              key={`${entry.key}-${index}`}
-                              style={[
-                                styles.legendDotMini,
-                                { backgroundColor: color },
-                              ]}
-                            />
-                          ))}
-                        </View>
-                      )}
-                      {entry.variant === 'icon' && entry.icon && (
-                        <Ionicons name={entry.icon} size={16} color={entry.color} />
-                      )}
-                    </View>
-                    <View style={styles.legendText}>
-                      <Text style={[styles.legendLabel, { color: theme.textPrimary }]}>{entry.label}</Text>
-                      {entry.description ? (
-                        <Text style={[styles.legendDescription, { color: theme.textSecondary }]}>
-                          {entry.description}
-                        </Text>
-                      ) : null}
-                  </View>
-                </View>
-              ))}
-              </View>
-            </View>
-          ))}
-        </View>
-      </ScrollView>
+            </Animated.View>
+          )}
+        </ScrollView>
       </View>
+      <Modal
+        transparent
+        visible={isLegendVisible}
+        animationType="slide"
+        onRequestClose={() => setLegendVisible(false)}
+      >
+        <View style={styles.legendModalBackdrop}>
+          <Pressable style={styles.legendModalScrim} onPress={() => setLegendVisible(false)} />
+          <View
+            style={[
+              styles.legendSheet,
+              {
+                backgroundColor: theme.surface,
+                borderColor: theme.borderSoft,
+                paddingBottom: 18 + insets.bottom,
+              },
+            ]}
+          >
+            <LinearGradient
+              colors={[theme.surface, theme.surfaceMuted]}
+              style={styles.legendGradient}
+            />
+            <View style={styles.legendHeader}>
+              <Text style={[styles.legendTitle, { color: theme.textSecondary }]}>
+                {t('calendarLegendTitle')}
+              </Text>
+              <View style={[styles.legendHeaderDivider, { backgroundColor: theme.borderSoft }]} />
+              <Pressable
+                onPress={() => setLegendVisible(false)}
+                accessibilityRole="button"
+                accessibilityLabel={t('reportPreviewClose')}
+                style={[styles.legendCloseButton, { backgroundColor: theme.surfaceMuted }]}
+              >
+                <Ionicons name="close" size={18} color={theme.textSecondary} />
+              </Pressable>
+            </View>
+            {legendGroups.map((group) => (
+              <View key={group.key} style={styles.legendGroup}>
+                <Text style={[styles.legendGroupTitle, { color: theme.textSecondary }]}>
+                  {group.title}
+                </Text>
+                <View style={styles.legendList}>
+                  {group.entries.map(renderLegendEntry)}
+                </View>
+              </View>
+            ))}
+          </View>
+        </View>
+      </Modal>
       <Modal transparent visible={showEmptyModal && !isGuest} animationType="fade">
         <View style={styles.emptyModalBackdrop}>
           <LinearGradient
@@ -828,12 +809,15 @@ const styles = StyleSheet.create({
     width: '100%',
     paddingHorizontal: 0,
   },
+  calendarScroll: {
+    flex: 1,
+  },
   monthCard: {
     backgroundColor: '#fff',
     borderRadius: 0,
     paddingVertical: 6,
-    paddingHorizontal: 16,
-    marginBottom: 8,
+    paddingHorizontal: 10,
+    marginBottom: 0,
     shadowColor: '#0f172a',
     shadowOpacity: 0.1,
     shadowOffset: { width: 0, height: 10 },
@@ -887,25 +871,26 @@ const styles = StyleSheet.create({
     elevation: 4,
   },
   calendarWrapper: {
-    borderRadius: 24,
+    flex: 1,
+    borderRadius: 0,
     backgroundColor: '#f4f5ff',
     paddingVertical: 12,
-    paddingHorizontal: 10,
-    borderWidth: 1,
+    paddingHorizontal: 4,
+    borderWidth: 0,
     shadowColor: '#0f172a',
-    shadowOpacity: 0.08,
-    shadowOffset: { width: 0, height: 10 },
-    shadowRadius: 20,
-    elevation: 10,
+    shadowOpacity: 0,
+    shadowOffset: { width: 0, height: 0 },
+    shadowRadius: 0,
+    elevation: 0,
   },
   calendarWrapperTablet: {
     paddingHorizontal: 14,
     paddingVertical: 14,
   },
   calendarWrapperIOS: {
-    borderRadius: 26,
+    borderRadius: 0,
     paddingVertical: 12,
-    paddingHorizontal: 10,
+    paddingHorizontal: 4,
   },
   calendarHeader: {
     flexDirection: 'row',
@@ -919,33 +904,36 @@ const styles = StyleSheet.create({
     color: '#94a3b8',
   },
   scrollContent: {
+    flexGrow: 1,
     paddingBottom: 16,
   },
   calendarGrid: {
+    flex: 1,
     marginTop: 10,
   },
   calendarWeekRow: {
     flexDirection: 'row',
+    flex: 1,
   },
   dayChip: {
     flex: 1,
     margin: 1,
-    minHeight: 88,
+    minHeight: 0,
     borderRadius: 10,
     backgroundColor: '#eef1ff',
     alignItems: 'center',
-    justifyContent: 'flex-start',
-    paddingTop: 12,
+    justifyContent: 'center',
+    paddingTop: 0,
     position: 'relative',
   },
   dayChipTablet: {
-    minHeight: 94,
+    minHeight: 0,
   },
   dayChipIOS: {
     margin: 1,
-    minHeight: 94,
+    minHeight: 0,
     borderRadius: 12,
-    paddingTop: 14,
+    paddingTop: 0,
   },
   dayChipFocused: {
     backgroundColor: '#ffffff08',
@@ -971,13 +959,13 @@ const styles = StyleSheet.create({
   },
   shiftIconRow: {
     flexDirection: 'row',
-    marginTop: 6,
-    gap: 4,
+    marginTop: 10,
+    gap: 3,
   },
   shiftIcon: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
+    width: 20,
+    height: 20,
+    borderRadius: 10,
     backgroundColor: '#fff',
     alignItems: 'center',
     justifyContent: 'center',
@@ -986,6 +974,17 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.15,
     shadowRadius: 6,
     elevation: 3,
+  },
+  shiftIconPlaceholder: {
+    width: 20,
+    height: 20,
+  },
+  todayDot: {
+    marginTop: 5,
+    marginBottom: -5,
+    width: 6,
+    height: 6,
+    borderRadius: 999,
   },
   importedEventRow: {
     flexDirection: 'row',
@@ -1002,30 +1001,28 @@ const styles = StyleSheet.create({
     fontSize: 10,
     color: '#475569',
   },
-  legendCard: {
-    borderRadius: 26,
-    marginTop: 12,
-    marginBottom: 24,
+  legendModalBackdrop: {
+    flex: 1,
+    justifyContent: 'flex-end',
+    backgroundColor: 'rgba(3, 7, 25, 0.5)',
+  },
+  legendModalScrim: {
+    ...StyleSheet.absoluteFillObject,
+  },
+  legendSheet: {
+    borderTopLeftRadius: 28,
+    borderTopRightRadius: 28,
     overflow: 'hidden',
+    borderWidth: 1,
+    borderBottomWidth: 0,
     shadowColor: '#0f172a',
-    shadowOpacity: 0.08,
-    shadowRadius: 20,
-    shadowOffset: { width: 0, height: 12 },
-    elevation: 10,
+    shadowOpacity: 0.24,
+    shadowRadius: 22,
+    shadowOffset: { width: 0, height: -10 },
+    elevation: 22,
     backgroundColor: '#fff',
-    paddingHorizontal: 18,
-    paddingVertical: 16,
-  },
-  legendCardTabletLandscape: {
-    marginTop: 14,
-    marginBottom: 30,
-  },
-  legendCardIOS: {
-    borderRadius: 28,
-    marginTop: 14,
-    marginBottom: 28,
     paddingHorizontal: 20,
-    paddingVertical: 18,
+    paddingTop: 18,
   },
   legendGradient: {
     ...StyleSheet.absoluteFillObject,
@@ -1036,6 +1033,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     columnGap: 10,
     marginBottom: 14,
+  },
+  legendCloseButton: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   legendTitle: {
     fontSize: 14,
