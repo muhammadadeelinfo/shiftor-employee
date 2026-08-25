@@ -15,7 +15,7 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.shiftor.employee",
-      "buildNumber": "21",
+      "buildNumber": "22",
       "infoPlist": {
         "NSCameraUsageDescription": "Camera access is required to scan QR codes for clock-in and clock-out.",
         "NSLocationWhenInUseUsageDescription": "Location access is used to show nearby shifts and verify shift locations.",
