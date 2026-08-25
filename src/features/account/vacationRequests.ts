@@ -8,6 +8,7 @@ export type VacationRequestRecord = {
   employeeId: string;
   startDate: string;
   endDate: string;
+  selectedDates?: string[] | null;
   note: string | null;
   status: VacationRequestStatus;
   reviewedAt: string | null;
@@ -24,6 +25,15 @@ export type VacationRequestContext = {
 
 const SUPABASE_UNAVAILABLE_MESSAGE = 'Supabase client is not configured.';
 const VACATION_REQUESTS_UNAVAILABLE_MESSAGE = 'Vacation requests are not available yet.';
+const SELECT_WITH_SELECTED_DATES =
+  'id,companyId,employeeId,startDate,endDate,selectedDates,note,status,reviewedAt,reviewedBy,createdAt';
+const SELECT_WITHOUT_SELECTED_DATES =
+  'id,companyId,employeeId,startDate,endDate,note,status,reviewedAt,reviewedBy,createdAt';
+
+const isMissingSelectedDatesColumnError = (error: { code?: string; message?: string }) =>
+  error.code === '42703' ||
+  (/selectedDates/i.test(error.message ?? '') &&
+    /schema cache|could not find|does not exist/i.test(error.message ?? ''));
 
 const ensureClient = () => {
   if (!supabase) {
@@ -93,11 +103,22 @@ export const fetchVacationRequests = async (
   const client = ensureClient();
   const { data, error } = await client
     .from('vacation_requests')
-    .select('id,companyId,employeeId,startDate,endDate,note,status,reviewedAt,reviewedBy,createdAt')
+    .select(SELECT_WITH_SELECTED_DATES)
     .eq('employeeId', employeeId)
     .order('createdAt', { ascending: false });
 
   if (error) {
+    if (isMissingSelectedDatesColumnError(error)) {
+      const fallback = await client
+        .from('vacation_requests')
+        .select(SELECT_WITHOUT_SELECTED_DATES)
+        .eq('employeeId', employeeId)
+        .order('createdAt', { ascending: false });
+      if (fallback.error) {
+        throw fallback.error;
+      }
+      return Array.isArray(fallback.data) ? (fallback.data as VacationRequestRecord[]) : [];
+    }
     if (/vacation_requests/i.test(error.message) && /schema cache|could not find the table/i.test(error.message)) {
       return [];
     }
@@ -139,31 +160,48 @@ export const submitVacationRequest = async ({
   employeeId,
   startDate,
   endDate,
+  selectedDates,
   note,
 }: {
   companyId: string;
   employeeId: string;
   startDate: string;
   endDate: string;
+  selectedDates?: string[];
   note?: string;
 }) => {
   const client = ensureClient();
   const trimmedNote = typeof note === 'string' && note.trim() ? note.trim() : null;
+  const insertPayload = {
+    companyId,
+    employeeId,
+    startDate,
+    endDate,
+    selectedDates: Array.isArray(selectedDates) ? selectedDates : [],
+    note: trimmedNote,
+    status: 'pending',
+  };
   const { data, error } = await client
     .from('vacation_requests')
-    .insert({
-      companyId,
-      employeeId,
-      startDate,
-      endDate,
-      note: trimmedNote,
-      status: 'pending',
-    })
-    .select('id,companyId,employeeId,startDate,endDate,note,status,reviewedAt,reviewedBy,createdAt')
+    .insert(insertPayload)
+    .select(SELECT_WITH_SELECTED_DATES)
     .limit(1)
     .single();
 
   if (error) {
+    if (isMissingSelectedDatesColumnError(error)) {
+      const { selectedDates: _selectedDates, ...fallbackPayload } = insertPayload;
+      const fallback = await client
+        .from('vacation_requests')
+        .insert(fallbackPayload)
+        .select(SELECT_WITHOUT_SELECTED_DATES)
+        .limit(1)
+        .single();
+      if (fallback.error) {
+        throw fallback.error;
+      }
+      return fallback.data as VacationRequestRecord;
+    }
     if (/vacation_requests/i.test(error.message) && /schema cache|could not find the table/i.test(error.message)) {
       throw new Error(VACATION_REQUESTS_UNAVAILABLE_MESSAGE);
     }
@@ -171,4 +209,29 @@ export const submitVacationRequest = async ({
   }
 
   return data as VacationRequestRecord;
+};
+
+export const cancelVacationRequest = async ({
+  employeeId,
+  requestId,
+}: {
+  employeeId: string;
+  requestId: string;
+}) => {
+  const client = ensureClient();
+  const { data, error } = await client
+    .from('vacation_requests')
+    .update({ status: 'cancelled' })
+    .eq('id', requestId)
+    .eq('employeeId', employeeId)
+    .eq('status', 'pending')
+    .select('id')
+    .maybeSingle();
+
+  if (error) {
+    throw error;
+  }
+  if (!data) {
+    throw new Error('Vacation request could not be cancelled.');
+  }
 };

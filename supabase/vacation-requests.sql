@@ -9,6 +9,7 @@ create table if not exists public.vacation_requests (
   "employeeId" uuid not null references public.employees(id) on delete cascade,
   "startDate" date not null,
   "endDate" date not null,
+  "selectedDates" jsonb not null default '[]'::jsonb,
   note text,
   status text not null default 'pending' check (status in ('pending', 'approved', 'rejected', 'cancelled')),
   "reviewedAt" timestamptz,
@@ -16,6 +17,23 @@ create table if not exists public.vacation_requests (
   "createdAt" timestamptz not null default now(),
   constraint vacation_requests_date_order check ("startDate" <= "endDate")
 );
+
+alter table public.vacation_requests
+  add column if not exists "selectedDates" jsonb not null default '[]'::jsonb;
+
+do $$
+begin
+  if not exists (
+    select 1
+    from pg_constraint
+    where conname = 'vacation_requests_selected_dates_array'
+      and conrelid = 'public.vacation_requests'::regclass
+  ) then
+    alter table public.vacation_requests
+      add constraint vacation_requests_selected_dates_array
+      check (jsonb_typeof("selectedDates") = 'array');
+  end if;
+end $$;
 
 create index if not exists vacation_requests_employee_created_idx
   on public.vacation_requests ("employeeId", "createdAt" desc);
@@ -66,6 +84,26 @@ create policy "vacation_requests_owner_update" on public.vacation_requests
       from public.companies c
       where c.id = "companyId"
         and c."ownerId" = auth.uid()
+    )
+  );
+
+drop policy if exists "vacation_requests_employee_cancel" on public.vacation_requests;
+create policy "vacation_requests_employee_cancel" on public.vacation_requests
+  for update
+  using (
+    "employeeId" = auth.uid()
+    and status = 'pending'
+  )
+  with check (
+    "employeeId" = auth.uid()
+    and status = 'cancelled'
+    and "reviewedAt" is null
+    and "reviewedBy" is null
+    and exists (
+      select 1
+      from public.employees e
+      where e.id = auth.uid()
+        and e."companyId" = "companyId"
     )
   );
 
