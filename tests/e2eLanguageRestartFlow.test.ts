@@ -21,7 +21,7 @@ const run = async () => {
   assert.strictEqual(languageAfterRestart, 'de');
 
   assert.strictEqual(getStartupRoute(false), '/startup');
-  assert.strictEqual(getStartupRoute(true), '/home');
+  assert.strictEqual(getStartupRoute(true), '/my-shifts');
 };
 
 void run()

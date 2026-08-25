@@ -64,7 +64,7 @@ function ThemeAwareTabs({ insets }: { insets: ReturnType<typeof useSafeAreaInset
 
   return (
     <Tabs
-      initialRouteName="home"
+      initialRouteName="my-shifts"
       screenOptions={({ route }) => {
         const icon = iconConfig[route.name] ?? {
           active: 'square',
