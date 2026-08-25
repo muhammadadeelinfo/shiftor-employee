@@ -21,7 +21,6 @@ import { useNotifications } from '@shared/context/NotificationContext';
 import { useLanguage } from '@shared/context/LanguageContext';
 import { useTheme } from '@shared/themeContext';
 import { layoutTokens } from '@shared/theme/layout';
-import { PrimaryButton } from '@shared/components/PrimaryButton';
 import {
   fetchVacationRequestContext,
   fetchVacationRequests,
@@ -288,14 +287,6 @@ export default function HomeDashboardScreen() {
     email: user?.email,
   });
   const quickActions = [
-    {
-      key: 'clock',
-      title: activeShift ? t('dashboardClockOutAction') : t('dashboardClockInAction'),
-      icon: 'qr-code-outline',
-      path: '/qr-clock-in',
-    },
-    { key: 'shifts', title: t('dashboardViewShiftsAction'), icon: 'list-outline', path: '/my-shifts' },
-    { key: 'calendar', title: t('dashboardOpenCalendarAction'), icon: 'calendar-outline', path: '/calendar' },
     { key: 'documents', title: t('dashboardUploadDocumentAction'), icon: 'document-attach-outline', path: '/employee-documents' },
     { key: 'vacation', title: t('dashboardRequestVacationAction'), icon: 'airplane-outline', path: '/vacation-requests' },
     { key: 'support', title: t('dashboardContactSupportAction'), icon: 'help-circle-outline', path: '/support' },
@@ -401,7 +392,7 @@ export default function HomeDashboardScreen() {
           >
             <Ionicons name="document-text-outline" size={18} color={theme.primary} />
             <Text style={[styles.statValue, { color: theme.textPrimary }]} numberOfLines={1}>
-              {latestDocument ? formatRelativeDate(latestDocument.createdAt) : '—'}
+              {latestDocument ? formatRelativeDate(latestDocument.createdAt) : t('dashboardNoDocument')}
             </Text>
             <Text style={[styles.statLabel, { color: theme.textSecondary }]}>{t('dashboardLatestDocument')}</Text>
           </Pressable>
@@ -422,11 +413,6 @@ export default function HomeDashboardScreen() {
             ))}
           </View>
         </View>
-
-        <PrimaryButton
-          title={activeShift ? t('dashboardClockOutAction') : t('dashboardClockInAction')}
-          onPress={() => router.push('/qr-clock-in')}
-        />
       </ScrollView>
     </SafeAreaView>
   );

@@ -49,6 +49,13 @@ const statusTone = (status: VacationRequestStatus, colors: ReturnType<typeof use
   return colors.caution;
 };
 
+const getInclusiveDayCount = (start: Date, end: Date) => {
+  const startUtc = Date.UTC(start.getFullYear(), start.getMonth(), start.getDate());
+  const endUtc = Date.UTC(end.getFullYear(), end.getMonth(), end.getDate());
+  const dayMs = 24 * 60 * 60 * 1000;
+  return Math.max(1, Math.round((endUtc - startUtc) / dayMs) + 1);
+};
+
 export default function VacationRequestsScreen() {
   const router = useRouter();
   const queryClient = useQueryClient();
@@ -110,6 +117,13 @@ export default function VacationRequestsScreen() {
     () => requests.filter((request) => request.status === 'pending'),
     [requests]
   );
+  const selectedVacationDays = useMemo(
+    () => getInclusiveDayCount(startDate, endDate),
+    [endDate, startDate]
+  );
+  const selectedVacationDurationLabel = selectedVacationDays === 1
+    ? t('vacationRequestsDurationOne')
+    : t('vacationRequestsDurationMany', { count: selectedVacationDays });
   const requestSummaryLabel = useMemo(() => {
     if (!latestRequest) return t('vacationRequestsNoRecentRequest');
     return `${t('vacationRequestsLatestSubmitted')} ${formatVacationDate(latestRequest.createdAt, language)}`;
@@ -252,19 +266,21 @@ export default function VacationRequestsScreen() {
                 {requestSummaryLabel}
               </Text>
             </View>
-            <View
-              style={[
-                styles.overviewBadge,
-                {
-                  backgroundColor: `${statusTone(latestRequest?.status ?? 'pending', theme)}18`,
-                  borderColor: `${statusTone(latestRequest?.status ?? 'pending', theme)}38`,
-                },
-              ]}
-            >
-              <Text style={[styles.overviewBadgeText, { color: statusTone(latestRequest?.status ?? 'pending', theme) }]}>
-                {latestRequest ? getStatusLabel(latestRequest.status) : t('vacationRequestsStatusPending')}
-              </Text>
-            </View>
+            {latestRequest ? (
+              <View
+                style={[
+                  styles.overviewBadge,
+                  {
+                    backgroundColor: `${statusTone(latestRequest.status, theme)}18`,
+                    borderColor: `${statusTone(latestRequest.status, theme)}38`,
+                  },
+                ]}
+              >
+                <Text style={[styles.overviewBadgeText, { color: statusTone(latestRequest.status, theme) }]}>
+                  {getStatusLabel(latestRequest.status)}
+                </Text>
+              </View>
+            ) : null}
           </View>
 
           <View style={[styles.metricsGrid, isCompact && styles.metricsGridStack]}>
@@ -372,6 +388,13 @@ export default function VacationRequestsScreen() {
                   {formatVacationDate(toDateOnlyString(endDate), language)}
                 </Text>
               </TouchableOpacity>
+            </View>
+
+            <View style={[styles.durationPill, { backgroundColor: theme.surfaceMuted, borderColor: theme.borderSoft }]}>
+              <Ionicons name="time-outline" size={14} color={theme.primary} />
+              <Text style={[styles.durationPillText, { color: theme.textPrimary }]}>
+                {selectedVacationDurationLabel}
+              </Text>
             </View>
 
             <Text style={[styles.fieldLabel, styles.noteLabel, { color: theme.textSecondary }]}>
@@ -751,6 +774,21 @@ const styles = StyleSheet.create({
   fieldValue: {
     fontSize: 16,
     fontWeight: '600',
+  },
+  durationPill: {
+    alignSelf: 'flex-start',
+    minHeight: 34,
+    borderRadius: 999,
+    borderWidth: 1,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 7,
+  },
+  durationPillText: {
+    fontSize: 13,
+    fontWeight: '700',
   },
   noteLabel: {
     marginTop: 2,
