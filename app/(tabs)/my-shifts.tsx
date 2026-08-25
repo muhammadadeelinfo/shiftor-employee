@@ -72,25 +72,6 @@ export default function MyShiftsScreen() {
   const referenceShift = orderedShifts.find((shift) => shift.id === focusedShiftId) ?? orderedShifts[0];
   const referenceMonth = referenceShift ? new Date(referenceShift.start) : now;
   const monthLabel = getMonthLabel(referenceMonth);
-  const nextShiftLabel = useMemo(() => {
-    if (isGuest) {
-      return t('shiftsGuestSubtitle');
-    }
-    if (!nextShift) {
-      return t('noUpcomingShifts');
-    }
-    const start = new Date(nextShift.start);
-    if (Number.isNaN(start.getTime())) {
-      return t('nextShift');
-    }
-    const dateText = start.toLocaleDateString([], {
-      weekday: 'short',
-      month: 'short',
-      day: 'numeric',
-    });
-    const timeText = start.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
-    return `${t('nextShift')}: ${dateText} · ${timeText}`;
-  }, [isGuest, nextShift, t]);
 
   const showSkeletons = isLoading && !orderedShifts.length && !error;
   const cachedShiftNotice = isUsingCachedShifts ? (
@@ -432,12 +413,9 @@ export default function MyShiftsScreen() {
               </TouchableOpacity>
             ) : null}
           </View>
-          <View style={styles.pageHeaderMetaRow}>
-            <Text style={[styles.pageHeaderSubtitle, { color: theme.textSecondary }]} numberOfLines={1}>
-              {nextShiftLabel}
-            </Text>
-            <View style={styles.headerActionsRow}>
-              {pendingAssignmentIds.length > 0 ? (
+          {pendingAssignmentIds.length > 0 ? (
+            <View style={styles.pageHeaderMetaRow}>
+              <View style={styles.headerActionsRow}>
                 <TouchableOpacity
                   onPress={() => {
                     void handleConfirmAll();
@@ -473,9 +451,9 @@ export default function MyShiftsScreen() {
                     </>
                   )}
                 </TouchableOpacity>
-              ) : null}
+              </View>
             </View>
-          </View>
+          ) : null}
         </View>
         {isUsingCachedShifts ? cachedShiftNotice : errorView}
         <ScrollView
@@ -552,12 +530,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-  },
-  pageHeaderSubtitle: {
-    flex: 1,
-    fontSize: 12,
-    marginTop: 0,
-    fontWeight: '500',
   },
   exportAction: {
     minHeight: 30,
