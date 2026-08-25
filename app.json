@@ -2,7 +2,7 @@
   "expo": {
     "name": "Shiftor Employee",
     "slug": "shiftor-employee",
-    "version": "1.1.0",
+    "version": "2.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "dark",
@@ -15,7 +15,7 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.shiftor.employee",
-      "buildNumber": "19",
+      "buildNumber": "21",
       "infoPlist": {
         "NSCameraUsageDescription": "Camera access is required to scan QR codes for clock-in and clock-out.",
         "NSLocationWhenInUseUsageDescription": "Location access is used to show nearby shifts and verify shift locations.",
