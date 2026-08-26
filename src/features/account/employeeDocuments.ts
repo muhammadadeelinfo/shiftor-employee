@@ -173,10 +173,12 @@ const fetchDocumentsBySlug = async ({
   employeeId,
   accessToken,
   slug,
+  includeCompanyGenerated = false,
 }: {
   employeeId: string;
   accessToken: string;
-  slug: EmployeeDocumentType;
+  slug: string;
+  includeCompanyGenerated?: boolean;
 }) => {
   const apiBaseUrl = ensureApiBaseUrl();
   const response = await fetch(
@@ -201,7 +203,9 @@ const fetchDocumentsBySlug = async ({
     throw new Error(payload?.error || 'Unable to load employee documents.');
   }
 
-  return payload.documents.filter((item) => item.uploadedBy === employeeId);
+  return includeCompanyGenerated
+    ? payload.documents
+    : payload.documents.filter((item) => item.uploadedBy === employeeId);
 };
 
 export const fetchEmployeeDocuments = async ({
@@ -253,6 +257,25 @@ export const fetchEmployeeDocumentDownloadUrl = async ({
   }
 
   return payload.signedUrl;
+};
+
+export const fetchEmployeeDocumentDownloadUrlByFileName = async ({
+  accessToken,
+  employeeId,
+  slug,
+  fileName,
+}: {
+  accessToken: string;
+  employeeId: string;
+  slug: string;
+  fileName: string;
+}) => {
+  const documents = await fetchDocumentsBySlug({ employeeId, accessToken, slug, includeCompanyGenerated: true });
+  const match = documents.find((document) => document.fileName === fileName);
+  if (!match) {
+    return null;
+  }
+  return fetchEmployeeDocumentDownloadUrl({ accessToken, documentId: match.id });
 };
 
 export const submitEmployeeDocument = async ({

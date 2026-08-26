@@ -24,13 +24,13 @@ import { useLanguage, type TranslationKey } from '@shared/context/LanguageContex
 import { layoutTokens } from '@shared/theme/layout';
 import { getContentMaxWidth, shouldStackForCompactWidth } from '@shared/utils/responsiveLayout';
 import { downloadRemoteDocument } from '@shared/utils/nativeDocumentOpen';
+import { fetchEmployeeDocumentDownloadUrlByFileName } from '@features/account/employeeDocuments';
 import { recordPositiveRatingMoment } from '@shared/utils/ratingPrompt';
 import { getUserFacingErrorMessage } from '@shared/utils/userFacingError';
 import { trackAppEvent } from '@shared/utils/analytics';
 import {
   buildVacationApprovalDocumentFileName,
   cancelVacationRequest,
-  fetchVacationApprovalLetterUrl,
   fetchVacationRequestContext,
   fetchVacationRequests,
   formatVacationDate,
@@ -107,7 +107,7 @@ const parseVacationRequestNote = (note: string | null) => {
 export default function VacationRequestsScreen() {
   const router = useRouter();
   const queryClient = useQueryClient();
-  const { user } = useAuth();
+  const { user, session } = useAuth();
   const { theme } = useTheme();
   const { t, language } = useLanguage();
   const insets = useSafeAreaInsets();
@@ -316,12 +316,19 @@ export default function VacationRequestsScreen() {
       return;
     }
 
+    if (!session?.access_token) {
+      Alert.alert(t('vacationRequestsTitle'), t('vacationRequestsApprovalLetterUnavailable'));
+      return;
+    }
+
     try {
       setOpeningRequestId(request.id);
-      const signedUrl = await fetchVacationApprovalLetterUrl({
-        companyId: request.companyId,
+      const fileName = buildVacationApprovalDocumentFileName(request.id);
+      const signedUrl = await fetchEmployeeDocumentDownloadUrlByFileName({
+        accessToken: session.access_token,
         employeeId,
-        requestId: request.id,
+        slug: 'vacation-requests',
+        fileName,
       });
 
       if (!signedUrl) {
@@ -331,7 +338,7 @@ export default function VacationRequestsScreen() {
 
       await downloadRemoteDocument({
         url: signedUrl,
-        fileName: buildVacationApprovalDocumentFileName(request.id),
+        fileName,
       });
     } catch (openError) {
       Alert.alert(
