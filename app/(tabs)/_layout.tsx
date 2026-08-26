@@ -104,7 +104,6 @@ function ThemeAwareTabs({ insets }: { insets: ReturnType<typeof useSafeAreaInset
         };
       }}
     >
-      <Tabs.Screen name="jobs" options={{ href: null }} />
       <Tabs.Screen name="home" />
       <Tabs.Screen name="my-shifts" />
       <Tabs.Screen name="calendar" />

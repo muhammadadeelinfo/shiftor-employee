@@ -20,12 +20,14 @@ export default function CalendarSettingsScreen() {
   type CalendarSettingAction = {
     key: string;
     label: string;
+    description: string;
     icon: keyof typeof Ionicons.glyphMap;
     onPress: () => void;
   };
   type CalendarSettingGroup = {
     key: string;
     title: string;
+    description: string;
     actions: CalendarSettingAction[];
   };
 
@@ -34,10 +36,12 @@ export default function CalendarSettingsScreen() {
       {
         key: 'inApp',
         title: t('calendarSettingsGroupInApp'),
+        description: t('calendarSettingsGroupInAppDesc'),
         actions: [
           {
             key: 'calendar',
             label: t('calendarMenuOpen'),
+            description: t('calendarMenuOpenDesc'),
             icon: 'calendar-outline' as const,
             onPress: () => {
               router.push('/calendar');
@@ -46,18 +50,23 @@ export default function CalendarSettingsScreen() {
           {
             key: 'sync',
             label: t('calendarMenuSync'),
+            description: t('calendarMenuSyncDesc'),
             icon: 'sync-outline' as const,
-            onPress: () => undefined,
+            onPress: () => {
+              router.push('/calendar');
+            },
           },
         ],
       },
       {
         key: 'external',
         title: t('calendarSettingsGroupExternal'),
+        description: t('calendarSettingsGroupExternalDesc'),
         actions: [
           {
             key: 'google',
             label: t('calendarMenuImportGoogle'),
+            description: t('calendarMenuImportGoogleDesc'),
             icon: 'logo-google' as const,
             onPress: () => {
               void Linking.openURL('https://calendar.google.com');
@@ -66,6 +75,7 @@ export default function CalendarSettingsScreen() {
           {
             key: 'outlook',
             label: t('calendarMenuImportOutlook'),
+            description: t('calendarMenuImportOutlookDesc'),
             icon: 'logo-microsoft' as const,
             onPress: () => {
               void Linking.openURL('https://outlook.live.com/calendar/');
@@ -75,13 +85,6 @@ export default function CalendarSettingsScreen() {
       },
     ],
     [router, t]
-  );
-  const heroStats = useMemo(
-    () => [
-      { key: 'inAppCount', label: t('calendarSettingsGroupInApp'), value: '2' },
-      { key: 'externalCount', label: t('calendarSettingsGroupExternal'), value: '2' },
-    ],
-    [t]
   );
 
   return (
@@ -101,17 +104,6 @@ export default function CalendarSettingsScreen() {
               {t('calendarSettingsSubtitle')}
             </Text>
           </View>
-        </View>
-        <View style={styles.summaryPillsRow}>
-          {heroStats.map((stat) => (
-            <View
-              key={stat.key}
-              style={[styles.summaryPill, { backgroundColor: theme.surface, borderColor: theme.borderSoft }]}
-            >
-              <Text style={[styles.summaryPillLabel, { color: theme.textSecondary }]}>{stat.label}</Text>
-              <Text style={[styles.summaryPillValue, { color: theme.textPrimary }]}>{stat.value}</Text>
-            </View>
-          ))}
         </View>
       </View>
 
@@ -135,9 +127,11 @@ export default function CalendarSettingsScreen() {
             ]}
           >
             <View style={styles.groupHeader}>
-              <Text style={[styles.groupTitle, { color: theme.textSecondary }]}>{group.title}</Text>
-              <View style={[styles.groupCountBadge, { backgroundColor: theme.surfaceMuted, borderColor: theme.borderSoft }]}>
-                <Text style={[styles.groupCountValue, { color: theme.textPrimary }]}>{group.actions.length}</Text>
+              <View style={styles.groupTitleWrap}>
+                <Text style={[styles.groupTitle, { color: theme.textPrimary }]}>{group.title}</Text>
+                <Text style={[styles.groupDescription, { color: theme.textSecondary }]}>
+                  {group.description}
+                </Text>
               </View>
             </View>
             {group.actions.map((action, index) => (
@@ -156,7 +150,12 @@ export default function CalendarSettingsScreen() {
                 <View style={[styles.iconWrap, { backgroundColor: theme.surfaceElevated, borderColor: theme.border }]}>
                   <Ionicons name={action.icon} size={16} color={theme.primary} />
                 </View>
-                <Text style={[styles.rowLabel, { color: theme.textPrimary }]}>{action.label}</Text>
+                <View style={styles.rowText}>
+                  <Text style={[styles.rowLabel, { color: theme.textPrimary }]}>{action.label}</Text>
+                  <Text style={[styles.rowDescription, { color: theme.textSecondary }]}>
+                    {action.description}
+                  </Text>
+                </View>
                 <Ionicons name="chevron-forward" size={18} color={theme.textSecondary} />
               </TouchableOpacity>
             ))}
@@ -178,7 +177,7 @@ const styles = StyleSheet.create({
   header: {
     paddingHorizontal: layoutTokens.screenHorizontal,
     paddingTop: layoutTokens.screenTop,
-    paddingBottom: 8,
+    paddingBottom: 10,
   },
   headerRow: {
     flexDirection: 'row',
@@ -196,42 +195,16 @@ const styles = StyleSheet.create({
     fontSize: 12,
     opacity: 0.88,
   },
-  summaryPillsRow: {
-    marginTop: 14,
-    flexDirection: 'row',
-    gap: 8,
-  },
-  summaryPill: {
-    flex: 1,
-    borderRadius: 12,
-    borderWidth: 1,
-    minHeight: 50,
-    paddingHorizontal: 10,
-    paddingVertical: 8,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  summaryPillLabel: {
-    fontSize: 11,
-    fontWeight: '600',
-    textTransform: 'uppercase',
-    letterSpacing: 0.3,
-  },
-  summaryPillValue: {
-    fontSize: 18,
-    fontWeight: '800',
-  },
   scroll: {
     flex: 1,
   },
   content: {
     paddingHorizontal: layoutTokens.screenHorizontal,
-    paddingTop: 8,
+    paddingTop: 4,
   },
   group: {
     borderWidth: 1,
-    borderRadius: 16,
+    borderRadius: 8,
     padding: 12,
     marginBottom: 14,
   },
@@ -241,30 +214,25 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     marginBottom: 10,
   },
+  groupTitleWrap: {
+    flex: 1,
+    gap: 3,
+  },
   groupTitle: {
-    fontSize: 12,
-    fontWeight: '700',
-    textTransform: 'uppercase',
-    letterSpacing: 0.35,
+    fontSize: 15,
+    fontWeight: '800',
+    letterSpacing: 0,
   },
-  groupCountBadge: {
-    borderWidth: 1,
-    minWidth: 28,
-    height: 24,
-    borderRadius: 999,
-    paddingHorizontal: 8,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  groupCountValue: {
+  groupDescription: {
     fontSize: 12,
-    fontWeight: '700',
+    lineHeight: 17,
   },
   row: {
     borderWidth: 1,
-    borderRadius: 12,
-    minHeight: 54,
+    borderRadius: 8,
+    minHeight: 64,
     paddingHorizontal: 12,
+    paddingVertical: 10,
     marginBottom: 8,
     flexDirection: 'row',
     alignItems: 'center',
@@ -278,10 +246,17 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  rowLabel: {
+  rowText: {
     flex: 1,
+    gap: 2,
+  },
+  rowLabel: {
     fontSize: 14,
-    fontWeight: '600',
+    fontWeight: '700',
+  },
+  rowDescription: {
+    fontSize: 12,
+    lineHeight: 17,
   },
   rowLast: {
     marginBottom: 0,

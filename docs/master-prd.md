@@ -10,7 +10,7 @@ The technical setup, commands, and release process live in `README.md` and the r
 
 ## 2. Product Overview
 
-Shiftor Employee is the companion mobile app for the Shiftor platform. Employees use it to view assigned shifts, manage shift-related actions, browse public/startup jobs, access account information, upload documents, request vacation, receive notifications, and use QR clock-in workflows.
+Shiftor Employee is the companion mobile app for the Shiftor platform. Employees use it to view assigned shifts, manage shift-related actions, access account information, upload documents, request vacation, receive notifications, and use QR clock-in workflows.
 
 The app is built with Expo, React Native, Expo Router, Supabase, React Query, and shared i18n/theme utilities. It connects to the same backend ecosystem as Shiftor Admin.
 
@@ -25,8 +25,8 @@ The app is built with Expo, React Native, Expo Router, Supabase, React Query, an
 ## 4. Target Users
 
 - Employees: authenticated users who need shifts, clock-in, documents, vacation requests, notifications, and account information.
-- Guest candidates: unauthenticated visitors who can browse public/startup job listings and preview the app.
-- Administrators and operations teams: indirect users through Shiftor Admin/backend workflows that supply shifts, jobs, documents, notifications, company links, and approvals.
+- Guest visitors: unauthenticated visitors who can preview selected public app surfaces before login.
+- Administrators and operations teams: indirect users through Shiftor Admin/backend workflows that supply shifts, documents, notifications, company links, and approvals.
 
 ## 5. Current App Surface
 
@@ -43,7 +43,7 @@ The repository currently includes these main app routes:
 Status: Developed
 
 - Supabase auth provider and route guarding.
-- Public routes for onboarding, startup, auth, and jobs.
+- Public routes for onboarding and auth.
 - Authenticated tab layout and protected employee workflows.
 - Startup route utility that decides the correct first screen.
 
@@ -77,15 +77,12 @@ Status: Developed
 - Calendar settings screen exists for in-app and external calendar configuration.
 - Shared calendar selection utilities and tests are present.
 
-### Jobs and Guest Job Browsing
+### Guest Preview
 
 Status: Developed
 
-- Public/startup jobs endpoint integration via `API_BASE_URL`.
-- Startup jobs list supports filtering, search parsing, typo-tolerant matching, and field-specific search terms.
-- Job detail screen exists.
 - Guest preview screen exists for unauthenticated exploration.
-- Demo/test job filtering is included to hide seeded data from public surfaces.
+- Public job browsing and job detail routes have been removed from the mobile app.
 
 ### QR Clock-In
 
@@ -201,8 +198,8 @@ The employee app currently depends on these backend resources:
 - `notifications` table for realtime and persisted employee notifications.
 - `vacation_requests` table for vacation request lifecycle.
 - Supabase Storage bucket configured by the app for profile photos and documents.
-- Employee API endpoints for jobs, documents, QR clock-in, and monthly hours.
-- Shiftor Admin/backend workflows for creating shifts, publishing jobs, approving vacation, generating approval letters, managing document records, and administering company links.
+- Employee API endpoints for documents, QR clock-in, and monthly hours.
+- Shiftor Admin/backend workflows for creating shifts, approving vacation, generating approval letters, managing document records, and administering company links.
 
 ## 8. Current Test Coverage
 
@@ -353,13 +350,13 @@ Status: In Progress
 Status: Planned
 
 - Prepare localized App Store and Google Play metadata for English and German.
-- Create high-quality screenshots that show the real app value: next shift, calendar, QR clock-in, notifications, documents, vacation, monthly hours, and jobs.
+- Create high-quality screenshots that show the real app value: next shift, calendar, QR clock-in, notifications, documents, vacation, and monthly hours.
 - Create a 15-30 second app preview video focused on the employee daily workflow.
 - Test alternate screenshots, icon, subtitle, and promotional text through Apple product page optimization and Google Play store listing experiments.
 - Use accurate, relevant keywords only; avoid competitor names, irrelevant keywords, and keyword stuffing.
 - Choose the most relevant primary category and keep category selection consistent with the app's real use.
 - Keep "What's New" notes specific and benefit-led, especially when updates respond to user feedback.
-- Add custom product pages or campaign-specific listings for job seeker acquisition, employer onboarding, and employee workforce use cases.
+- Add custom product pages or campaign-specific listings for employer onboarding and employee workforce use cases.
 
 ### Ratings, Reviews, and Support Plan
 
@@ -402,7 +399,7 @@ Status: Planned
 - Bilingual workforce experience designed for English and German from the start.
 - Reliable QR clock-in with clear shift context and correction path.
 - Self-service documents and vacation requests connected to admin workflows.
-- Public jobs and employee account experience in the same app, so candidates can become employees without switching products.
+- Employee account experience focused on shifts, QR clock-in, documents, vacation requests, and notifications.
 
 ### Market Ranking Acceptance Criteria
 

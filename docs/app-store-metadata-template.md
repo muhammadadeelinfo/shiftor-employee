@@ -62,7 +62,7 @@ Use this template in App Store Connect before first submission.
 - Demo account password:
 - Notes for reviewer:
   - `This app is for employee schedule access connected to Shiftor Admin.`
-  - `Use demo account above to access jobs, account, and notifications.`
+  - `Use demo account above to access shifts, account, and notifications.`
 
 ## Public Audience & Distribution Clarification
 

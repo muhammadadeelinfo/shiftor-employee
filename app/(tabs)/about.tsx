@@ -1,5 +1,4 @@
-import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import Constants from 'expo-constants';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -10,29 +9,14 @@ import { useTheme } from '@shared/themeContext';
 import { SUPPORT_FALLBACK_URL } from '@shared/utils/support';
 import { getLegalLinks, openExternalUrlWithFallback } from '@shared/utils/legalLinks';
 
+const SHIFTOR_WEBSITE_URL = 'https://shiftorapp.com';
+
 export default function AboutScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { theme } = useTheme();
   const { t } = useLanguage();
-  const nativeAppVersion =
-    typeof Constants.nativeAppVersion === 'string' ? Constants.nativeAppVersion.trim() : '';
-  const nativeBuildVersion =
-    typeof Constants.nativeBuildVersion === 'string' ? Constants.nativeBuildVersion.trim() : '';
-  const versionLabel = nativeAppVersion
-    ? nativeBuildVersion
-      ? `${nativeAppVersion} (${nativeBuildVersion})`
-      : nativeAppVersion
-    : t('notProvided');
-  const platformLabel =
-    Constants.expoConfig?.platforms?.includes('ios') && Constants.expoConfig?.platforms?.includes('android')
-      ? 'iOS / Android'
-      : Constants.platform?.ios
-        ? 'iOS'
-        : Constants.platform?.android
-          ? 'Android'
-          : 'Mobile';
-  const { privacyPolicyUrl, termsUrl } = getLegalLinks();
+  const { privacyPolicyUrl, termsUrl, supportPageUrl } = getLegalLinks();
 
   return (
     <SafeAreaView style={[styles.safeArea, { backgroundColor: theme.background }]} edges={['left', 'right']}>
@@ -48,7 +32,7 @@ export default function AboutScreen() {
         ]}
         showsVerticalScrollIndicator={false}
       >
-        <BackButton onPress={() => router.replace('/account')} />
+        <BackButton onPress={() => router.replace('/account')} style={styles.backButton} />
 
         <View style={styles.pageHeader}>
           <Text style={[styles.pageTitle, { color: theme.textPrimary }]}>{t('aboutSectionTitle')}</Text>
@@ -56,39 +40,60 @@ export default function AboutScreen() {
         </View>
 
         <View style={[styles.sectionCard, { borderColor: theme.border, backgroundColor: theme.surfaceElevated }]}>
-          <Text style={[styles.sectionTitle, { color: theme.textPrimary }]}>App details</Text>
-          <View style={[styles.infoRow, { borderColor: theme.borderSoft }]}>
-            <Text style={[styles.infoLabel, { color: theme.textSecondary }]}>{t('aboutAppName')}</Text>
-            <Text style={[styles.infoValue, { color: theme.textPrimary }]}>Shiftor Employee</Text>
+          <View style={styles.sectionHeader}>
+            <View style={[styles.sectionIcon, { backgroundColor: theme.surfaceMuted }]}>
+              <Ionicons name="business-outline" size={18} color={theme.primary} />
+            </View>
+            <Text style={[styles.sectionTitle, { color: theme.textPrimary }]}>{t('aboutCompaniesTitle')}</Text>
           </View>
-          <View style={[styles.infoRow, { borderColor: theme.borderSoft }]}>
-            <Text style={[styles.infoLabel, { color: theme.textSecondary }]}>Developer</Text>
-            <Text style={[styles.infoValue, { color: theme.textPrimary }]}>Goi Labs</Text>
-          </View>
-          <View style={[styles.infoRow, { borderColor: theme.borderSoft }]}>
-            <Text style={[styles.infoLabel, { color: theme.textSecondary }]}>{t('aboutVersion')}</Text>
-            <Text style={[styles.infoValue, { color: theme.textPrimary }]}>{versionLabel}</Text>
-          </View>
-          <View style={[styles.infoRow, { borderColor: theme.borderSoft }]}>
-            <Text style={[styles.infoLabel, { color: theme.textSecondary }]}>Platform</Text>
-            <Text style={[styles.infoValue, { color: theme.textPrimary }]}>{platformLabel}</Text>
-          </View>
+          <Text style={[styles.sectionBody, { color: theme.textSecondary }]}>{t('aboutCompaniesBody')}</Text>
+          <PolicyLink
+            iconName="globe-outline"
+            label="Shiftorapp.com"
+            onPress={() =>
+              void openExternalUrlWithFallback({
+                title: 'Shiftorapp.com',
+                url: SHIFTOR_WEBSITE_URL,
+                fallbackUrl: SUPPORT_FALLBACK_URL,
+                unableToOpenMessage: t('unableOpenLinkDevice'),
+              })
+            }
+          />
         </View>
 
         <View style={[styles.sectionCard, { borderColor: theme.border, backgroundColor: theme.surfaceElevated }]}>
-          <Text style={[styles.sectionTitle, { color: theme.textPrimary }]}>{t('privacySummaryTitle')}</Text>
+          <View style={styles.sectionHeader}>
+            <View style={[styles.sectionIcon, { backgroundColor: theme.surfaceMuted }]}>
+              <Ionicons name="shield-checkmark-outline" size={18} color={theme.primary} />
+            </View>
+            <Text style={[styles.sectionTitle, { color: theme.textPrimary }]}>{t('privacySummaryTitle')}</Text>
+          </View>
           <Text style={[styles.sectionBody, { color: theme.textSecondary }]}>{t('privacySummaryBody')}</Text>
-          <Text style={[styles.sectionBody, { color: theme.textSecondary }]}>{t('privacySummarySensitiveBody')}</Text>
         </View>
 
         <View style={[styles.sectionCard, { borderColor: theme.border, backgroundColor: theme.surfaceElevated }]}>
-          <Text style={[styles.sectionTitle, { color: theme.textPrimary }]}>Legal</Text>
-          <Text style={[styles.sectionBody, { color: theme.textSecondary }]}>
-            Review the privacy and usage policies for the mobile app.
-          </Text>
-          <TouchableOpacity
-            activeOpacity={0.85}
-            style={[styles.linkRow, { borderColor: theme.borderSoft, backgroundColor: theme.surface }]}
+          <View style={styles.sectionHeader}>
+            <View style={[styles.sectionIcon, { backgroundColor: theme.surfaceMuted }]}>
+              <Ionicons name="document-text-outline" size={18} color={theme.primary} />
+            </View>
+            <Text style={[styles.sectionTitle, { color: theme.textPrimary }]}>{t('aboutLegalTitle')}</Text>
+          </View>
+          <Text style={[styles.sectionBody, { color: theme.textSecondary }]}>{t('aboutLegalBody')}</Text>
+          <PolicyLink
+            iconName="help-circle-outline"
+            label={t('supportHelpCenter')}
+            onPress={() =>
+              void openExternalUrlWithFallback({
+                title: t('supportHelpCenter'),
+                url: supportPageUrl,
+                fallbackUrl: SUPPORT_FALLBACK_URL,
+                unableToOpenMessage: t('unableOpenLinkDevice'),
+              })
+            }
+          />
+          <PolicyLink
+            iconName="shield-outline"
+            label={t('aboutPrivacyPolicy')}
             onPress={() =>
               void openExternalUrlWithFallback({
                 title: t('aboutPrivacyPolicy'),
@@ -97,16 +102,10 @@ export default function AboutScreen() {
                 unableToOpenMessage: t('unableOpenLinkDevice'),
               })
             }
-          >
-            <View style={[styles.rowIcon, { backgroundColor: theme.surfaceMuted }]}>
-              <Ionicons name="shield-outline" size={16} color={theme.primary} />
-            </View>
-            <Text style={[styles.rowLabel, { color: theme.textPrimary }]}>{t('aboutPrivacyPolicy')}</Text>
-            <Ionicons name="open-outline" size={16} color={theme.textSecondary} />
-          </TouchableOpacity>
-          <TouchableOpacity
-            activeOpacity={0.85}
-            style={[styles.linkRow, { borderColor: theme.borderSoft, backgroundColor: theme.surface }]}
+          />
+          <PolicyLink
+            iconName="document-text-outline"
+            label={t('aboutTerms')}
             onPress={() =>
               void openExternalUrlWithFallback({
                 title: t('aboutTerms'),
@@ -115,16 +114,77 @@ export default function AboutScreen() {
                 unableToOpenMessage: t('unableOpenLinkDevice'),
               })
             }
-          >
-            <View style={[styles.rowIcon, { backgroundColor: theme.surfaceMuted }]}>
-              <Ionicons name="document-text-outline" size={16} color={theme.primary} />
+          />
+        </View>
+
+        <View style={[styles.sectionCard, { borderColor: theme.border, backgroundColor: theme.surfaceElevated }]}>
+          <View style={styles.sectionHeader}>
+            <View style={[styles.sectionIcon, { backgroundColor: theme.surfaceMuted }]}>
+              <Ionicons name="information-circle-outline" size={18} color={theme.primary} />
             </View>
-            <Text style={[styles.rowLabel, { color: theme.textPrimary }]}>{t('aboutTerms')}</Text>
-            <Ionicons name="open-outline" size={16} color={theme.textSecondary} />
-          </TouchableOpacity>
+            <Text style={[styles.sectionTitle, { color: theme.textPrimary }]}>{t('aboutAppDetails')}</Text>
+          </View>
+          <InfoRow label={t('aboutAppName')} value="Shiftor Employee" />
+          <InfoRow label={t('aboutPlatform')} value={t('aboutPlatformValue')} isLast />
         </View>
       </ScrollView>
     </SafeAreaView>
+  );
+}
+
+type InfoRowProps = {
+  label: string;
+  value: string;
+  isLast?: boolean;
+};
+
+function InfoRow({ label, value, isLast = false }: InfoRowProps) {
+  const { theme } = useTheme();
+
+  return (
+    <View
+      style={[
+        styles.infoRow,
+        {
+          borderBottomColor: theme.borderSoft,
+          borderBottomWidth: isLast ? 0 : StyleSheet.hairlineWidth,
+        },
+      ]}
+    >
+      <Text style={[styles.infoLabel, { color: theme.textSecondary }]}>{label}</Text>
+      <Text style={[styles.infoValue, { color: theme.textPrimary }]}>{value}</Text>
+    </View>
+  );
+}
+
+type PolicyLinkProps = {
+  iconName: keyof typeof Ionicons.glyphMap;
+  label: string;
+  onPress: () => void;
+};
+
+function PolicyLink({ iconName, label, onPress }: PolicyLinkProps) {
+  const { theme } = useTheme();
+
+  return (
+    <Pressable
+      accessibilityRole="link"
+      accessibilityLabel={label}
+      onPress={onPress}
+      style={({ pressed }) => [
+        styles.linkRow,
+        {
+          borderColor: theme.borderSoft,
+          backgroundColor: pressed ? theme.surfaceMuted : theme.surface,
+        },
+      ]}
+    >
+      <View style={[styles.rowIcon, { backgroundColor: theme.surfaceMuted }]}>
+        <Ionicons name={iconName} size={16} color={theme.primary} />
+      </View>
+      <Text style={[styles.rowLabel, { color: theme.textPrimary }]}>{label}</Text>
+      <Ionicons name="open-outline" size={16} color={theme.textSecondary} />
+    </Pressable>
   );
 }
 
@@ -137,40 +197,58 @@ const styles = StyleSheet.create({
   },
   container: {
     paddingHorizontal: layoutTokens.screenHorizontal,
-    gap: 16,
+    gap: 14,
+  },
+  backButton: {
+    width: 38,
+    height: 38,
   },
   pageHeader: {
-    gap: 6,
-    paddingTop: 2,
-    paddingHorizontal: 2,
+    gap: 5,
+    paddingTop: 4,
+    paddingBottom: 4,
   },
   pageTitle: {
-    fontSize: 28,
-    fontWeight: '900',
-    letterSpacing: -0.4,
+    fontSize: 26,
+    fontWeight: '800',
+    letterSpacing: 0,
   },
   pageBody: {
     fontSize: 14,
-    lineHeight: 20,
+    lineHeight: 19,
   },
   sectionCard: {
     borderWidth: 1,
-    borderRadius: 18,
-    padding: 18,
-    gap: 12,
+    borderRadius: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    gap: 10,
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  sectionIcon: {
+    width: 32,
+    height: 32,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   sectionTitle: {
-    fontSize: 16,
+    flex: 1,
+    fontSize: 15,
     fontWeight: '800',
+    letterSpacing: 0,
   },
   sectionBody: {
-    marginTop: -4,
     fontSize: 13,
-    lineHeight: 19,
+    lineHeight: 20,
   },
   infoRow: {
-    borderTopWidth: 1,
-    paddingTop: 12,
+    minHeight: 44,
+    paddingVertical: 10,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
@@ -183,14 +261,15 @@ const styles = StyleSheet.create({
   infoValue: {
     flex: 1,
     textAlign: 'right',
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '700',
   },
   linkRow: {
     borderWidth: 1,
-    borderRadius: 14,
-    paddingHorizontal: 14,
-    paddingVertical: 14,
+    borderRadius: 8,
+    minHeight: 54,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
@@ -198,7 +277,7 @@ const styles = StyleSheet.create({
   rowIcon: {
     width: 32,
     height: 32,
-    borderRadius: 11,
+    borderRadius: 8,
     alignItems: 'center',
     justifyContent: 'center',
   },

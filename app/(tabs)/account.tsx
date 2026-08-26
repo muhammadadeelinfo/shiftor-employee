@@ -59,6 +59,12 @@ import {
   normalizeContactString,
   type EmployeeProfile,
 } from '@features/account/accountProfileUtils';
+import {
+  getVerifiedMfaFactorCount,
+  requestEmployeeAccountDeletion,
+  requestPasswordReset,
+  signOutOtherSessions,
+} from '@features/account/accountSecurity';
 
 const notificationPreferenceLabelKeys: Record<
   NotificationPreferenceKey,
@@ -450,10 +456,9 @@ export default function AccountScreen() {
     }
     const redirectUrl =
       (Constants.expoConfig?.extra?.authRedirectUrl as string | undefined)?.trim() || undefined;
-    const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: redirectUrl,
-    });
-    if (error) {
+    try {
+      await requestPasswordReset({ auth: supabase.auth, email, redirectUrl });
+    } catch (error) {
       console.warn('Password reset request failed', error);
       Alert.alert(
         t('securityResetPassword'),
@@ -468,8 +473,28 @@ export default function AccountScreen() {
       Alert.alert(t('securityManageSessions'), t('authClientUnavailable'));
       return;
     }
-    const { error } = await supabase.auth.signOut({ scope: 'others' });
-    if (error) {
+    const confirmed = await new Promise<boolean>((resolve) => {
+      Alert.alert(
+        t('securityManageSessions'),
+        t('securitySignOutOtherDevicesConfirmBody'),
+        [
+          { text: t('commonCancel') || 'Cancel', style: 'cancel', onPress: () => resolve(false) },
+          {
+            text: t('securitySignOutOtherDevicesConfirmAction'),
+            style: 'destructive',
+            onPress: () => resolve(true),
+          },
+        ],
+        { cancelable: true, onDismiss: () => resolve(false) }
+      );
+    });
+    if (!confirmed) {
+      return;
+    }
+
+    try {
+      await signOutOtherSessions(supabase.auth);
+    } catch (error) {
       console.warn('Sign-out-all request failed', error);
       Alert.alert(
         t('securityManageSessions'),
@@ -485,10 +510,7 @@ export default function AccountScreen() {
       return;
     }
     try {
-      const { data, error } = await supabase.auth.mfa.listFactors();
-      if (error) throw error;
-      const factors = [...(data?.all ?? [])];
-      const verifiedCount = factors.filter((factor) => factor.status === 'verified').length;
+      const verifiedCount = await getVerifiedMfaFactorCount(supabase.auth);
       if (verifiedCount > 0) {
         Alert.alert(t('securityEnable2fa'), t('security2faEnabled', { count: verifiedCount }));
         return;
@@ -528,12 +550,7 @@ export default function AccountScreen() {
 
     try {
       setDeletingAccount(true);
-      const { data, error } = await supabase.rpc('request_employee_account_deletion');
-      if (error) {
-        throw error;
-      }
-      const payload = data && typeof data === 'object' ? (data as Record<string, unknown>) : {};
-      const status = typeof payload.status === 'string' ? payload.status : '';
+      const status = await requestEmployeeAccountDeletion(supabase);
       const successMessage =
         status === 'already_pending'
           ? t('accountDeletionAlreadyPendingBody')

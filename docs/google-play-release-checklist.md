@@ -69,7 +69,7 @@ npx expo start -c
 ## 4) Manual QA on real device (required)
 
 - [ ] Login, logout, and session restore after app restart.
-- [ ] Jobs tab loads and refreshes with production API.
+- [ ] My Shifts tab loads and refreshes assigned shift data.
 - [ ] Account tab opens without runtime errors.
 - [ ] Notifications screen opens and renders empty/non-empty states correctly.
 - [ ] Notification deep-link navigation works and does not show `Unmatched Route`.
@@ -108,5 +108,5 @@ eas submit --platform android
 ## 7) Post-submit monitoring
 
 - [ ] Monitor crashes and errors for first 30-60 minutes after rollout.
-- [ ] Validate auth, jobs, and notifications endpoints from a live install.
+- [ ] Validate auth, shifts, and notifications endpoints from a live install.
 - [ ] Keep previous stable release notes available for rollback decisions.
