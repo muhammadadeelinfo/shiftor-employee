@@ -35,6 +35,7 @@ import { getUserFacingErrorMessage } from '@shared/utils/userFacingError';
 const REMEMBER_KEY = 'employee-portal-remember-me';
 const EMAIL_KEY = 'employee-portal-remembered-email';
 const SUPPORT_BASE_URL = 'https://goilabs.com';
+const SHIFTOR_WEBSITE_URL = 'https://shiftorapp.com';
 
 export default function LoginScreen() {
   const router = useRouter();
@@ -57,13 +58,16 @@ export default function LoginScreen() {
   useEffect(() => {
     (async () => {
       const storedRemember = await AsyncStorage.getItem(REMEMBER_KEY);
+      const shouldRemember = storedRemember === 'true';
       if (storedRemember !== null) {
-        setRememberMe(storedRemember === 'true');
+        setRememberMe(shouldRemember);
       }
       const storedEmail = await AsyncStorage.getItem(EMAIL_KEY);
-      if (storedEmail) {
+      if (shouldRemember && storedEmail) {
         setRememberedEmail(storedEmail);
         setEmail(storedEmail);
+      } else if (!shouldRemember && storedEmail) {
+        await AsyncStorage.removeItem(EMAIL_KEY);
       }
     })();
   }, []);
@@ -105,7 +109,7 @@ export default function LoginScreen() {
         await AsyncStorage.removeItem(EMAIL_KEY);
       }
 
-      const { data, error } = await supabase.auth.signInWithPassword({
+      const { error } = await supabase.auth.signInWithPassword({
         email: trimmedEmail,
         password: submittedPassword,
       });
@@ -183,7 +187,10 @@ export default function LoginScreen() {
     }
   };
   const handleSupportEmail = async () => {
-    const supportUrl = buildSupportMailto('Help request');
+    const supportUrl = buildSupportMailto(
+      'Employee login credentials request',
+      ['Company name:', 'Employee name:', 'Work email:', '', 'Message:'].join('\n')
+    );
     const webSupportUrl = helpCenterUrl || SUPPORT_FALLBACK_URL;
 
     try {
@@ -231,6 +238,15 @@ export default function LoginScreen() {
             {titleRest ? ` ${titleRest}` : ''}
           </Text>
           <Text style={styles.subtitle}>{t('loginSignInSubtitle')}</Text>
+          <View style={styles.accessNotice}>
+            <View style={styles.accessNoticeIcon}>
+              <Ionicons name="business-outline" size={18} color="#93c5fd" />
+            </View>
+            <View style={styles.accessNoticeCopy}>
+              <Text style={styles.accessNoticeTitle}>{t('loginCredentialNoticeTitle')}</Text>
+              <Text style={styles.accessNoticeBody}>{t('loginCredentialNoticeBody')}</Text>
+            </View>
+          </View>
           <View style={styles.emailField}>
             <TextInput
               style={styles.emailInput}
@@ -318,7 +334,13 @@ export default function LoginScreen() {
               </TouchableOpacity>
               <Switch
                 value={rememberMe}
-                onValueChange={setRememberMe}
+                onValueChange={(value) => {
+                  setRememberMe(value);
+                  if (!value) {
+                    setRememberedEmail('');
+                    void AsyncStorage.removeItem(EMAIL_KEY);
+                  }
+                }}
                 disabled={loading}
                 trackColor={{ false: '#334155', true: '#2563eb' }}
                 thumbColor={rememberMe ? '#f8fafc' : '#cbd5f5'}
@@ -326,6 +348,7 @@ export default function LoginScreen() {
               />
             </View>
           </View>
+          <Text style={styles.resetHint}>{t('loginResetPasswordHint')}</Text>
           <PrimaryButton
             title={t('loginSignInButton')}
             onPress={handleAuthenticate}
@@ -340,7 +363,16 @@ export default function LoginScreen() {
               disabled={loading}
             >
               <Ionicons name="help-circle-outline" size={18} color="#60a5fa" />
-              <Text style={styles.supportText}>{t('loginSupportText')}</Text>
+              <Text style={styles.supportText}>{t('loginAccessHelpText')}</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.companySiteRow}
+              activeOpacity={0.7}
+              onPress={() => void openExternalUrl(t('loginCompanySiteTitle'), SHIFTOR_WEBSITE_URL)}
+              disabled={loading}
+            >
+              <Text style={styles.companySiteText}>{t('loginCompanySiteText')}</Text>
+              <Ionicons name="open-outline" size={16} color="#7dd3fc" />
             </TouchableOpacity>
             {!isIOS ? (
               <View style={styles.footerRow}>
@@ -439,6 +471,39 @@ const styles = StyleSheet.create({
   titleAccent: {
     color: '#60a5fa',
   },
+  accessNotice: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 10,
+    padding: 12,
+    marginBottom: 16,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: 'rgba(96, 165, 250, 0.18)',
+    backgroundColor: 'rgba(37, 99, 235, 0.08)',
+  },
+  accessNoticeIcon: {
+    width: 34,
+    height: 34,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(37, 99, 235, 0.14)',
+  },
+  accessNoticeCopy: {
+    flex: 1,
+  },
+  accessNoticeTitle: {
+    color: '#e2e8f0',
+    fontSize: 13,
+    fontWeight: '800',
+    marginBottom: 3,
+  },
+  accessNoticeBody: {
+    color: '#aab7d4',
+    fontSize: 12,
+    lineHeight: 17,
+  },
   passwordField: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -485,7 +550,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 16,
+    marginBottom: 8,
   },
   signinUtilityRight: {
     flexDirection: 'row',
@@ -505,6 +570,12 @@ const styles = StyleSheet.create({
   rememberLabel: {
     fontSize: 14,
     color: '#cbd5f5',
+  },
+  resetHint: {
+    color: '#8ea0c4',
+    fontSize: 11,
+    lineHeight: 15,
+    marginBottom: 16,
   },
   errorText: {
     marginTop: -10,
@@ -539,10 +610,24 @@ const styles = StyleSheet.create({
     minHeight: 44,
   },
   supportText: {
+    flexShrink: 1,
     color: '#60a5fa',
     fontSize: 13,
     fontWeight: '600',
     marginLeft: 6,
+  },
+  companySiteRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginTop: 2,
+    minHeight: 36,
+  },
+  companySiteText: {
+    flexShrink: 1,
+    color: '#7dd3fc',
+    fontSize: 12,
+    fontWeight: '700',
   },
   footerRow: {
     marginTop: 12,
